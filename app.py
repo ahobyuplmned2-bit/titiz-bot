@@ -7,6 +7,10 @@ ACCESS_TOKEN = "EAAVV1mNUcEkBRZCKz7cZAPn3Dc0NE33WUQm7kjSQ6bLJzT7iA0IswVwteUoSHIn
 PHONE_NUMBER_ID = "1097018736835171"
 VERIFY_TOKEN = "bot_adawat_manziliya_2026"
 
+# Image URLs for products
+IMG_QUDOR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663669337302/FErlTSZcVDmLLuCl.jpg"
+IMG_THALAJA = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663669337302/yCftQDzESzArGegt.jpg"
+
 RESPONSES = {
     "1": "🏠 *المنتجات والأسعار:*\n\nنوفر تشكيلة واسعة من الأدوات المنزلية:\n\n🔴 *فرامة الضغطة الذكية (المائدة MD-5266):*\n- شفرات فولاذية ضد الصدأ\n- قوة إضافية لتوفير الوقت 60%\n- سهلة الاستخدام\n- السعر: 2,800 ريال\n\n🍲 *طقم قدور المائدة 4 قطع - هندي:*\n- ستانلس ثقيل + أغطية استيل\n- 4 مقاسات: كبير/وسط/صغير/صغير جداً\n- ضمان المائدة\n- الكبير 3,500 | الوسط 3,000 | الصغير 2,500 | الصغير جداً 2,000\n- 🎁 الطقم كامل: 10,500 ريال (وفر 1,000)\n\n☕ *ثلاجة شاي المائدة M213 - 0.7 لتر:*\n- تحفظ الحرارة 6 ساعات\n- الألوان: وردي | بيج | أزرق | كحلي\n- تصميم أنيق للضيافة\n- السعر: 2,500 ريال\n\n📦 التوصيل مجاني داخل المحافظة!\nللمزيد من المنتجات تواصل معنا.\n\nأرسل *قدور* لتفاصيل طقم القدور\nأرسل *ثلاجة* لتفاصيل ثلاجة الشاي",
     "2": "🛒 *طريقة الطلب:*\nيمكنك الطلب عبر:\n1. إرسال اسم المنتج أو صورته هنا.\n2. تزويدنا بالاسم والعنوان.\n3. اختيار وسيلة الدفع (عند الاستلام أو تحويل).\n\n📦 التوصيل مجاني داخل المحافظة!",
@@ -17,6 +21,12 @@ RESPONSES = {
     "قدور": "🍲 *طقم قدور المائدة 4 قطع - هندي*\n\n✅ ستانلس ثقيل + أغطية استيل\n✅ 4 مقاسات: كبير/وسط/صغير/صغير جداً\n✅ ضمان المائدة\n\n💰 *الأسعار:*\nالكبير 3,500 | الوسط 3,000\nالصغير 2,500 | الصغير جداً 2,000\n\n🎁 *الطقم كامل:* 10,500 ريال - وفر 1,000\n🚚 توصيل مجاني لداخل المحافظة\n\nاكتب *اطلب* للطلب",
     "ثلاجة": "☕ *ثلاجة شاي المائدة M213 - 0.7 لتر*\n\n✅ تحفظ الحرارة 6 ساعات\n✅ الألوان: وردي 💗 | بيج 🤎 | أزرق 💙 | كحلي\n✅ تصميم أنيق للضيافة\n\n💰 السعر: 2,500 ريال\n\n🚚 توصيل مجاني لداخل المحافظة\n⏰ الكمية محدودة\n\nاكتب *اطلب* للطلب",
     "اطلب": "🛒 *لإتمام الطلب:*\n\nأرسل لنا:\n1. اسم المنتج اللي تبيه\n2. اسمك الكامل\n3. عنوان التوصيل\n4. رقم تواصل آخر (اختياري)\n\n💳 الدفع عند الاستلام\n📦 التوصيل مجاني داخل المحافظة!\n\nوسيتم التواصل معك لتأكيد الطلب ✅",
+}
+
+# Responses that include images
+IMAGE_RESPONSES = {
+    "قدور": IMG_QUDOR,
+    "ثلاجة": IMG_THALAJA,
 }
 
 WELCOME_MESSAGE = """أهلاً بك في *Titiz لبيع وتوزيع جميع الأدوات المنزلية* 🏠✨
@@ -52,6 +62,25 @@ def send_message(to, text):
     return response.json()
 
 
+def send_image(to, image_url, caption=""):
+    url = f"https://graph.facebook.com/v21.0/{PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "image",
+        "image": {
+            "link": image_url,
+            "caption": caption
+        }
+    }
+    response = requests.post(url, headers=headers, json=data)
+    return response.json()
+
+
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
     mode = request.args.get("hub.mode")
@@ -75,9 +104,13 @@ def handle_message():
             msg_body = message.get("text", {}).get("body", "").strip()
             if msg_body in RESPONSES:
                 reply = RESPONSES[msg_body]
+                # Send image if available for this keyword
+                if msg_body in IMAGE_RESPONSES:
+                    send_image(sender, IMAGE_RESPONSES[msg_body], reply)
+                else:
+                    send_message(sender, reply)
             else:
-                reply = WELCOME_MESSAGE
-            send_message(sender, reply)
+                send_message(sender, WELCOME_MESSAGE)
     except (KeyError, IndexError):
         pass
     return jsonify({"status": "ok"}), 200
