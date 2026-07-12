@@ -60,6 +60,9 @@ RESP_QUALITY = "⭐ *جودة منتجاتنا:*\n\n✅ ستانلس ستيل ث
 # رد العروض
 RESP_OFFERS = "🔥 *عروضنا الحالية:*\n\n🎁 طقم القدور كامل 4 قطع: 10,500 بدل 11,500 - وفري 1,000 ريال!\n🚚 توصيل مجاني لكل الطلبات\n\n⭐ العرض لفترة محدودة! لا تفوتكِ 😍"
 
+# رد الثقة والمصداقية
+RESP_TRUST = "🤝 *ليش تثقين فينا:*\n\n✅ عندنا محلين في إب تقدري تزورينا 🏪\n✅ الدفع عند الاستلام - ما نطلب فلوس مقدماً\n✅ استبدال خلال 7 أيام لو ما عجبكِ\n✅ زبائننا كثير والحمد لله راضين\n✅ نشتغل بسمعتنا وما نغش أي زبون\n\n📍 *عناويننا:*\n🏪 إب - بوابة ملعب الكبسي الخلفية\n🏪 السوق المركزي القديم\n\nجربي واحكمي بنفسكِ 😊👌"
+
 # رد الوداع
 RESP_BYE = "مع السلامة يا غالية! 💛👋\nنورتينا والله!\nإحنا هنا بأي وقت تحتاجينا 😊\nلا تنسينا! ❤️"
 
@@ -203,6 +206,51 @@ RESPONSES = {
     "فيه عرض": RESP_OFFERS,
     "فيه خصم": RESP_OFFERS,
     "عندكم عروض": RESP_OFFERS,
+    # === الثقة والمصداقية ===
+    "ثقة": RESP_TRUST,
+    "ثقه": RESP_TRUST,
+    "الثقة": RESP_TRUST,
+    "الثقه": RESP_TRUST,
+    "كيف نوثق بكم": RESP_TRUST,
+    "كيف اثق فيكم": RESP_TRUST,
+    "كيف اثق بكم": RESP_TRUST,
+    "نوثق": RESP_TRUST,
+    "نثق": RESP_TRUST,
+    "مصداقية": RESP_TRUST,
+    "مصداقيه": RESP_TRUST,
+    "موثوق": RESP_TRUST,
+    "موثوقين": RESP_TRUST,
+    "نصب": RESP_TRUST,
+    "نصاب": RESP_TRUST,
+    "نصابين": RESP_TRUST,
+    "كذب": RESP_TRUST,
+    "تكذبون": RESP_TRUST,
+    "تكذبوا": RESP_TRUST,
+    "كذابين": RESP_TRUST,
+    "غش": RESP_TRUST,
+    "تغشون": RESP_TRUST,
+    "تغشوا": RESP_TRUST,
+    "غشاشين": RESP_TRUST,
+    "مضمون": RESP_TRUST,
+    "مضمونين": RESP_TRUST,
+    "هل انتم موثوقين": RESP_TRUST,
+    "انتو صادقين": RESP_TRUST,
+    "انتم صادقين": RESP_TRUST,
+    "كيف اعرف انكم": RESP_TRUST,
+    "كيف نعرف انكم": RESP_TRUST,
+    "ما نعرفكم": RESP_TRUST,
+    "ما اعرفكم": RESP_TRUST,
+    "خايفه": RESP_TRUST,
+    "خايفة": RESP_TRUST,
+    "خايف": RESP_TRUST,
+    "متردده": RESP_TRUST,
+    "مترددة": RESP_TRUST,
+    "متردد": RESP_TRUST,
+    "اخاف": RESP_TRUST,
+    "أخاف": RESP_TRUST,
+    "محتاره": RESP_TRUST,
+    "محتارة": RESP_TRUST,
+    "احتيال": RESP_TRUST,
     # === الوداع ===
     "مع السلامة": RESP_BYE,
     "مع السلامه": RESP_BYE,
