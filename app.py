@@ -1,15 +1,20 @@
 from flask import Flask, request, jsonify
 import requests
+from datetime import datetime
 
 app = Flask(__name__)
 
 ACCESS_TOKEN = "EAAVV1mNUcEkBRZCKz7cZAPn3Dc0NE33WUQm7kjSQ6bLJzT7iA0IswVwteUoSHInm2aW690MiEPT87UjciE9c5Bk0VQl9cMZBloQZCF3u4bZAEFrXCqrikv68EnaOPaZAZBAQXEhfCpWWNXGP68E5DPqxUa4hP5ZBeiVTqsnQZADrEHAR8zqESGtZAtn2EXWxZBI3QZDZD"
 PHONE_NUMBER_ID = "1097018736835171"
 VERIFY_TOKEN = "bot_adawat_manziliya_2026"
+OWNER_NUMBER = "967773595571"  # رقم المالك لاستقبال الإشعارات
 
 # Image URLs for products
 IMG_QUDOR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663669337302/FErlTSZcVDmLLuCl.jpg"
 IMG_THALAJA = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663669337302/yCftQDzESzArGegt.jpg"
+
+# قائمة الزبائن اللي راسلوا البوت
+customers = []
 
 # Product responses
 RESP_QUDOR = "🍲 *طقم قدور المائدة 4 قطع - هندي*\n\n✅ ستانلس ثقيل + أغطية استيل\n✅ 4 مقاسات: كبير/وسط/صغير/صغير جداً\n✅ ضمان المائدة\n\n💰 *الأسعار:*\nالكبير 3,500 | الوسط 3,000\nالصغير 2,500 | الصغير جداً 2,000\n\n🎁 *الطقم كامل:* 10,500 ريال - وفر 1,000\n🚚 توصيل مجاني لداخل المحافظة\n\nاكتب *اطلب* للطلب"
@@ -95,6 +100,34 @@ def send_image(to, image_url, caption=""):
     return response.json()
 
 
+def notify_owner(sender, msg_body):
+    """إرسال إشعار للمالك بأن زبون راسل البوت"""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    notification = f"📩 *رسالة جديدة من زبون*\n\n👤 الرقم: {sender}\n💬 الرسالة: {msg_body}\n🕐 الوقت: {now}\n\nللرد عليه مباشرة: wa.me/{sender}"
+    send_message(OWNER_NUMBER, notification)
+
+
+def add_customer(sender, msg_body):
+    """إضافة الزبون للقائمة"""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # تحقق إذا الرقم موجود مسبقاً
+    for c in customers:
+        if c["number"] == sender:
+            c["last_message"] = msg_body
+            c["last_time"] = now
+            c["messages_count"] += 1
+            return
+    # زبون جديد
+    customers.append({
+        "number": sender,
+        "first_message": msg_body,
+        "last_message": msg_body,
+        "first_time": now,
+        "last_time": now,
+        "messages_count": 1
+    })
+
+
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
     mode = request.args.get("hub.mode")
@@ -116,6 +149,30 @@ def handle_message():
             message = value["messages"][0]
             sender = message["from"]
             msg_body = message.get("text", {}).get("body", "").strip()
+
+            # لا ترسل إشعار لنفسك
+            if sender != OWNER_NUMBER:
+                # إضافة الزبون للقائمة
+                add_customer(sender, msg_body)
+                # إشعار المالك
+                notify_owner(sender, msg_body)
+
+            # أمر خاص للمالك: عرض قائمة الزبائن
+            if sender == OWNER_NUMBER and msg_body == "الزبائن":
+                if customers:
+                    customer_list = "📋 *قائمة الزبائن:*\n\n"
+                    for i, c in enumerate(customers, 1):
+                        customer_list += f"{i}. 👤 {c['number']}\n"
+                        customer_list += f"   آخر رسالة: {c['last_message']}\n"
+                        customer_list += f"   الوقت: {c['last_time']}\n"
+                        customer_list += f"   عدد الرسائل: {c['messages_count']}\n\n"
+                    customer_list += f"📊 إجمالي الزبائن: {len(customers)}"
+                    send_message(sender, customer_list)
+                else:
+                    send_message(sender, "📋 لا يوجد زبائن حتى الآن.")
+                return jsonify({"status": "ok"}), 200
+
+            # الرد التلقائي
             if msg_body in RESPONSES:
                 reply = RESPONSES[msg_body]
                 # Send image if keyword matches a product
