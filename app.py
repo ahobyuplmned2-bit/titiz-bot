@@ -589,17 +589,36 @@ def handle_message():
                     send_message(sender, "📋 لا يوجد زبائن حتى الآن.")
                 return jsonify({"status": "ok"}), 200
 
-            # الرد التلقائي
-            if msg_body in RESPONSES:
-                reply = RESPONSES[msg_body]
+            # تطبيع النص - إزالة الرموز والمسافات الزائدة
+            msg_normalized = msg_body.lower().strip()
+            # إزالة علامات الترقيم والرموز
+            for ch in ['!', '?', '.', ',', '؟', '،', '\u200f', '\u200e']:
+                msg_normalized = msg_normalized.replace(ch, '')
+            msg_normalized = msg_normalized.strip()
+
+            # الرد التلقائي - مطابقة مباشرة
+            matched_key = None
+            if msg_normalized in RESPONSES:
+                matched_key = msg_normalized
+            elif msg_body in RESPONSES:
+                matched_key = msg_body
+            else:
+                # بحث جزئي - لو الرسالة تحتوي على كلمة مفتاحية
+                for key in RESPONSES:
+                    if len(key) > 2 and key in msg_normalized:
+                        matched_key = key
+                        break
+
+            if matched_key:
+                reply = RESPONSES[matched_key]
                 # ردود منفصلة (قائمة)
                 if isinstance(reply, list):
                     for r in reply:
                         send_message(sender, r)
                 # صورة + نص
-                elif msg_body in QUDOR_KEYWORDS:
+                elif matched_key in QUDOR_KEYWORDS:
                     send_image(sender, IMG_QUDOR, reply)
-                elif msg_body in THALAJA_KEYWORDS:
+                elif matched_key in THALAJA_KEYWORDS:
                     send_image(sender, IMG_THALAJA, reply)
                 else:
                     send_message(sender, reply)
