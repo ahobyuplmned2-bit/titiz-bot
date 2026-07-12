@@ -39,6 +39,30 @@ RESP_NEW_CUSTOMER = [
     "اكتبي *قدور* أو *ثلاجة* وشوفي بنفسكِ 😍\nأو اكتبي *1* لكل المنتجات\n\n💡 *زبائننا دائماً يرجعوا لنا!* 👌"
 ]
 
+# رد التوصيل
+RESP_DELIVERY = "🚚 *التوصيل والشحن:*\n\n✅ داخل محافظة إب: *مجاني* تماماً!\n📦 باقي المحافظات: 2-4 أيام\n💳 الدفع عند الاستلام\n\nيعني ما فيه أي مخاطرة عليكِ 😊"
+
+# رد الدفع
+RESP_PAYMENT = "💳 *طرق الدفع:*\n\n✅ الدفع عند الاستلام (كاش)\n✅ تحويل مسبق\n\nيعني تستلمي المنتج وتتأكدي منه وبعدين تدفعي 👌\nبدون أي مخاطرة! 😊"
+
+# رد الضمان والاستبدال
+RESP_GUARANTEE = "🔄 *الضمان والاستبدال:*\n\n✅ استبدال خلال 7 أيام من الاستلام\n✅ استرجاع خلال 3 أيام (بحالته الأصلية)\n✅ ضمان المائدة على المنتجات\n\nإحنا واثقين من جودة منتجاتنا 👌"
+
+# رد الألوان
+RESP_COLORS = "🎨 *الألوان المتوفرة:*\n\n☕ ثلاجة الشاي:\n💗 وردي | 🤎 بيج | 💙 أزرق | كحلي\n\nاكتبي *ثلاجة* لتشوفي الصورة 😍"
+
+# رد المقاسات
+RESP_SIZES = "📏 *المقاسات المتوفرة:*\n\n🍲 طقم القدور - 4 مقاسات:\n• كبير - 3,500 ريال\n• وسط - 3,000 ريال\n• صغير - 2,500 ريال\n• صغير جداً - 2,000 ريال\n\n🎁 الطقم كامل: 10,500 ريال (وفري 1,000!) 🔥"
+
+# رد الجودة
+RESP_QUALITY = "⭐ *جودة منتجاتنا:*\n\n✅ ستانلس ستيل ثقيل - ما يصدي\n✅ ماركة المائدة الأصلية\n✅ ضمان على كل منتج\n✅ زبائننا شهاداتهم أفضل دليل 👌\n\nجربي وما راح تندمي! 😊"
+
+# رد العروض
+RESP_OFFERS = "🔥 *عروضنا الحالية:*\n\n🎁 طقم القدور كامل 4 قطع: 10,500 بدل 11,500 - وفري 1,000 ريال!\n🚚 توصيل مجاني لكل الطلبات\n\n⭐ العرض لفترة محدودة! لا تفوتكِ 😍"
+
+# رد الوداع
+RESP_BYE = "مع السلامة يا غالية! 💛👋\nنورتينا والله!\nإحنا هنا بأي وقت تحتاجينا 😊\nلا تنسينا! ❤️"
+
 # رد الموقع
 RESP_LOCATION = "📍 *مواقع محلات Titiz:*\n\n🏪 *الفرع الأول:*\nإب - بوابة ملعب الكبسي الخلفية\nنهاية طلعة صرافة الكريمي\n\n🏪 *الفرع الثاني:*\nالسوق المركزي القديم\nأمام صرافة فيصل الخطيب\n\n📞 للتواصل: +967 773 595 571\n✅ نستقبلكِ بأي وقت!"
 
@@ -99,6 +123,98 @@ RESPONSES = {
     "ابي اتعامل معاكم": RESP_NEW_CUSTOMER,
     "اشتي اتعامل معاكم": RESP_NEW_CUSTOMER,
     "اريد اتعامل معاكم": RESP_NEW_CUSTOMER,
+    # === التوصيل ===
+    "توصيل": RESP_DELIVERY,
+    "التوصيل": RESP_DELIVERY,
+    "شحن": RESP_DELIVERY,
+    "الشحن": RESP_DELIVERY,
+    "توصلون": RESP_DELIVERY,
+    "توصلوا": RESP_DELIVERY,
+    "كيف التوصيل": RESP_DELIVERY,
+    "كم التوصيل": RESP_DELIVERY,
+    "التوصيل مجاني": RESP_DELIVERY,
+    "هل فيه توصيل": RESP_DELIVERY,
+    "فيه توصيل": RESP_DELIVERY,
+    "عندكم توصيل": RESP_DELIVERY,
+    "توصيل مجاني": RESP_DELIVERY,
+    # === الدفع ===
+    "دفع": RESP_PAYMENT,
+    "الدفع": RESP_PAYMENT,
+    "كيف ادفع": RESP_PAYMENT,
+    "كيف الدفع": RESP_PAYMENT,
+    "طريقة الدفع": RESP_PAYMENT,
+    "طريقه الدفع": RESP_PAYMENT,
+    "كاش": RESP_PAYMENT,
+    "تحويل": RESP_PAYMENT,
+    "عند الاستلام": RESP_PAYMENT,
+    # === الضمان والاستبدال ===
+    "ضمان": RESP_GUARANTEE,
+    "الضمان": RESP_GUARANTEE,
+    "استبدال": RESP_GUARANTEE,
+    "الاستبدال": RESP_GUARANTEE,
+    "استرجاع": RESP_GUARANTEE,
+    "الاسترجاع": RESP_GUARANTEE,
+    "ارجاع": RESP_GUARANTEE,
+    "ارجعه": RESP_GUARANTEE,
+    "ارجعة": RESP_GUARANTEE,
+    "لو ما عجبني": RESP_GUARANTEE,
+    "اذا ما عجبني": RESP_GUARANTEE,
+    "لو فيه مشكلة": RESP_GUARANTEE,
+    "لو فيه مشكله": RESP_GUARANTEE,
+    # === الألوان ===
+    "الوان": RESP_COLORS,
+    "ألوان": RESP_COLORS,
+    "الالوان": RESP_COLORS,
+    "الألوان": RESP_COLORS,
+    "ايش الالوان": RESP_COLORS,
+    "شو الالوان": RESP_COLORS,
+    "لون": RESP_COLORS,
+    # === المقاسات ===
+    "مقاس": RESP_SIZES,
+    "مقاسات": RESP_SIZES,
+    "المقاسات": RESP_SIZES,
+    "حجم": RESP_SIZES,
+    "احجام": RESP_SIZES,
+    "الاحجام": RESP_SIZES,
+    "كبير": RESP_SIZES,
+    "صغير": RESP_SIZES,
+    "وسط": RESP_SIZES,
+    # === الجودة ===
+    "جودة": RESP_QUALITY,
+    "جوده": RESP_QUALITY,
+    "الجودة": RESP_QUALITY,
+    "الجوده": RESP_QUALITY,
+    "اصلي": RESP_QUALITY,
+    "أصلي": RESP_QUALITY,
+    "اصليه": RESP_QUALITY,
+    "أصلية": RESP_QUALITY,
+    "هل اصلي": RESP_QUALITY,
+    "النوعية": RESP_QUALITY,
+    "نوعية": RESP_QUALITY,
+    "نوعيه": RESP_QUALITY,
+    # === العروض ===
+    "عروض": RESP_OFFERS,
+    "العروض": RESP_OFFERS,
+    "عرض": RESP_OFFERS,
+    "خصم": RESP_OFFERS,
+    "خصومات": RESP_OFFERS,
+    "تخفيض": RESP_OFFERS,
+    "تخفيضات": RESP_OFFERS,
+    "فيه عرض": RESP_OFFERS,
+    "فيه خصم": RESP_OFFERS,
+    "عندكم عروض": RESP_OFFERS,
+    # === الوداع ===
+    "مع السلامة": RESP_BYE,
+    "مع السلامه": RESP_BYE,
+    "باي": RESP_BYE,
+    "بااي": RESP_BYE,
+    "bye": RESP_BYE,
+    "الله معك": RESP_BYE,
+    "الله معكم": RESP_BYE,
+    "في امان الله": RESP_BYE,
+    "في أمان الله": RESP_BYE,
+    "الله يحفظك": RESP_BYE,
+    "الله يحفظكم": RESP_BYE,
     # === السؤال عن المنتجات ===
     "منتجات": RESPONSES["1"],
     "المنتجات": RESPONSES["1"],
