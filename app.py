@@ -157,6 +157,18 @@ def handle_message():
                 # إشعار المالك
                 notify_owner(sender, msg_body)
 
+            # أمر خاص للمالك: الرد على زبون من رقم البوت
+            if sender == OWNER_NUMBER and msg_body.startswith("رد "):
+                parts = msg_body.split(" ", 2)
+                if len(parts) == 3:
+                    target_number = parts[1]
+                    reply_text = parts[2]
+                    send_message(target_number, reply_text)
+                    send_message(OWNER_NUMBER, f"✅ تم إرسال ردك للزبون {target_number}")
+                else:
+                    send_message(OWNER_NUMBER, "❌ الصيغة: رد [رقم الزبون] [الرسالة]\nمثال: رد 967777123456 طلبك جاهز")
+                return jsonify({"status": "ok"}), 200
+
             # أمر خاص للمالك: عرض قائمة الزبائن
             if sender == OWNER_NUMBER and msg_body == "الزبائن":
                 if customers:
