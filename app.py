@@ -66,6 +66,9 @@ RESP_TRUST = "🤝 *ليش تثقين فينا:*\n\n✅ عندنا محلين ف
 # رد السؤال عن المنتجات - بسيط يسأل الزبون ايش يبي
 RESP_PRODUCTS_ASK = "🏠 أهلاً فيكِ يا غالية! ✨\n\nلدينا جميع الأدوات المنزلية ومستلزمات المطابخ 🍳\n\nايش بدكِ أنتِ من منتج؟ 😊\n\nمثلاً:\n🍲 اكتبي *قدور* - طقم قدور ستانلس\n☕ اكتبي *ثلاجة* - ثلاجة شاي أنيقة\n🔪 اكتبي *1* - لكل المنتجات والأسعار"
 
+# رد مكان استلام المنتج
+RESP_WHERE_DELIVER = "📦 وين تحبين نحط لكِ المنتج؟ 🤔\n\nنقدر نحطه في أي مكان قريب منكِ:\n\n🏪 محل قريب من بيتكِ\n🛍️ بقالة في حارتكِ\n📍 أي نقطة تحدديها\n\nأرسلي لنا اسم المكان أو المنطقة وإحنا نوصله لأقرب نقطة منكِ 😊👌"
+
 # رد الوداع
 RESP_BYE = "مع السلامة يا غالية! 💛👋\nنورتينا والله!\nإحنا هنا بأي وقت تحتاجينا 😊\nلا تنسينا! ❤️"
 
@@ -346,6 +349,57 @@ RESPONSES = {
     "قائمه المنتجات": RESP_PRODUCTS_ASK,
     "كتالوج": RESP_PRODUCTS_ASK,
     "الكتالوج": RESP_PRODUCTS_ASK,
+    # === مكان استلام المنتج ===
+    "وين تحطو البضاعه": RESP_WHERE_DELIVER,
+    "وين تحطو البضاعة": RESP_WHERE_DELIVER,
+    "وين تحطو المنتج": RESP_WHERE_DELIVER,
+    "وين تحطون البضاعه": RESP_WHERE_DELIVER,
+    "وين تحطون البضاعة": RESP_WHERE_DELIVER,
+    "وين تحطون المنتج": RESP_WHERE_DELIVER,
+    "وين تحطوا البضاعه": RESP_WHERE_DELIVER,
+    "وين تحطوا البضاعة": RESP_WHERE_DELIVER,
+    "وين تحطوا المنتج": RESP_WHERE_DELIVER,
+    "وين نحطه": RESP_WHERE_DELIVER,
+    "وين نحطه لك": RESP_WHERE_DELIVER,
+    "وين نستلم": RESP_WHERE_DELIVER,
+    "وين استلم": RESP_WHERE_DELIVER,
+    "وين استلمه": RESP_WHERE_DELIVER,
+    "فين تحطو البضاعه": RESP_WHERE_DELIVER,
+    "فين تحطو البضاعة": RESP_WHERE_DELIVER,
+    "فين تحطو المنتج": RESP_WHERE_DELIVER,
+    "فين تحطون البضاعه": RESP_WHERE_DELIVER,
+    "فين تحطون المنتج": RESP_WHERE_DELIVER,
+    "فين نستلم": RESP_WHERE_DELIVER,
+    "فين استلم": RESP_WHERE_DELIVER,
+    "كيف استلم": RESP_WHERE_DELIVER,
+    "كيف نستلم": RESP_WHERE_DELIVER,
+    "كيف استلمه": RESP_WHERE_DELIVER,
+    "كيف استلم الطلب": RESP_WHERE_DELIVER,
+    "كيف استلم المنتج": RESP_WHERE_DELIVER,
+    "كيف استلم البضاعه": RESP_WHERE_DELIVER,
+    "مكان الاستلام": RESP_WHERE_DELIVER,
+    "نقطة الاستلام": RESP_WHERE_DELIVER,
+    "نقطه الاستلام": RESP_WHERE_DELIVER,
+    "وين توصلون": RESP_WHERE_DELIVER,
+    "وين توصلوا": RESP_WHERE_DELIVER,
+    "وين توصلو": RESP_WHERE_DELIVER,
+    "فين توصلون": RESP_WHERE_DELIVER,
+    "فين توصلوا": RESP_WHERE_DELIVER,
+    "وين اخذه": RESP_WHERE_DELIVER,
+    "وين اخذ الطلب": RESP_WHERE_DELIVER,
+    "فين اخذه": RESP_WHERE_DELIVER,
+    "فين اخذ الطلب": RESP_WHERE_DELIVER,
+    "وين الاستلام": RESP_WHERE_DELIVER,
+    "فين الاستلام": RESP_WHERE_DELIVER,
+    "من وين استلم": RESP_WHERE_DELIVER,
+    "من فين استلم": RESP_WHERE_DELIVER,
+    "وين اجي اخذه": RESP_WHERE_DELIVER,
+    "وين اروح استلم": RESP_WHERE_DELIVER,
+    "وين نحط لك": RESP_WHERE_DELIVER,
+    "وين نحطه لكم": RESP_WHERE_DELIVER,
+    "الاستلام": RESP_WHERE_DELIVER,
+    "طريقة الاستلام": RESP_WHERE_DELIVER,
+    "طريقه الاستلام": RESP_WHERE_DELIVER,
     # === الموقع ===
     "الموقع": RESP_LOCATION,
     "موقع": RESP_LOCATION,
