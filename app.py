@@ -12,11 +12,17 @@ OWNER_NUMBER = "967773595571"  # رقم المالك لاستقبال الإشع
 # Image URLs for products
 IMG_QUDOR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663669337302/FErlTSZcVDmLLuCl.jpg"
 IMG_THALAJA = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663669337302/yCftQDzESzArGegt.jpg"
+# Media IDs for فرامة images
+IMG_FARAMA_BIG = "1722172418808924"  # كبير MD-5266
+IMG_FARAMA_MED = "1788826688946693"  # وسط MD-5076
+IMG_FARAMA_SML = "1340222830997132"  # صغير MD-5066
 
 # قائمة الزبائن اللي راسلوا البوت
 customers = []
 
 # Product responses
+RESP_FARAMA = "🔴 *فرامة الضغطة الذكية من المائدة* 🔪\n\nالمميزات:\n✅ توفّر عليكِ 60% من وقت التقطيع\n✅ شفرات فولاذ ضد الصدأ\n✅ سهلة التنظيف والاستخدام\n✅ تقطع كمية كبيرة مرة وحدة\n\n💰 *الأسعار:*\n🔴 الكبير (MD-5266): 3,000 ريال\n🟢 الوسط (MD-5076): 2,500 ريال\n🟢 الصغير (MD-5066): 2,000 ريال\n\n🚚 التوصيل مجاني داخل المحافظة!\n⚠️ احذروا التقليد - اطلبيها باسمها من المائدة\n\nاكتبي *اطلب* للطلب 😍"
+
 RESP_QUDOR = "🍲 *طقم قدور المائدة 4 قطع - هندي*\n\n✅ ستانلس ثقيل + أغطية استيل\n✅ 4 مقاسات: كبير/وسط/صغير/صغير جداً\n✅ ضمان المائدة\n\n💰 *الأسعار:*\nالكبير 3,500 | الوسط 3,000\nالصغير 2,500 | الصغير جداً 2,000\n\n🎁 *الطقم كامل:* 10,500 ريال - وفر 1,000\n🚚 توصيل مجاني لداخل المحافظة\n\nاكتب *اطلب* للطلب"
 RESP_THALAJA = "☕ *ثلاجة شاي المائدة M213 - 0.7 لتر*\n\n✅ تحفظ الحرارة 6 ساعات\n✅ الألوان: وردي 💗 | بيج 🤎 | أزرق 💙 | كحلي\n✅ تصميم أنيق للضيافة\n\n💰 السعر: 2,500 ريال\n\n🚚 توصيل مجاني لداخل المحافظة\n⏰ الكمية محدودة\n\nاكتب *اطلب* للطلب"
 RESP_ORDER = "🛒 *لإتمام الطلب:*\n\nأرسل لنا:\n1. اسم المنتج اللي تبيه\n2. اسمك الكامل\n3. عنوان التوصيل\n4. رقم تواصل آخر (اختياري)\n\n💳 الدفع عند الاستلام\n📦 التوصيل مجاني داخل المحافظة!\n\nوسيتم التواصل معك لتأكيد الطلب ✅"
@@ -82,6 +88,43 @@ RESPONSES = {
     "4": "🔄 *سياسة الاستبدال والاسترجاع:*\n- الاستبدال خلال 7 أيام من تاريخ الاستلام.\n- الاسترجاع خلال 3 أيام بشرط أن يكون المنتج بحالته الأصلية.",
     "5": "⏰ *مواعيد العمل:*\nمن السبت إلى الخميس:\n- الفترة الصباحية: 9:00 ص - 12:00 م\n- الفترة المسائية: 4:00 م - 10:00 م\nالجمعة: من 4:00 م - 10:00 م",
     "6": RESP_LOCATION,
+    # === المنتجات - الفرامة ===
+    "فرامة": RESP_FARAMA,
+    "فرامه": RESP_FARAMA,
+    "الفرامة": RESP_FARAMA,
+    "الفرامه": RESP_FARAMA,
+    "فرامة الضغطة": RESP_FARAMA,
+    "فرامه الضغطه": RESP_FARAMA,
+    "فرامة الضغطه": RESP_FARAMA,
+    "فرامه الضغطة": RESP_FARAMA,
+    "الفرامة الذكية": RESP_FARAMA,
+    "الفرامه الذكيه": RESP_FARAMA,
+    "فرامة ذكية": RESP_FARAMA,
+    "فرامه ذكيه": RESP_FARAMA,
+    "عصارة": RESP_FARAMA,
+    "عصاره": RESP_FARAMA,
+    "العصارة": RESP_FARAMA,
+    "العصاره": RESP_FARAMA,
+    "فرامة المائدة": RESP_FARAMA,
+    "فرامه المائده": RESP_FARAMA,
+    "فرامة المائده": RESP_FARAMA,
+    "فرامه المائدة": RESP_FARAMA,
+    "فرامة خضار": RESP_FARAMA,
+    "فرامه خضار": RESP_FARAMA,
+    "قطاعة": RESP_FARAMA,
+    "قطاعه": RESP_FARAMA,
+    "القطاعة": RESP_FARAMA,
+    "القطاعه": RESP_FARAMA,
+    "مفرمة": RESP_FARAMA,
+    "مفرمه": RESP_FARAMA,
+    "المفرمة": RESP_FARAMA,
+    "المفرمه": RESP_FARAMA,
+    "خلاط": RESP_FARAMA,
+    "الخلاط": RESP_FARAMA,
+    "فرامة ضغطة": RESP_FARAMA,
+    "فرامه ضغطه": RESP_FARAMA,
+    "ضغطة ذكية": RESP_FARAMA,
+    "ضغطه ذكيه": RESP_FARAMA,
     # === المنتجات - القدور ===
     "قدور": RESP_QUDOR,
     "القدور": RESP_QUDOR,
@@ -561,6 +604,7 @@ RESPONSES = {
 # Keywords that trigger image responses
 QUDOR_KEYWORDS = ["قدور", "القدور", "قدر", "القدر", "طقم قدور", "طقم القدور", "قدور المائدة", "قدور المائده", "قدور هندي", "قدور ستانلس", "طقم"]
 THALAJA_KEYWORDS = ["ثلاجة", "ثلاجه", "الثلاجة", "الثلاجه", "شاي", "ثلاجة شاي", "ثلاجه شاي", "ثلاجة الشاي", "ثلاجه الشاي", "ترمس", "ترمز", "حافظة", "حافظه"]
+FARAMA_KEYWORDS = ["فرامة", "فرامه", "الفرامة", "الفرامه", "فرامة الضغطة", "فرامه الضغطه", "فرامة الضغطه", "فرامه الضغطة", "الفرامة الذكية", "الفرامه الذكيه", "فرامة ذكية", "فرامه ذكيه", "عصارة", "عصاره", "العصارة", "العصاره", "فرامة المائدة", "فرامه المائده", "فرامة المائده", "فرامه المائدة", "فرامة خضار", "فرامه خضار", "قطاعة", "قطاعه", "القطاعة", "القطاعه", "مفرمة", "مفرمه", "المفرمة", "المفرمه", "خلاط", "الخلاط", "فرامة ضغطة", "فرامه ضغطه", "ضغطة ذكية", "ضغطه ذكيه"]
 
 WELCOME_MESSAGE = """يا غالية خلينا بموضوعنا 😊✨
 إحنا محل *Titiz* للأدوات المنزلية 🏠
@@ -600,6 +644,25 @@ def send_image(to, image_url, caption=""):
         "type": "image",
         "image": {
             "link": image_url,
+            "caption": caption
+        }
+    }
+    response = requests.post(url, headers=headers, json=data)
+    return response.json()
+
+
+def send_image_by_id(to, media_id, caption=""):
+    url = f"https://graph.facebook.com/v21.0/{PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "image",
+        "image": {
+            "id": media_id,
             "caption": caption
         }
     }
@@ -717,7 +780,13 @@ def handle_message():
                 if isinstance(reply, list):
                     for r in reply:
                         send_message(sender, r)
-                # صورة + نص
+                # صورة + نص - الفرامة (3 صور)
+                elif matched_key in FARAMA_KEYWORDS:
+                    send_message(sender, reply)
+                    send_image_by_id(sender, IMG_FARAMA_BIG, "🔴 الكبير MD-5266 - 3,000 ريال")
+                    send_image_by_id(sender, IMG_FARAMA_MED, "🟢 الوسط MD-5076 - 2,500 ريال")
+                    send_image_by_id(sender, IMG_FARAMA_SML, "🟢 الصغير MD-5066 - 2,000 ريال")
+                # صورة + نص - القدور
                 elif matched_key in QUDOR_KEYWORDS:
                     send_image(sender, IMG_QUDOR, reply)
                 elif matched_key in THALAJA_KEYWORDS:
