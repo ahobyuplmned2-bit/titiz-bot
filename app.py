@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify
 import requests
+import json
+import os
 from datetime import datetime
 
 app = Flask(__name__)
@@ -19,6 +21,25 @@ IMG_FARAMA_SML = "1340222830997132"  # صغير MD-5066
 
 # قائمة الزبائن اللي راسلوا البوت
 customers = []
+
+# === نظام إدارة المنتجات ===
+PRODUCTS_FILE = "products.json"
+
+def load_products():
+    if os.path.exists(PRODUCTS_FILE):
+        try:
+            with open(PRODUCTS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_products(products):
+    with open(PRODUCTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(products, f, ensure_ascii=False, indent=2)
+
+# تحميل المنتجات عند بدء التشغيل
+custom_products = load_products()
 
 # Product responses
 RESP_FARAMA = "🔴 *فرامة الضغطة الذكية من المائدة* 🔪\n\nالمميزات:\n✅ توفّر عليكِ 60% من وقت التقطيع\n✅ شفرات فولاذ ضد الصدأ\n✅ سهلة التنظيف والاستخدام\n✅ تقطع كمية كبيرة مرة وحدة\n\n💰 *الأسعار:*\n🔴 الكبير (MD-5266): 3,000 ريال\n🟢 الوسط (MD-5076): 2,500 ريال\n🟢 الصغير (MD-5066): 2,000 ريال\n\n🚚 التوصيل مجاني داخل المحافظة!\n⚠️ احذروا التقليد - اطلبيها باسمها من المائدة\n\nاكتبي *اطلب* للطلب 😍"
@@ -739,6 +760,93 @@ def handle_message():
                     send_message(OWNER_NUMBER, "❌ الصيغة: رد [رقم الزبون] [الرسالة]\nمثال: رد 967777123456 طلبك جاهز")
                 return jsonify({"status": "ok"}), 200
 
+            # أمر خاص للمالك: إضافة منتج جديد
+            if sender == OWNER_NUMBER and msg_body.startswith("اضف "):
+                parts = msg_body.split(" ", 3)
+                if len(parts) >= 3:
+                    product_name = parts[1]
+                    product_price = parts[2]
+                    product_desc = parts[3] if len(parts) == 4 else ""
+                    custom_products[product_name] = {
+                        "name": product_name,
+                        "price": product_price,
+                        "description": product_desc,
+                        "image_id": "",
+                        "added": datetime.now().strftime("%Y-%m-%d %H:%M")
+                    }
+                    save_products(custom_products)
+                    send_message(OWNER_NUMBER, f"✅ تم إضافة المنتج: {product_name}\nالسعر: {product_price} ريال\nالوصف: {product_desc}\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
+                else:
+                    send_message(OWNER_NUMBER, "❌ الصيغة: اضف [اسم المنتج] [السعر] [الوصف]\nمثال: اضف ملعقة 500 ملعقة ستانلس ثقيلة")
+                return jsonify({"status": "ok"}), 200
+
+            # أمر خاص للمالك: تعديل سعر منتج
+            if sender == OWNER_NUMBER and msg_body.startswith("عدل سعر "):
+                parts = msg_body.split(" ", 3)
+                if len(parts) == 4:
+                    product_name = parts[2]
+                    new_price = parts[3]
+                    if product_name in custom_products:
+                        custom_products[product_name]["price"] = new_price
+                        save_products(custom_products)
+                        send_message(OWNER_NUMBER, f"✅ تم تعديل سعر {product_name} إلى {new_price} ريال")
+                    else:
+                        send_message(OWNER_NUMBER, f"❌ المنتج '{product_name}' غير موجود")
+                else:
+                    send_message(OWNER_NUMBER, "❌ الصيغة: عدل سعر [اسم المنتج] [السعر الجديد]\nمثال: عدل سعر ملعقة 600")
+                return jsonify({"status": "ok"}), 200
+
+            # أمر خاص للمالك: حذف منتج
+            if sender == OWNER_NUMBER and msg_body.startswith("حذف "):
+                product_name = msg_body.replace("حذف ", "").strip()
+                if product_name in custom_products:
+                    del custom_products[product_name]
+                    save_products(custom_products)
+                    send_message(OWNER_NUMBER, f"✅ تم حذف المنتج: {product_name}")
+                else:
+                    send_message(OWNER_NUMBER, f"❌ المنتج '{product_name}' غير موجود")
+                return jsonify({"status": "ok"}), 200
+
+            # أمر خاص للمالك: عرض المخزن
+            if sender == OWNER_NUMBER and msg_body in ["المخزن", "مخزن", "منتجاتي"]:
+                if custom_products:
+                    product_list = "📦 *المنتجات المحفوظة:*\n\n"
+                    for i, (name, info) in enumerate(custom_products.items(), 1):
+                        has_img = "🖼️" if info.get("image_id") else "❌"
+                        product_list += f"{i}. *{name}* - {info['price']} ريال {has_img}\n"
+                        if info.get('description'):
+                            product_list += f"   {info['description']}\n"
+                    product_list += f"\n📊 إجمالي: {len(custom_products)} منتج"
+                    send_message(OWNER_NUMBER, product_list)
+                else:
+                    send_message(OWNER_NUMBER, "📦 المخزن فارغ. أضف منتجات بالأمر:\nاضف [اسم] [سعر] [وصف]")
+                return jsonify({"status": "ok"}), 200
+
+            # أمر خاص للمالك: رفع صورة لمنتج
+            if sender == OWNER_NUMBER and message.get("type") == "image":
+                image_info = message.get("image", {})
+                media_id = image_info.get("id", "")
+                caption = image_info.get("caption", "").strip()
+                if caption and media_id:
+                    if caption in custom_products:
+                        custom_products[caption]["image_id"] = media_id
+                        save_products(custom_products)
+                        send_message(OWNER_NUMBER, f"✅ تم إضافة صورة للمنتج: {caption}")
+                    else:
+                        # إضافة منتج جديد بالصورة
+                        custom_products[caption] = {
+                            "name": caption,
+                            "price": "0",
+                            "description": "",
+                            "image_id": media_id,
+                            "added": datetime.now().strftime("%Y-%m-%d %H:%M")
+                        }
+                        save_products(custom_products)
+                        send_message(OWNER_NUMBER, f"✅ تم حفظ الصورة كمنتج جديد: {caption}\nعدل السعر بالأمر:\nعدل سعر {caption} [السعر]")
+                elif media_id and not caption:
+                    send_message(OWNER_NUMBER, "❌ أرسل الصورة مع كابشن فيه اسم المنتج")
+                return jsonify({"status": "ok"}), 200
+
             # أمر خاص للمالك: عرض قائمة الزبائن
             if sender == OWNER_NUMBER and msg_body == "الزبائن":
                 if customers:
@@ -794,7 +902,24 @@ def handle_message():
                 else:
                     send_message(sender, reply)
             else:
-                send_message(sender, WELCOME_MESSAGE)
+                # البحث في المنتجات المخصصة (المضافة من المالك)
+                found_product = None
+                for pname, pinfo in custom_products.items():
+                    if pname in msg_normalized or msg_normalized in pname:
+                        found_product = pinfo
+                        break
+                if found_product:
+                    product_reply = f"📦 *{found_product['name']}*\n\n"
+                    if found_product.get('description'):
+                        product_reply += f"{found_product['description']}\n\n"
+                    product_reply += f"💰 السعر: {found_product['price']} ريال\n"
+                    product_reply += f"🚚 التوصيل مجاني داخل المحافظة!\n\nاكتبي *اطلب* للطلب 😍"
+                    if found_product.get('image_id'):
+                        send_image_by_id(sender, found_product['image_id'], product_reply)
+                    else:
+                        send_message(sender, product_reply)
+                else:
+                    send_message(sender, WELCOME_MESSAGE)
     except (KeyError, IndexError):
         pass
     return jsonify({"status": "ok"}), 200
