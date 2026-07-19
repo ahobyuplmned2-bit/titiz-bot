@@ -956,32 +956,55 @@ def handle_message():
                     send_message(sender, reply)
             else:
                 # البحث في المنتجات المخصصة (المضافة من المالك)
-                found_product = None
-                for pname, pinfo in custom_products.items():
-                    if pname in msg_normalized or msg_normalized in pname:
-                        found_product = pinfo
-                        break
-                if found_product:
-                    product_reply = f"📦 *{found_product['name']}*\n\n"
-                    if found_product.get('description'):
-                        product_reply += f"{found_product['description']}\n\n"
-                    product_reply += f"💰 السعر: {found_product['price']} ريال\n"
+                # 1- بحث بالاسم الكامل (مطابقة دقيقة)
+                exact_product = custom_products.get(msg_normalized)
+                if exact_product:
+                    product_reply = f"📦 *{exact_product['name']}*\n\n"
+                    if exact_product.get('description'):
+                        product_reply += f"{exact_product['description']}\n\n"
+                    product_reply += f"💰 السعر: {exact_product['price']} ريال\n"
                     product_reply += f"🚚 التوصيل مجاني داخل المحافظة!\n\nاكتبي *اطلب* للطلب 😍"
-                    if found_product.get('image_id'):
-                        send_image_by_id(sender, found_product['image_id'], product_reply)
+                    if exact_product.get('image_id'):
+                        send_image_by_id(sender, exact_product['image_id'], product_reply)
                     else:
                         send_message(sender, product_reply)
                 else:
-                    # البحث في الأسئلة والأجوبة المخصصة
-                    found_qa = None
-                    for qa_key, qa_answer in custom_qa.items():
-                        if qa_key in msg_normalized or msg_normalized in qa_key:
-                            found_qa = qa_answer
-                            break
-                    if found_qa:
-                        send_message(sender, found_qa)
+                    # 2- بحث جزئي (كلمة عامة)
+                    matching_products = []
+                    for pname, pinfo in custom_products.items():
+                        if msg_normalized in pname or pname in msg_normalized:
+                            matching_products.append(pinfo)
+                    
+                    if len(matching_products) == 1:
+                        # منتج واحد فقط - أرسله مباشرة
+                        found = matching_products[0]
+                        product_reply = f"📦 *{found['name']}*\n\n"
+                        if found.get('description'):
+                            product_reply += f"{found['description']}\n\n"
+                        product_reply += f"💰 السعر: {found['price']} ريال\n"
+                        product_reply += f"🚚 التوصيل مجاني داخل المحافظة!\n\nاكتبي *اطلب* للطلب 😍"
+                        if found.get('image_id'):
+                            send_image_by_id(sender, found['image_id'], product_reply)
+                        else:
+                            send_message(sender, product_reply)
+                    elif len(matching_products) > 1:
+                        # أكثر من منتج - أرسل قائمة
+                        list_reply = "🔍 وجدنا المنتجات التالية:\n\n"
+                        for i, p in enumerate(matching_products, 1):
+                            list_reply += f"{i}- {p['name']} ({p['price']} ريال)\n"
+                        list_reply += "\n✍️ أرسلي اسم المنتج اللي تبينه وبنرسل لكِ التفاصيل 😊"
+                        send_message(sender, list_reply)
                     else:
-                        send_message(sender, WELCOME_MESSAGE)
+                        # البحث في الأسئلة والأجوبة المخصصة
+                        found_qa = None
+                        for qa_key, qa_answer in custom_qa.items():
+                            if qa_key in msg_normalized or msg_normalized in qa_key:
+                                found_qa = qa_answer
+                                break
+                        if found_qa:
+                            send_message(sender, found_qa)
+                        else:
+                            send_message(sender, WELCOME_MESSAGE)
     except (KeyError, IndexError):
         pass
     return jsonify({"status": "ok"}), 200
