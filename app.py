@@ -24,6 +24,23 @@ customers = []
 
 # === نظام إدارة المنتجات ===
 PRODUCTS_FILE = "products.json"
+QA_FILE = "qa.json"
+
+def load_qa():
+    if os.path.exists(QA_FILE):
+        try:
+            with open(QA_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_qa(qa_data):
+    with open(QA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(qa_data, f, ensure_ascii=False, indent=2)
+
+# تحميل الأسئلة والأجوبة عند بدء التشغيل
+custom_qa = load_qa()
 
 def load_products():
     if os.path.exists(PRODUCTS_FILE):
@@ -847,6 +864,42 @@ def handle_message():
                     send_message(OWNER_NUMBER, "❌ أرسل الصورة مع كابشن فيه اسم المنتج")
                 return jsonify({"status": "ok"}), 200
 
+            # أمر خاص للمالك: إضافة سؤال وجواب
+            if sender == OWNER_NUMBER and msg_body.startswith("اضف سؤال "):
+                parts = msg_body.split(" ", 3)
+                if len(parts) == 4:
+                    keyword = parts[2]
+                    answer = parts[3]
+                    custom_qa[keyword] = answer
+                    save_qa(custom_qa)
+                    send_message(OWNER_NUMBER, f"✅ تم إضافة السؤال:\nالكلمة: {keyword}\nالرد: {answer}")
+                else:
+                    send_message(OWNER_NUMBER, "❌ الصيغة: اضف سؤال [الكلمة] [الرد]\nمثال: اضف سؤال ضمان عندنا ضمان سنة كاملة")
+                return jsonify({"status": "ok"}), 200
+
+            # أمر خاص للمالك: حذف سؤال
+            if sender == OWNER_NUMBER and msg_body.startswith("حذف سؤال "):
+                keyword = msg_body.replace("حذف سؤال ", "").strip()
+                if keyword in custom_qa:
+                    del custom_qa[keyword]
+                    save_qa(custom_qa)
+                    send_message(OWNER_NUMBER, f"✅ تم حذف السؤال: {keyword}")
+                else:
+                    send_message(OWNER_NUMBER, f"❌ السؤال '{keyword}' غير موجود")
+                return jsonify({"status": "ok"}), 200
+
+            # أمر خاص للمالك: عرض كل الأسئلة والأجوبة
+            if sender == OWNER_NUMBER and msg_body in ["الاسئلة", "اسئلة", "الاسئله", "اسئله"]:
+                if custom_qa:
+                    qa_list = "❓ *الأسئلة والأجوبة:*\n\n"
+                    for i, (kw, ans) in enumerate(custom_qa.items(), 1):
+                        qa_list += f"{i}. *{kw}* → {ans}\n\n"
+                    qa_list += f"📊 إجمالي: {len(custom_qa)} سؤال"
+                    send_message(OWNER_NUMBER, qa_list)
+                else:
+                    send_message(OWNER_NUMBER, "❓ لا توجد أسئلة محفوظة.\nأضف سؤال بالأمر:\nاضف سؤال [الكلمة] [الرد]")
+                return jsonify({"status": "ok"}), 200
+
             # أمر خاص للمالك: عرض قائمة الزبائن
             if sender == OWNER_NUMBER and msg_body == "الزبائن":
                 if customers:
@@ -919,7 +972,16 @@ def handle_message():
                     else:
                         send_message(sender, product_reply)
                 else:
-                    send_message(sender, WELCOME_MESSAGE)
+                    # البحث في الأسئلة والأجوبة المخصصة
+                    found_qa = None
+                    for qa_key, qa_answer in custom_qa.items():
+                        if qa_key in msg_normalized or msg_normalized in qa_key:
+                            found_qa = qa_answer
+                            break
+                    if found_qa:
+                        send_message(sender, found_qa)
+                    else:
+                        send_message(sender, WELCOME_MESSAGE)
     except (KeyError, IndexError):
         pass
     return jsonify({"status": "ok"}), 200
