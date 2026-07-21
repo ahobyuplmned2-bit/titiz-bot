@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import requests
 import json
 import os
+import re
 from datetime import datetime
 
 app = Flask(__name__)
@@ -779,22 +780,33 @@ def handle_message():
 
             # أمر خاص للمالك: إضافة منتج جديد
             if sender == OWNER_NUMBER and msg_body.startswith("اضف "):
-                parts = msg_body.split(" ", 3)
-                if len(parts) >= 3:
-                    product_name = parts[1]
-                    product_price = parts[2]
-                    product_desc = parts[3] if len(parts) == 4 else ""
-                    custom_products[product_name] = {
-                        "name": product_name,
-                        "price": product_price,
-                        "description": product_desc,
-                        "image_id": "",
-                        "added": datetime.now().strftime("%Y-%m-%d %H:%M")
-                    }
-                    save_products(custom_products)
-                    send_message(OWNER_NUMBER, f"✅ تم إضافة المنتج: {product_name}\nالسعر: {product_price} ريال\nالوصف: {product_desc}\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
+                add_text = msg_body[4:].strip()  # كل شي بعد كلمة "اضف"
+                # البحث عن أول رقم في النص = السعر
+                price_match = re.search(r'\b(\d+)\b', add_text)
+                if price_match:
+                    price_value = price_match.group(1)
+                    price_start = price_match.start()
+                    price_end = price_match.end()
+                    # الاسم = كل الكلمات قبل الرقم
+                    product_name = add_text[:price_start].strip()
+                    # الوصف = كل الكلمات بعد الرقم
+                    product_desc = add_text[price_end:].strip()
+                    if product_name:
+                        # تطبيع الاسم للحفظ
+                        name_normalized = product_name.replace("|", "").strip()
+                        custom_products[name_normalized] = {
+                            "name": product_name,
+                            "price": price_value,
+                            "description": product_desc,
+                            "image_id": "",
+                            "added": datetime.now().strftime("%Y-%m-%d %H:%M")
+                        }
+                        save_products(custom_products)
+                        send_message(OWNER_NUMBER, f"✅ تم إضافة المنتج:\n📦 الاسم: {product_name}\n💰 السعر: {price_value} ريال\n📝 الوصف: {product_desc}\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
+                    else:
+                        send_message(OWNER_NUMBER, "❌ لازم تكتب اسم المنتج قبل السعر\nمثال: اضف سلك غسيل ستانلس المائدة 300 سلك ثقيل ومتين")
                 else:
-                    send_message(OWNER_NUMBER, "❌ الصيغة: اضف [اسم المنتج] [السعر] [الوصف]\nمثال: اضف ملعقة 500 ملعقة ستانلس ثقيلة")
+                    send_message(OWNER_NUMBER, "❌ لازم تكتب السعر (رقم) في الأمر\nمثال: اضف سلك غسيل ستانلس المائدة 300 سلك ثقيل ومتين")
                 return jsonify({"status": "ok"}), 200
 
             # أمر خاص للمالك: تعديل سعر منتج
