@@ -3,18 +3,25 @@
     "id": "MD-5266",
     "name_ar": "فرامة الضغطة الذكية",
     "name_en": "Smart Press Chopper",
-    "aliases": ["فرامة", "فرامة الضغطة", "عصارة", "عصاره", "مفرمة"],
+    "aliases": [
+      "فرامة",
+      "فرامة الضغطة",
+      "عصارة",
+      "عصاره",
+      "مفرمة"
+    ],
     "model": "MD-5266",
     "brand": "ALMAEDA",
     "description_ar": "فرامة مطبخ يدوية بلون أحمر مع شفرات فولاذية ضد الصدأ، توفر حتى 60% من الوقت وسهلة الاستخدام.",
-    "description_en": "Hand press chopper with stainless steel blades, saves up to 60% time, easy to use.",
-    "price": null,
-    "currency": null,
+    "price": 0,
+    "currency": "ريال",
     "available": true,
     "image": null
-{
-  "سلك غسيل ستانلس المائدة 50 جرام": {
-    "name": "سلك غسيل ستانلس المائدة 50 جرام",
+  },
+  {
+    "id": "SLK-50",
+    "name_ar": "سلك غسيل ستانلس المائدة 50 جرام",
+    "name_en": "Stainless Steel Scrubber 50g",
     "aliases": [
       "سلك",
       "سلك غسيل",
@@ -23,8 +30,12 @@
       "سلك صحون",
       "ليفة ستانلس"
     ],
-    "description": "سلك تنظيف ستانلس عالي الجودة لتنظيف القدور والصحون والشوايات، متين ومقاوم للصدأ.",
+    "model": "SLK-50",
+    "brand": "ALMAEDA",
+    "description_ar": "سلك تنظيف ستانلس عالي الجودة لتنظيف القدور والصحون والشوايات، متين ومقاوم للصدأ.",
     "price": 300,
-    "image_id": null
+    "currency": "ريال",
+    "available": true,
+    "image": null
   }
-  }
+]
