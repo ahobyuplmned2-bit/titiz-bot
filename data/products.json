@@ -12,26 +12,26 @@
     "currency": null,
     "available": true,
     "image": null
+[
+  {
+    "id": "SLK-50",
+    "name_ar": "سلك غسيل ستانلس المائدة 50 جرام",
+    "name_en": "Stainless Steel Scrubber 50g",
+    "aliases": [
+      "سلك غسيل",
+      "سلك مواعين",
+      "سلك جلي",
+      "سلك صحون",
+      "ليفة ستانلس",
+      "سلك تنظيف"
+    ],
+    "model": "SLK-50",
+    "brand": "ALMAEDA",
+    "description_ar": "سلك تنظيف ستانلس عالي الجودة لتنظيف القدور والصحون والشوايات، متين ومقاوم للصدأ.",
+    "description_en": "High quality stainless steel scrubber for cleaning pots and dishes.",
+    "price": 300,
+    "currency": "ريال",
+    "available": true,
+    "image": null
   }
 ]
-  "id": "SLK-50",
-  "name_ar": "سلك غسيل ستانلس المائدة 50 جرام",
-  "name_en": "Stainless Steel Scrubber 50g",
-  "aliases": [
-    "سلك غسيل",
-    "سلك مواعين",
-    "سلك جلي",
-    "سلك صحون",
-    "ليفة ستانلس",
-    "سلك تنظيف"
-  ],
-  "model": "SLK-50",
-  "brand": "ALMAEDA",
-  "description_ar": "سلك تنظيف ستانلس عالي الجودة لتنظيف القدور والصحون والشوايات، متين ومقاوم للصدأ.",
-  "description_en": "High quality stainless steel scrubber for cleaning pots and dishes.",
-  "price": 300,
-  "currency": "ريال",
-  "available": true,
-  "image": null
-}
-  ] 
