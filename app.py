@@ -23,38 +23,67 @@ IMG_FARAMA_SML = "1340222830997132"  # صغير MD-5066
 # قائمة الزبائن اللي راسلوا البوت
 customers = []
 
-# === نظام إدارة المنتجات ===
+# === نظام إدارة المنتجات - حفظ على GitHub ===
+import base64
+
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_REPO = "ahobyuplmned2-bit/titiz-bot"
+GITHUB_API = f"https://api.github.com/repos/{GITHUB_REPO}/contents"
+
 PRODUCTS_FILE = "products.json"
 QA_FILE = "qa.json"
 
+def github_load(filename):
+    """ تحميل ملف JSON من GitHub """
+    try:
+        url = f"{GITHUB_API}/{filename}"
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            content = resp.json().get("content", "")
+            decoded = base64.b64decode(content).decode("utf-8")
+            return json.loads(decoded), resp.json().get("sha", "")
+        return {}, ""
+    except:
+        return {}, ""
+
+def github_save(filename, data, sha=""):
+    """ حفظ ملف JSON على GitHub """
+    try:
+        url = f"{GITHUB_API}/{filename}"
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        content = base64.b64encode(json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")).decode("utf-8")
+        payload = {
+            "message": f"Update {filename}",
+            "content": content
+        }
+        if sha:
+            payload["sha"] = sha
+        else:
+            # الحصول على sha الحالي
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                payload["sha"] = resp.json().get("sha", "")
+        requests.put(url, headers=headers, json=payload, timeout=10)
+    except:
+        pass
+
 def load_qa():
-    if os.path.exists(QA_FILE):
-        try:
-            with open(QA_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return {}
-    return {}
+    data, _ = github_load(QA_FILE)
+    return data
 
 def save_qa(qa_data):
-    with open(QA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(qa_data, f, ensure_ascii=False, indent=2)
+    github_save(QA_FILE, qa_data)
+
+def load_products():
+    data, _ = github_load(PRODUCTS_FILE)
+    return data
+
+def save_products(products):
+    github_save(PRODUCTS_FILE, products)
 
 # تحميل الأسئلة والأجوبة عند بدء التشغيل
 custom_qa = load_qa()
-
-def load_products():
-    if os.path.exists(PRODUCTS_FILE):
-        try:
-            with open(PRODUCTS_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return {}
-    return {}
-
-def save_products(products):
-    with open(PRODUCTS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(products, f, ensure_ascii=False, indent=2)
 
 # تحميل المنتجات عند بدء التشغيل
 custom_products = load_products()
@@ -836,6 +865,36 @@ def handle_message():
                     send_message(OWNER_NUMBER, f"❌ المنتج '{product_name}' غير موجود")
                 return jsonify({"status": "ok"}), 200
 
+            # أمر خاص للمالك: إضافة كلمات مفتاحية لمنتج
+            if sender == OWNER_NUMBER and msg_body.startswith("كلمات "):
+                kw_text = msg_body[6:].strip()
+                # الصيغة: كلمات [اسم المنتج] | [كلمة1, كلمة2, كلمة3]
+                if "|" in kw_text:
+                    parts = kw_text.split("|", 1)
+                    p_name = parts[0].strip()
+                    keywords_str = parts[1].strip()
+                    keywords_list = [k.strip() for k in keywords_str.replace("،", ",").split(",") if k.strip()]
+                    if p_name in custom_products:
+                        custom_products[p_name]["keywords"] = keywords_list
+                        save_products(custom_products)
+                        send_message(OWNER_NUMBER, f"✅ تم إضافة كلمات مفتاحية لـ {p_name}:\n" + "\n".join([f"  • {k}" for k in keywords_list]))
+                    else:
+                        # بحث جزئي في اسم المنتج
+                        found_name = None
+                        for pn in custom_products:
+                            if p_name in pn or pn in p_name:
+                                found_name = pn
+                                break
+                        if found_name:
+                            custom_products[found_name]["keywords"] = keywords_list
+                            save_products(custom_products)
+                            send_message(OWNER_NUMBER, f"✅ تم إضافة كلمات مفتاحية لـ {found_name}:\n" + "\n".join([f"  • {k}" for k in keywords_list]))
+                        else:
+                            send_message(OWNER_NUMBER, f"❌ المنتج '{p_name}' غير موجود\nاكتب المخزن لعرض المنتجات")
+                else:
+                    send_message(OWNER_NUMBER, "❌ الصيغة: كلمات [اسم المنتج] | [كلمة1, كلمة2, كلمة3]\nمثال: كلمات سلك غسيل | سلك, ليفة, سلك مواعين, غسيل")
+                return jsonify({"status": "ok"}), 200
+
             # أمر خاص للمالك: عرض المخزن
             if sender == OWNER_NUMBER and msg_body in ["المخزن", "مخزن", "منتجاتي"]:
                 if custom_products:
@@ -981,11 +1040,19 @@ def handle_message():
                     else:
                         send_message(sender, product_reply)
                 else:
-                    # 2- بحث جزئي (كلمة عامة)
+                    # 2- بحث جزئي (كلمة عامة) + بحث بالكلمات المفتاحية
                     matching_products = []
                     for pname, pinfo in custom_products.items():
+                        # بحث بالاسم
                         if msg_normalized in pname or pname in msg_normalized:
                             matching_products.append(pinfo)
+                            continue
+                        # بحث بالكلمات المفتاحية
+                        keywords = pinfo.get("keywords", [])
+                        for kw in keywords:
+                            if kw in msg_normalized or msg_normalized in kw:
+                                matching_products.append(pinfo)
+                                break
                     
                     if len(matching_products) == 1:
                         # منتج واحد فقط - أرسله مباشرة
