@@ -810,32 +810,57 @@ def handle_message():
             # أمر خاص للمالك: إضافة منتج جديد
             if sender == OWNER_NUMBER and msg_body.startswith("اضف "):
                 add_text = msg_body[4:].strip()  # كل شي بعد كلمة "اضف"
-                # البحث عن أول رقم في النص = السعر
-                price_match = re.search(r'\b(\d+)\b', add_text)
-                if price_match:
-                    price_value = price_match.group(1)
-                    price_start = price_match.start()
-                    price_end = price_match.end()
-                    # الاسم = كل الكلمات قبل الرقم
-                    product_name = add_text[:price_start].strip()
-                    # الوصف = كل الكلمات بعد الرقم
-                    product_desc = add_text[price_end:].strip()
+                # التحقق من وجود فاصل |
+                if "|" in add_text:
+                    # الصيغة: اضف اسم المنتج | السعر | الوصف | كلمات مفتاحية
+                    parts = [p.strip() for p in add_text.split("|")]
+                    product_name = parts[0] if len(parts) > 0 else ""
+                    price_value = parts[1] if len(parts) > 1 else ""
+                    product_desc = parts[2] if len(parts) > 2 else ""
+                    keywords_str = parts[3] if len(parts) > 3 else ""
+                    # استخراج الرقم من السعر
+                    price_num = re.search(r'\d+', price_value)
+                    price_value = price_num.group() if price_num else price_value
+                    # تحويل الكلمات المفتاحية لقائمة
+                    keywords = [k.strip() for k in keywords_str.split(",") if k.strip()] if keywords_str else []
                     if product_name:
-                        # تطبيع الاسم للحفظ
-                        name_normalized = product_name.replace("|", "").strip()
-                        custom_products[name_normalized] = {
+                        custom_products[product_name] = {
                             "name": product_name,
                             "price": price_value,
                             "description": product_desc,
+                            "keywords": keywords,
                             "image_id": "",
                             "added": datetime.now().strftime("%Y-%m-%d %H:%M")
                         }
                         save_products(custom_products)
-                        send_message(OWNER_NUMBER, f"✅ تم إضافة المنتج:\n📦 الاسم: {product_name}\n💰 السعر: {price_value} ريال\n📝 الوصف: {product_desc}\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
+                        kw_text = "، ".join(keywords) if keywords else "لا يوجد"
+                        send_message(OWNER_NUMBER, f"✅ تم إضافة المنتج:\n📦 الاسم: {product_name}\n💰 السعر: {price_value} ريال\n📝 الوصف: {product_desc}\n🔑 كلمات مفتاحية: {kw_text}\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
                     else:
-                        send_message(OWNER_NUMBER, "❌ لازم تكتب اسم المنتج قبل السعر\nمثال: اضف سلك غسيل ستانلس المائدة 300 سلك ثقيل ومتين")
+                        send_message(OWNER_NUMBER, "❌ لازم تكتب اسم المنتج\nمثال: اضف ليف استيل | 300 | ليف ستانلس ثقيل | ليف، سلك، غسيل")
                 else:
-                    send_message(OWNER_NUMBER, "❌ لازم تكتب السعر (رقم) في الأمر\nمثال: اضف سلك غسيل ستانلس المائدة 300 سلك ثقيل ومتين")
+                    # الصيغة القديمة: اضف اسم المنتج السعر الوصف
+                    price_match = re.search(r'\b(\d+)\b', add_text)
+                    if price_match:
+                        price_value = price_match.group(1)
+                        price_start = price_match.start()
+                        price_end = price_match.end()
+                        product_name = add_text[:price_start].strip()
+                        product_desc = add_text[price_end:].strip()
+                        if product_name:
+                            custom_products[product_name] = {
+                                "name": product_name,
+                                "price": price_value,
+                                "description": product_desc,
+                                "keywords": [],
+                                "image_id": "",
+                                "added": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            }
+                            save_products(custom_products)
+                            send_message(OWNER_NUMBER, f"✅ تم إضافة المنتج:\n📦 الاسم: {product_name}\n💰 السعر: {price_value} ريال\n📝 الوصف: {product_desc}\n\nلإضافة كلمات مفتاحية:\nكلمات {product_name} | ليف، سلك، غسيل\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
+                        else:
+                            send_message(OWNER_NUMBER, "❌ لازم تكتب اسم المنتج قبل السعر\nمثال: اضف ليف استيل | 300 | ليف ستانلس ثقيل | ليف، سلك، غسيل")
+                    else:
+                        send_message(OWNER_NUMBER, "❌ لازم تكتب السعر\nمثال: اضف ليف استيل | 300 | ليف ستانلس ثقيل | ليف، سلك، غسيل")
                 return jsonify({"status": "ok"}), 200
 
             # أمر خاص للمالك: تعديل سعر منتج
