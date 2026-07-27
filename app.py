@@ -23,6 +23,9 @@ IMG_FARAMA_SML = "1340222830997132"  # صغير MD-5066
 # قائمة الزبائن اللي راسلوا البوت
 customers = []
 
+# حفظ حالة البحث لكل مستخدم (لاختيار المنتج بالرقم)
+user_sessions = {}
+
 # === نظام إدارة المنتجات - حفظ على GitHub ===
 import base64
 
@@ -1051,37 +1054,12 @@ def handle_message():
                 else:
                     send_message(sender, reply)
             else:
-                # البحث في المنتجات المخصصة (المضافة من المالك)
-                # 1- بحث بالاسم الكامل (مطابقة دقيقة)
-                exact_product = custom_products.get(msg_normalized)
-                if exact_product:
-                    product_reply = f"📦 *{exact_product['name']}*\n\n"
-                    if exact_product.get('description'):
-                        product_reply += f"{exact_product['description']}\n\n"
-                    product_reply += f"💰 السعر: {exact_product['price']} ريال\n"
-                    product_reply += f"🚚 التوصيل مجاني داخل المحافظة!\n\nاكتبي *اطلب* للطلب 😍"
-                    if exact_product.get('image_id'):
-                        send_image_by_id(sender, exact_product['image_id'], product_reply)
-                    else:
-                        send_message(sender, product_reply)
-                else:
-                    # 2- بحث جزئي (كلمة عامة) + بحث بالكلمات المفتاحية
-                    matching_products = []
-                    for pname, pinfo in custom_products.items():
-                        # بحث بالاسم
-                        if msg_normalized in pname or pname in msg_normalized:
-                            matching_products.append(pinfo)
-                            continue
-                        # بحث بالكلمات المفتاحية
-                        keywords = pinfo.get("keywords", [])
-                        for kw in keywords:
-                            if kw in msg_normalized or msg_normalized in kw:
-                                matching_products.append(pinfo)
-                                break
-                    
-                    if len(matching_products) == 1:
-                        # منتج واحد فقط - أرسله مباشرة
-                        found = matching_products[0]
+                # التحقق إذا العميل اختار رقم من قائمة سابقة
+                if sender in user_sessions and msg_normalized.isdigit():
+                    choice = int(msg_normalized)
+                    session_products = user_sessions[sender]
+                    if 1 <= choice <= len(session_products):
+                        found = session_products[choice - 1]
                         product_reply = f"📦 *{found['name']}*\n\n"
                         if found.get('description'):
                             product_reply += f"{found['description']}\n\n"
@@ -1091,24 +1069,73 @@ def handle_message():
                             send_image_by_id(sender, found['image_id'], product_reply)
                         else:
                             send_message(sender, product_reply)
-                    elif len(matching_products) > 1:
-                        # أكثر من منتج - أرسل قائمة
-                        list_reply = "🔍 وجدنا المنتجات التالية:\n\n"
-                        for i, p in enumerate(matching_products, 1):
-                            list_reply += f"{i}- {p['name']} ({p['price']} ريال)\n"
-                        list_reply += "\n✍️ أرسلي اسم المنتج اللي تبينه وبنرسل لكِ التفاصيل 😊"
-                        send_message(sender, list_reply)
+                        del user_sessions[sender]
                     else:
-                        # البحث في الأسئلة والأجوبة المخصصة
-                        found_qa = None
-                        for qa_key, qa_answer in custom_qa.items():
-                            if qa_key in msg_normalized or msg_normalized in qa_key:
-                                found_qa = qa_answer
-                                break
-                        if found_qa:
-                            send_message(sender, found_qa)
+                        send_message(sender, f"❌ اختاري رقم من 1 إلى {len(session_products)}")
+                else:
+                    # مسح الجلسة السابقة لو موجودة
+                    if sender in user_sessions:
+                        del user_sessions[sender]
+                    
+                    # البحث في المنتجات المخصصة (المضافة من المالك)
+                    # 1- بحث بالاسم الكامل (مطابقة دقيقة)
+                    exact_product = custom_products.get(msg_normalized)
+                    if exact_product:
+                        product_reply = f"📦 *{exact_product['name']}*\n\n"
+                        if exact_product.get('description'):
+                            product_reply += f"{exact_product['description']}\n\n"
+                        product_reply += f"💰 السعر: {exact_product['price']} ريال\n"
+                        product_reply += f"🚚 التوصيل مجاني داخل المحافظة!\n\nاكتبي *اطلب* للطلب 😍"
+                        if exact_product.get('image_id'):
+                            send_image_by_id(sender, exact_product['image_id'], product_reply)
                         else:
-                            send_message(sender, WELCOME_MESSAGE)
+                            send_message(sender, product_reply)
+                    else:
+                        # 2- بحث جزئي (كلمة عامة) + بحث بالكلمات المفتاحية
+                        matching_products = []
+                        for pname, pinfo in custom_products.items():
+                            # بحث بالاسم
+                            if msg_normalized in pname or pname in msg_normalized:
+                                matching_products.append(pinfo)
+                                continue
+                            # بحث بالكلمات المفتاحية
+                            keywords = pinfo.get("keywords", [])
+                            for kw in keywords:
+                                if kw in msg_normalized or msg_normalized in kw:
+                                    matching_products.append(pinfo)
+                                    break
+                        
+                        if len(matching_products) == 1:
+                            # منتج واحد فقط - أرسله مباشرة
+                            found = matching_products[0]
+                            product_reply = f"📦 *{found['name']}*\n\n"
+                            if found.get('description'):
+                                product_reply += f"{found['description']}\n\n"
+                            product_reply += f"💰 السعر: {found['price']} ريال\n"
+                            product_reply += f"🚚 التوصيل مجاني داخل المحافظة!\n\nاكتبي *اطلب* للطلب 😍"
+                            if found.get('image_id'):
+                                send_image_by_id(sender, found['image_id'], product_reply)
+                            else:
+                                send_message(sender, product_reply)
+                        elif len(matching_products) > 1:
+                            # أكثر من منتج - أرسل قائمة واحفظ الجلسة
+                            user_sessions[sender] = matching_products
+                            list_reply = "🔍 وجدنا المنتجات التالية:\n\n"
+                            for i, p in enumerate(matching_products, 1):
+                                list_reply += f"{i}- {p['name']} ({p['price']} ريال)\n"
+                            list_reply += "\n✍️ أرسلي رقم المنتج اللي تبينه وبنرسل لكِ التفاصيل 😊"
+                            send_message(sender, list_reply)
+                        else:
+                            # البحث في الأسئلة والأجوبة المخصصة
+                            found_qa = None
+                            for qa_key, qa_answer in custom_qa.items():
+                                if qa_key in msg_normalized or msg_normalized in qa_key:
+                                    found_qa = qa_answer
+                                    break
+                            if found_qa:
+                                send_message(sender, found_qa)
+                            else:
+                                send_message(sender, WELCOME_MESSAGE)
     except (KeyError, IndexError):
         pass
     return jsonify({"status": "ok"}), 200
