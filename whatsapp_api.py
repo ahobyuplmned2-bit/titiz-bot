@@ -14,6 +14,7 @@ class WhatsAppAPI:
         self.access_token = access_token
         self.phone_number_id = phone_number_id
         self.api_url = f"https://graph.instagram.com/v18.0/{phone_number_id}"
+        self.messages_url = f"{self.api_url}/messages"
     
     def send_message(self, recipient_phone, message_text):
         """إرسال رسالة نصية"""
@@ -33,7 +34,7 @@ class WhatsAppAPI:
             }
             
             response = requests.post(
-                f"{self.api_url}/messages",
+                self.messages_url,
                 headers=headers,
                 json=payload,
                 timeout=10
@@ -59,7 +60,7 @@ class WhatsAppAPI:
             }
             
             response = requests.post(
-                f"{self.api_url}/messages",
+                self.messages_url,
                 headers=headers,
                 json=payload,
                 timeout=10
@@ -86,7 +87,7 @@ class WhatsAppAPI:
             }
             
             response = requests.post(
-                f"{self.api_url}/messages",
+                self.messages_url,
                 headers=headers,
                 json=payload,
                 timeout=10
@@ -118,7 +119,7 @@ class WhatsAppAPI:
                 payload["image"]["caption"] = caption
             
             response = requests.post(
-                f"{self.api_url}/messages",
+                self.messages_url,
                 headers=headers,
                 json=payload,
                 timeout=10
@@ -163,7 +164,7 @@ class WhatsAppAPI:
             }
             
             response = requests.post(
-                f"{self.api_url}/messages",
+                self.messages_url,
                 headers=headers,
                 json=payload,
                 timeout=10
@@ -199,7 +200,7 @@ class WhatsAppAPI:
             }
             
             response = requests.post(
-                f"{self.api_url}/messages",
+                self.messages_url,
                 headers=headers,
                 json=payload,
                 timeout=10
