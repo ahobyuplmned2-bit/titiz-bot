@@ -379,6 +379,37 @@ def log_action(log_type, phone_number, action, details=""):
         conn.commit()
         conn.close()
 
+def load_qa():
+    """تحميل جميع الأسئلة والأجوبة"""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('SELECT question, answer FROM qa')
+        rows = cursor.fetchall()
+        conn.close()
+        return {row[0]: row[1] for row in rows}
+
+def save_qa(keyword, answer):
+    """حفظ سؤال وجواب"""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('INSERT INTO qa (question, answer) VALUES (?, ?)', (keyword, answer))
+        except sqlite3.IntegrityError:
+            cursor.execute('UPDATE qa SET answer=? WHERE question=?', (answer, keyword))
+        conn.commit()
+        conn.close()
+
+def delete_qa(keyword):
+    """حذف سؤال"""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM qa WHERE question=?', (keyword,))
+        conn.commit()
+        conn.close()
+
 def get_statistics():
     """الحصول على الإحصائيات"""
     with db_lock:

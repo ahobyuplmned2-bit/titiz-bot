@@ -13,7 +13,7 @@ class WhatsAppAPI:
     def __init__(self, access_token, phone_number_id):
         self.access_token = access_token
         self.phone_number_id = phone_number_id
-        self.api_url = f"https://graph.instagram.com/v18.0/{phone_number_id}"
+        self.api_url = f"https://graph.facebook.com/v21.0/{phone_number_id}"
         self.messages_url = f"{self.api_url}/messages"
     
     def send_message(self, recipient_phone, message_text):
@@ -130,6 +130,27 @@ class WhatsAppAPI:
             print(f"خطأ في إرسال الصورة: {e}")
             return False
     
+    def send_image_by_id(self, recipient_phone, media_id, caption=""):
+        """إرسال صورة بمعرف الوسائط"""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": recipient_phone,
+                "type": "image",
+                "image": {"id": media_id}
+            }
+            if caption:
+                payload["image"]["caption"] = caption
+            response = requests.post(self.messages_url, headers=headers, json=payload, timeout=10)
+            return response.status_code == 200
+        except Exception as e:
+            print(f"خطأ في إرسال الصورة: {e}")
+            return False
+
     def send_buttons(self, recipient_phone, message_text, buttons):
         """إرسال رسالة مع أزرار"""
         try:
