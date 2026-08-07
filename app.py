@@ -351,7 +351,69 @@ def load_custom_responses():
     except:
         pass
 
+def sync_products_to_github():
+    """حفظ المنتجات على GitHub تلقائياً (حفظ دائم)"""
+    try:
+        products = get_all_products()
+        products_dict = {}
+        for p in products:
+            products_dict[p["name"]] = {
+                "name": p["name"],
+                "price": str(int(p["price"])),
+                "description": p.get("description", ""),
+                "keywords": p.get("keywords", ""),
+                "image_id": p.get("image_id", "")
+            }
+        github_save("products.json", products_dict)
+    except:
+        pass
+
+def sync_qa_to_github():
+    """حفظ الأسئلة والأجوبة على GitHub تلقائياً"""
+    try:
+        qas = load_qa()
+        github_save("qa.json", qas)
+    except:
+        pass
+
+def load_products_from_github():
+    """تحميل المنتجات من GitHub عند بدء التشغيل"""
+    try:
+        data, sha = github_load("products.json")
+        if data:
+            existing = get_all_products()
+            existing_names = [normalize_text(p["name"]) for p in existing]
+            for name, info in data.items():
+                if normalize_text(name) not in existing_names:
+                    price = 0
+                    try:
+                        price = float(info.get("price", "0"))
+                    except:
+                        pass
+                    desc = info.get("description", "")
+                    image_id = info.get("image_id", "")
+                    keywords = info.get("keywords", "")
+                    if isinstance(keywords, list):
+                        keywords = ",".join(keywords)
+                    add_product(name, price, desc, image_id, 100, keywords)
+    except:
+        pass
+
+def load_qa_from_github():
+    """تحميل الأسئلة والأجوبة من GitHub عند بدء التشغيل"""
+    try:
+        data, sha = github_load("qa.json")
+        if data:
+            existing_qa = load_qa()
+            for keyword, answer in data.items():
+                if keyword not in existing_qa:
+                    save_qa(keyword, answer)
+    except:
+        pass
+
 # تحميل عند بدء التشغيل
+load_products_from_github()
+load_qa_from_github()
 load_custom_responses()
 
 
@@ -495,6 +557,8 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                 save_qa(keyword, answer)
                 # إضافة للنظام الموحد فوراً
                 add_response(keyword, answer, source="custom")
+                # حفظ على GitHub
+                sync_qa_to_github()
                 send_message(OWNER_NUMBER, f"✅ تم إضافة الرد:\n🔑 الكلمة: {keyword}\n💬 الرد: {answer}\n\nالآن لو أي زبون كتب '{keyword}' بيرد عليه تلقائي ✅")
             else:
                 send_message(OWNER_NUMBER, "❌ الصيغة: اضف رد [الكلمة] | [الرد]")
@@ -509,6 +573,8 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
         delete_qa(keyword)
         # حذف من النظام الموحد
         removed = remove_response(keyword)
+        # حفظ على GitHub
+        sync_qa_to_github()
         if removed:
             send_message(OWNER_NUMBER, f"✅ تم حذف الرد: {keyword}")
         else:
@@ -542,6 +608,7 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             price_val = float(price_num.group()) if price_num else 0
             if product_name:
                 add_product(product_name, price_val, product_desc, "", 100, keywords_str)
+                sync_products_to_github()
                 send_message(OWNER_NUMBER, f"✅ تم إضافة المنتج:\n📦 {product_name}\n💰 {int(price_val)} ريال\n📝 {product_desc}\n🔑 كلمات: {keywords_str or 'لا يوجد'}\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
             else:
                 send_message(OWNER_NUMBER, "❌ الصيغة: اضف [اسم] | [سعر] | [وصف] | [كلمات مفتاحية]")
@@ -563,6 +630,7 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                 conn.execute("UPDATE products SET price=? WHERE name LIKE ?", (new_price, f"%{product_name}%"))
                 conn.commit()
                 conn.close()
+            sync_products_to_github()
             send_message(OWNER_NUMBER, f"✅ تم تعديل سعر {product_name} إلى {int(new_price)} ريال")
         else:
             send_message(OWNER_NUMBER, "❌ الصيغة: عدل سعر [اسم المنتج] [السعر الجديد]")
@@ -580,6 +648,7 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             conn.commit()
             conn.close()
         if deleted:
+            sync_products_to_github()
             send_message(OWNER_NUMBER, f"✅ تم حذف المنتج: {product_name}")
         else:
             send_message(OWNER_NUMBER, f"❌ المنتج '{product_name}' غير موجود")
@@ -717,6 +786,7 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                     send_message(OWNER_NUMBER, f"✅ تم إضافة صورة للمنتج: {caption}")
                 conn.commit()
                 conn.close()
+            sync_products_to_github()
         elif media_id and not caption:
             send_message(OWNER_NUMBER, "❌ أرسل الصورة مع كابشن فيه اسم المنتج")
         return True
