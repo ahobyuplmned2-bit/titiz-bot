@@ -1098,7 +1098,7 @@ def webhook():
         for k in old_keys:
             del processed_messages[k]
 
-        # Mark as Read
+        # Mark as Read (صحين أخضر)
         whatsapp.mark_as_read(message_id)
 
         # استخراج النص
@@ -1116,8 +1116,9 @@ def webhook():
 
         msg_normalized = normalize_text(msg_body)
 
-        # تأخير بسيط
-        time.sleep(1)
+        # جاري الكتابة (Typing Indicator)
+        whatsapp.send_typing_indicator(sender)
+        time.sleep(2)
 
         # تحديث بيانات العميل
         if sender != OWNER_NUMBER:
