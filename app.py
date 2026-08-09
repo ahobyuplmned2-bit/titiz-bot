@@ -1117,7 +1117,7 @@ def webhook():
         msg_normalized = normalize_text(msg_body)
 
         # جاري الكتابة (Typing Indicator)
-        whatsapp.send_typing_indicator(sender)
+        whatsapp.send_typing_indicator(message_id)
         time.sleep(2)
 
         # تحديث بيانات العميل

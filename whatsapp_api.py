@@ -71,8 +71,8 @@ class WhatsAppAPI:
             print(f"خطأ في تحديد الرسالة كمقروءة: {e}")
             return False
     
-    def send_typing_indicator(self, recipient_phone):
-        """إرسال مؤشر الكتابة"""
+    def send_typing_indicator(self, message_id):
+        """إرسال مؤشر الكتابة (جاري الكتابة)"""
         try:
             headers = {
                 "Authorization": f"Bearer {self.access_token}",
@@ -81,9 +81,11 @@ class WhatsAppAPI:
             
             payload = {
                 "messaging_product": "whatsapp",
-                "recipient_type": "individual",
-                "to": recipient_phone,
-                "type": "typing"
+                "status": "read",
+                "message_id": message_id,
+                "typing_indicator": {
+                    "type": "text"
+                }
             }
             
             response = requests.post(
@@ -232,10 +234,11 @@ class WhatsAppAPI:
             print(f"خطأ في إرسال القائمة: {e}")
             return False
     
-    def send_with_delay(self, recipient_phone, message_text, delay=2):
+    def send_with_delay(self, recipient_phone, message_text, message_id=None, delay=2):
         """إرسال رسالة مع تأخير (لمحاكاة الكتابة)"""
         # إرسال مؤشر الكتابة
-        self.send_typing_indicator(recipient_phone)
+        if message_id:
+            self.send_typing_indicator(message_id)
         
         # الانتظار
         time.sleep(delay)
