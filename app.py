@@ -352,10 +352,15 @@ def load_custom_responses():
         pass
 
 def sync_products_to_github():
-    """حفظ المنتجات على GitHub تلقائياً (حفظ دائم)"""
+    """دمج المنتجات المحلية مع نسخة GitHub ثم حفظها دون مسح المنتجات السابقة."""
     try:
+        if not GITHUB_TOKEN:
+            print("[GitHub] GITHUB_TOKEN غير موجود؛ تم إلغاء الحفظ الآمن.")
+            return False
+
+        remote_data, sha = github_load("products.json")
+        products_dict = remote_data if isinstance(remote_data, dict) else {}
         products = get_all_products()
-        products_dict = {}
         for p in products:
             products_dict[p["name"]] = {
                 "name": p["name"],
@@ -364,7 +369,11 @@ def sync_products_to_github():
                 "keywords": p.get("keywords", ""),
                 "image_id": p.get("image_id", "")
             }
-        result = github_save("products.json", products_dict)
+        if not products_dict:
+            print("[GitHub] تم منع كتابة products.json فارغاً فوق النسخة الحالية.")
+            return False
+
+        result = github_save("products.json", products_dict, sha=sha)
         if result:
             print(f"[GitHub] تم حفظ {len(products_dict)} منتج على GitHub")
         else:
@@ -420,12 +429,6 @@ def load_qa_from_github():
     except:
         pass
 
-# تحميل عند بدء التشغيل
-load_products_from_github()
-load_qa_from_github()
-load_custom_responses()
-
-
 # ╔══════════════════════════════════════════════════════════════╗
 # ║                    دوال مساعدة                              ║
 # ╚══════════════════════════════════════════════════════════════╝
@@ -478,6 +481,11 @@ def github_save(filename, data, sha=""):
     except Exception as e:
         print(f"[GitHub] خطأ: {e}")
         return False
+
+# تحميل البيانات بعد تعريف دوال GitHub، حتى لا يحدث استدعاء مبكر قبل github_load.
+load_products_from_github()
+load_qa_from_github()
+load_custom_responses()
 
 def send_message(to, text):
     return whatsapp.send_message(to, text)
