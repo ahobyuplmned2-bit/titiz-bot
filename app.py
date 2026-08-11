@@ -630,8 +630,11 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             price_val = float(price_num.group()) if price_num else 0
             if product_name:
                 add_product(product_name, price_val, product_desc, "", 100, keywords_str)
-                sync_products_to_github()
-                send_message(OWNER_NUMBER, f"✅ تم إضافة المنتج:\n📦 {product_name}\n💰 {int(price_val)} ريال\n📝 {product_desc}\n🔑 كلمات: {keywords_str or 'لا يوجد'}\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
+                saved = sync_products_to_github()
+                if saved:
+                    send_message(OWNER_NUMBER, f"✅ تم إضافة وحفظ المنتج دائمًا على GitHub:\n📦 {product_name}\n💰 {int(price_val)} ريال\n📝 {product_desc}\n🔑 كلمات: {keywords_str or 'لا يوجد'}\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
+                else:
+                    send_message(OWNER_NUMBER, f"⚠️ تم إضافة المنتج محلياً، لكن *فشل حفظه على GitHub* (تأكد من GITHUB_TOKEN):\n📦 {product_name}\n💰 {int(price_val)} ريال")
             else:
                 send_message(OWNER_NUMBER, "❌ الصيغة: اضف [اسم] | [سعر] | [وصف] | [كلمات مفتاحية]")
         else:
