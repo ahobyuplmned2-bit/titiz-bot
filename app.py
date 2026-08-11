@@ -364,9 +364,13 @@ def sync_products_to_github():
                 "keywords": p.get("keywords", ""),
                 "image_id": p.get("image_id", "")
             }
-        github_save("products.json", products_dict)
-    except:
-        pass
+        result = github_save("products.json", products_dict)
+        if result:
+            print(f"[GitHub] تم حفظ {len(products_dict)} منتج على GitHub")
+        else:
+            print("[GitHub] فشل حفظ المنتجات!")
+    except Exception as e:
+        print(f"[GitHub] خطأ في حفظ المنتجات: {e}")
 
 def sync_qa_to_github():
     """حفظ الأسئلة والأجوبة على GitHub تلقائياً"""
@@ -381,6 +385,7 @@ def load_products_from_github():
     try:
         data, sha = github_load("products.json")
         if data:
+            count = 0
             existing = get_all_products()
             existing_names = [normalize_text(p["name"]) for p in existing]
             for name, info in data.items():
@@ -396,8 +401,12 @@ def load_products_from_github():
                     if isinstance(keywords, list):
                         keywords = ",".join(keywords)
                     add_product(name, price, desc, image_id, 100, keywords)
-    except:
-        pass
+                    count += 1
+            print(f"[بدء التشغيل] تم تحميل {count} منتج من GitHub (إجمالي: {len(data)})")
+        else:
+            print("[بدء التشغيل] لا توجد منتجات على GitHub")
+    except Exception as e:
+        print(f"[بدء التشغيل] خطأ في تحميل المنتجات: {e}")
 
 def load_qa_from_github():
     """تحميل الأسئلة والأجوبة من GitHub عند بدء التشغيل"""
@@ -438,6 +447,7 @@ def github_load(filename):
 def github_save(filename, data, sha=""):
     """حفظ ملف على GitHub"""
     if not GITHUB_TOKEN:
+        print(f"[GitHub] GITHUB_TOKEN غير موجود! لا يمكن الحفظ.")
         return False
     try:
         url = f"{GITHUB_API}/{filename}"
@@ -446,15 +456,27 @@ def github_save(filename, data, sha=""):
             json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
         ).decode("utf-8")
         payload = {"message": f"Update {filename}", "content": content}
-        if sha:
-            payload["sha"] = sha
-        else:
+        # لازم نجيب sha الحالي عشان نقدر نحدث الملف
+        if not sha:
             resp = requests.get(url, headers=headers, timeout=10)
             if resp.status_code == 200:
                 payload["sha"] = resp.json().get("sha", "")
-        requests.put(url, headers=headers, json=payload, timeout=10)
-        return True
-    except:
+            elif resp.status_code == 404:
+                pass  # ملف جديد
+            else:
+                print(f"[GitHub] خطأ في جلب sha: {resp.status_code} {resp.text[:100]}")
+                return False
+        else:
+            payload["sha"] = sha
+        resp = requests.put(url, headers=headers, json=payload, timeout=15)
+        if resp.status_code in [200, 201]:
+            print(f"[GitHub] تم حفظ {filename} بنجاح")
+            return True
+        else:
+            print(f"[GitHub] فشل حفظ {filename}: {resp.status_code} {resp.text[:200]}")
+            return False
+    except Exception as e:
+        print(f"[GitHub] خطأ: {e}")
         return False
 
 def send_message(to, text):

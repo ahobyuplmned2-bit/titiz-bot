@@ -13,7 +13,7 @@ class WhatsAppAPI:
     def __init__(self, access_token, phone_number_id):
         self.access_token = access_token
         self.phone_number_id = phone_number_id
-        self.api_url = f"https://graph.facebook.com/v21.0/{phone_number_id}"
+        self.api_url = f"https://graph.facebook.com/v26.0/{phone_number_id}"
         self.messages_url = f"{self.api_url}/messages"
     
     def send_message(self, recipient_phone, message_text):
