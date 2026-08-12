@@ -91,6 +91,26 @@ def init_db():
             )
         ''')
 
+        # سجل تواصل مستقل عن customers، حتى لا يُحفظ العميل في customers.json قبل إكمال بياناته.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS contacts (
+                phone_number TEXT PRIMARY KEY,
+                first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # ردود الإدارة المؤجلة حتى يراسل العميل البوت لأول مرة.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS pending_replies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                phone_number TEXT NOT NULL,
+                message TEXT NOT NULL,
+                sent_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         # تذكيرات متابعة استفسارات المنتجات، محفوظة لاستمرارها بعد إعادة التشغيل.
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS customer_followups (
@@ -302,6 +322,74 @@ def delete_user_session(phone_number):
         conn.execute('DELETE FROM user_sessions WHERE phone_number = ?', (phone_number,))
         conn.commit()
         conn.close()
+
+def record_contact(phone_number):
+    """تسجيل أن الرقم راسل البوت، دون اعتباره عميلاً مكتمل البيانات."""
+    if not phone_number:
+        return
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute('''
+            INSERT INTO contacts (phone_number, first_seen_at, last_seen_at)
+            VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(phone_number) DO UPDATE SET
+                last_seen_at = CURRENT_TIMESTAMP
+        ''', (phone_number,))
+        conn.commit()
+        conn.close()
+
+def has_contact(phone_number):
+    """التحقق من أن الرقم سبق أن أرسل رسالة إلى البوت."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        row = conn.execute(
+            'SELECT 1 FROM contacts WHERE phone_number = ? LIMIT 1',
+            (phone_number,),
+        ).fetchone()
+        conn.close()
+        return row is not None
+
+def queue_pending_reply(phone_number, message):
+    """حفظ رد الإدارة حتى يراسل العميل البوت."""
+    if not phone_number or not message:
+        return False
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute(
+            'INSERT INTO pending_replies (phone_number, message) VALUES (?, ?)',
+            (phone_number, message),
+        )
+        conn.commit()
+        conn.close()
+        return True
+
+def get_pending_replies(phone_number, limit=20):
+    """الحصول على الردود المؤجلة غير المرسلة للعميل."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute('''
+            SELECT id, phone_number, message, created_at
+            FROM pending_replies
+            WHERE phone_number = ? AND sent_at IS NULL
+            ORDER BY id ASC LIMIT ?
+        ''', (phone_number, int(limit))).fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+def mark_pending_reply_sent(reply_id):
+    """تمييز الرد المؤجل كمرسل بعد نجاح واتساب."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE pending_replies SET sent_at = CURRENT_TIMESTAMP WHERE id = ? AND sent_at IS NULL',
+            (int(reply_id),),
+        )
+        updated = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return updated
 
 def schedule_customer_followup(phone_number, product_name="", delay_seconds=1800, followup_kind="satisfaction"):
     """جدولة متابعة واحدة للعميل، مع استبدال أي متابعة سابقة."""

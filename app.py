@@ -25,14 +25,16 @@ from database import (
     update_order_payment_proof, save_user_session, load_user_session,
     delete_user_session, schedule_customer_followup,
     cancel_customer_followup, get_due_customer_followups,
-    mark_customer_followup_sent, get_customer_followup
+    mark_customer_followup_sent, get_customer_followup,
+    record_contact, has_contact, queue_pending_reply,
+    get_pending_replies, mark_pending_reply_sent
 )
 from whatsapp_api import WhatsAppAPI, format_product_card
 
 app = Flask(__name__)
 
 # ===== الإعدادات العامة =====
-BOT_NAME = "Titiz موظفتك الذكية نرد على جميع طلباتكم 24 ساعة"
+BOT_NAME = "Titiz موظفتك الذكية، نرد على جميع طلباتكم 24 ساعة"
 
 # ===== بيانات WhatsApp =====
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN", "EAAVV1mNUcEkBRZCKz7cZAPn3Dc0NE33WUQm7kjSQ6bLJzT7iA0IswVwteUoSHInm2aW690MiEPT87UjciE9c5Bk0VQl9cMZBloQZCF3u4bZAEFrXCqrikv68EnaOPaZAZBAQXEhfCpWWNXGP68E5DPqxUa4hP5ZBeiVTqsnQZADrEHAR8zqESGtZAtn2EXWxZBI3QZDZD")
@@ -462,7 +464,7 @@ add_response(
     "مع السلامة يا غالية! 💛👋\nنورتينا والله!\nإحنا هنا بأي وقت تحتاجينا 😊\nلا تنسينا! ❤️"
 )
 
-WELCOME_MESSAGE = "أهلاً بك! أنا معك، كيف يمكنني مساعدتك اليوم؟\nهل تبحثين عن منتجات معينة، أم تودين الاستفسار عن طلباتك؟ 😊"
+WELCOME_MESSAGE = f"👋 أهلاً بكِ في {BOT_NAME}\n\nكيف يمكنني مساعدتك اليوم؟\nهل تبحثين عن منتجات معينة، أم تودين الاستفسار عن طلباتك؟ 😊"
 SHOPPING_ASSISTANT_MESSAGE = (
     "أهلاً بك! أنا مساعدك الذكي من Titiz، ويمكنني مساعدتك في القيام بالكثير من المهام التجارية، مثل:\n\n"
     "- *البحث عن المنتجات:* العثور على جميع الأدوات المنزلية والمنتجات بأسعار تنافسية.\n"
@@ -696,6 +698,14 @@ load_custom_responses()
 def send_message(to, text):
     return whatsapp.send_message(to, text)
 
+def deliver_pending_replies(to):
+    """إرسال ردود الإدارة المؤجلة بعد أن يبدأ العميل محادثته."""
+    if not to or to == OWNER_NUMBER:
+        return
+    for pending in get_pending_replies(to):
+        if send_message(to, pending["message"]):
+            mark_pending_reply_sent(pending["id"])
+
 def send_image(to, image_url, caption=""):
     return whatsapp.send_image(to, image_url, caption)
 
@@ -928,13 +938,31 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
     """معالجة أوامر المالك - ترجع True إذا تم التعامل مع الأمر"""
 
     # === رد على زبون ===
-    if msg_normalized.startswith("رد "):
-        parts = msg_body.split(" ", 2)
-        if len(parts) == 3:
-            send_message(parts[1], parts[2])
-            send_message(OWNER_NUMBER, f"✅ تم إرسال ردك للزبون {parts[1]}")
+    reply_match = re.match(r"^\s*رد\s+([+]?\d{7,15})\s+([\s\S]+?)\s*$", msg_body or "")
+    if msg_normalized == "رد" or msg_normalized.startswith("رد "):
+        if not reply_match:
+            send_message(OWNER_NUMBER, "❌ الصيغة الصحيحة: رد [رقم العميل] [الرسالة كاملة]")
+            return True
+
+        target_phone = reply_match.group(1).lstrip("+")
+        reply_text = reply_match.group(2).strip()
+        if not reply_text:
+            send_message(OWNER_NUMBER, "❌ اكتب نص الرسالة بعد رقم العميل.")
+            return True
+
+        if has_contact(target_phone) or get_customer(target_phone):
+            sent = send_message(target_phone, reply_text)
+            if sent:
+                send_message(OWNER_NUMBER, f"✅ تم إرسال الرد كاملاً إلى العميل {target_phone}")
+            else:
+                send_message(OWNER_NUMBER, f"⚠️ تعذر إرسال الرد إلى {target_phone}. تأكد من الرقم أو نافذة المحادثة.")
+        elif queue_pending_reply(target_phone, reply_text):
+            send_message(
+                OWNER_NUMBER,
+                f"✅ تم حفظ الرد للعميل {target_phone}، وسيتم إرساله تلقائياً عندما يراسل البوت.\n\n💬 الرد المحفوظ: {reply_text}",
+            )
         else:
-            send_message(OWNER_NUMBER, "❌ الصيغة: رد [رقم] [الرسالة]")
+            send_message(OWNER_NUMBER, "❌ تعذر حفظ الرد المؤجل.")
         return True
 
     # === إضافة رد (يدخل نفس النظام الموحد) ===
@@ -1707,6 +1735,8 @@ def webhook():
         for k in old_keys:
             del processed_messages[k]
 
+        record_contact(sender)
+
         # Mark as Read (صحين أخضر)
         whatsapp.mark_as_read(message_id)
 
@@ -1742,6 +1772,7 @@ def webhook():
 
         # معالجة رسائل العملاء (والمالك للاختبار)
         try:
+            deliver_pending_replies(sender)
             handle_customer_message(sender, msg_body, msg_normalized, message)
         finally:
             persist_customer_session(sender)
