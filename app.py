@@ -937,6 +937,15 @@ def send_contact_menu(to):
 def handle_owner_command(sender, msg_body, msg_normalized, message):
     """معالجة أوامر المالك - ترجع True إذا تم التعامل مع الأمر"""
 
+    # إذا كان رقم الإدارة يختبر دورة شراء، فصورة التحويل ليست صورة منتج.
+    # نعيدها لمسار العميل حتى تُحفظ كإثبات دفع، حتى بعد استعادة الجلسة من SQLite.
+    restore_customer_session(sender)
+    if (
+        message.get("type") == "image"
+        and user_states.get(sender) == "awaiting_transfer_proof"
+    ):
+        return False
+
     # === رد على زبون ===
     reply_match = re.match(r"^\s*رد\s+([+]?\d{7,15})\s+([\s\S]+?)\s*$", msg_body or "")
     if msg_normalized == "رد" or msg_normalized.startswith("رد "):
