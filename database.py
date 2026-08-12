@@ -479,9 +479,10 @@ def update_order_status(order_number, new_status):
             SET order_status = ?, updated_at = CURRENT_TIMESTAMP
             WHERE order_number = ?
         ''', (new_status, order_number))
-        
+        updated = cursor.rowcount > 0
         conn.commit()
         conn.close()
+        return updated
 
 def add_product(name, price, description="", image_id="", quantity=0, keywords=""):
     """إضافة منتج جديد"""

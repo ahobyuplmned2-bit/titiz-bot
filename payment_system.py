@@ -2,7 +2,7 @@
 نظام إدارة الدفع والتحويلات
 """
 
-from database import update_order_status, get_order, log_action
+from database import update_order_status, update_order_payment_proof, get_order, log_action
 import json
 
 PAYMENT_METHODS = {
@@ -89,7 +89,10 @@ class PaymentManager:
     @staticmethod
     def process_transfer_payment(order_number, proof_url=None):
         """معالجة التحويل المسبق"""
-        update_order_status(order_number, 'بانتظار مراجعة الدفع')
+        if proof_url:
+            update_order_payment_proof(order_number, proof_url)
+        else:
+            update_order_status(order_number, 'بانتظار مراجعة الدفع')
         
         details = f'Order: {order_number}'
         if proof_url:
@@ -108,22 +111,16 @@ class PaymentManager:
     @staticmethod
     def confirm_transfer_payment(order_number):
         """تأكيد التحويل من قبل الإدارة"""
-        update_order_status(order_number, 'تم الدفع')
+        updated = update_order_status(order_number, 'تم الدفع')
         log_action('payment', None, 'payment_confirmed', f'Order: {order_number}')
         
-        return True
+        return updated
     
     @staticmethod
     def get_admin_payment_confirmation_message(order_number):
         """رسالة تأكيد الدفع للعميل"""
         
-        message = f"✅ *تم تأكيد دفعتك بنجاح!*\n\n"
-        message += f"📦 رقم الطلب: {order_number}\n"
-        message += "💰 الحالة: تم الدفع\n\n"
-        message += "سيتم تجهيز طلبك قريباً وإرساله إليك 📦\n"
-        message += "شكراً لتعاملك معنا! ❤️"
-        
-        return message
+        return "تم استلام دفعتك بنجاح وسيتم تجهيز طلبك قريبًا."
 
 def format_payment_proof_message(order_number, phone_number):
     """تنسيق رسالة طلب إثبات الدفع"""

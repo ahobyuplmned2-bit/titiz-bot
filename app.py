@@ -698,6 +698,10 @@ ORDER_STATUSES = [
     "بانتظار مراجعة الدفع", "تم الدفع", "جديد", "جاري التجهيز",
     "تم الشحن", "تم التسليم", "ملغي"
 ]
+PAYMENT_COD = "الدفع عند الاستلام"
+PAYMENT_TRANSFER = "التحويل المسبق"
+TRANSFER_PAYMENT_METHODS = {PAYMENT_TRANSFER, "تحويل مسبق"}
+PAYMENT_CONFIRMATION_MESSAGE = "تم استلام دفعتك بنجاح وسيتم تجهيز طلبك قريبًا."
 
 def normalize_order_number(value):
     """توحيد رقم الطلب سواء أُرسل مع ORD- أو بدونه."""
@@ -1056,13 +1060,18 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
         order = get_order(order_number)
         if not order:
             send_message(OWNER_NUMBER, f"❌ لم أجد الطلب: {order_number}")
-        elif order.get("payment_method") != "تحويل مسبق":
+        elif order.get("payment_method") not in TRANSFER_PAYMENT_METHODS:
             send_message(OWNER_NUMBER, "❌ هذا الطلب ليس بتحويل مسبق.")
+        elif not order.get("payment_proof_url"):
+            send_message(OWNER_NUMBER, "❌ لا يمكن تأكيد الدفع قبل حفظ صورة إشعار التحويل مع الطلب.")
         else:
-            update_order_status(order_number, "تم الدفع")
-            if order.get("phone_number"):
-                send_message(order["phone_number"], "✅ تم استلام دفعتك بنجاح وسيتم تجهيز طلبك قريبًا.")
-            send_message(OWNER_NUMBER, f"✅ تم تأكيد الدفع للطلب {order_number} وإشعار العميل.")
+            updated = update_order_status(order_number, "تم الدفع")
+            if updated and order.get("phone_number"):
+                send_message(order["phone_number"], PAYMENT_CONFIRMATION_MESSAGE)
+            if updated:
+                send_message(OWNER_NUMBER, f"✅ تم تأكيد الدفع للطلب {order_number} وإشعار العميل.")
+            else:
+                send_message(OWNER_NUMBER, f"❌ تعذر تحديث حالة الطلب {order_number}.")
         return True
 
     # === تغيير حالة طلب ===
@@ -1342,18 +1351,22 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 address = session_data.get("address", "")
                 add_customer(sender, name, address)
                 customer = get_customer(sender)
-                order_number, _ = create_order(customer["id"], items, total, "تحويل مسبق")
                 proof_id = message.get("image", {}).get("id", "")
-                if proof_id:
-                    update_order_payment_proof(order_number, proof_id)
+                if not proof_id:
+                    send_message(sender, "⚠️ لم أتمكن من قراءة صورة إشعار التحويل. أرسلي الصورة مرة أخرى من فضلكِ.")
+                    return
+                order_number, _ = create_order(customer["id"], items, total, PAYMENT_TRANSFER)
+                proof_saved = update_order_payment_proof(order_number, proof_id)
+                if not proof_saved:
+                    send_message(sender, "⚠️ تعذر حفظ صورة إشعار التحويل مع الطلب. أرسلي الصورة مرة أخرى من فضلكِ.")
+                    return
                 clear_cart(sender)
                 user_states.pop(sender, None)
                 user_sessions.pop(sender, None)
-                send_message(sender, f"✅ *تم استلام طلبك!*\n\n📋 رقم الطلب: *{order_number}*\n💰 الإجمالي: {int(total)} ريال\n💳 الدفع: تحويل مسبق\n\n⏳ جاري مراجعة الدفع...\nسنؤكد لكِ خلال دقائق 😊")
-                notify_owner_new_order(order_number, sender, name, address, items, total, "تحويل مسبق")
-                send_message(OWNER_NUMBER, f"📸 *صورة إشعار التحويل للطلب {order_number}*\nمن العميل: {name or sender}")
-                if proof_id:
-                    send_image_by_id(OWNER_NUMBER, proof_id, f"إشعار التحويل — {order_number}")
+                send_message(sender, f"✅ *تم استلام طلبك!*\n\n📋 رقم الطلب: *{order_number}*\n💰 الإجمالي: {int(total)} ريال\n💳 الدفع: {PAYMENT_TRANSFER}\n\n⏳ الحالة: *بانتظار مراجعة الدفع*\nسنؤكد لكِ خلال دقائق 😊")
+                notify_owner_new_order(order_number, sender, name, address, items, total, PAYMENT_TRANSFER)
+                send_message(OWNER_NUMBER, f"📸 *صورة إشعار التحويل للطلب {order_number}*\nمن العميل: {name or sender}\n📊 الحالة: *بانتظار مراجعة الدفع*")
+                send_image_by_id(OWNER_NUMBER, proof_id, f"إشعار التحويل — {order_number}")
             else:
                 user_states.pop(sender, None)
                 send_message(sender, "❌ السلة فارغة!")

@@ -86,10 +86,15 @@ class AdminCommands:
         if not order:
             return f"❌ لم أجد الطلب: {order_number}"
         
-        if order['payment_method'] != 'التحويل المسبق':
+        if order['payment_method'] not in {'التحويل المسبق', 'تحويل مسبق'}:
             return f"❌ هذا الطلب لا يحتاج تأكيد دفع (طريقة الدفع: {order['payment_method']})"
+
+        if not order.get('payment_proof_url'):
+            return "❌ لا يمكن تأكيد الدفع قبل حفظ صورة إشعار التحويل مع الطلب."
         
-        PaymentManager.confirm_transfer_payment(order_number)
+        confirmed = PaymentManager.confirm_transfer_payment(order_number)
+        if not confirmed:
+            return f"❌ تعذر تحديث حالة الطلب {order_number}"
         
         message = f"✅ تم تأكيد الدفع للطلب {order_number}\n\n"
         message += "سيتم إرسال إشعار للعميل بتأكيد الدفع"
