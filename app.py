@@ -1598,16 +1598,7 @@ def webhook():
         whatsapp.send_typing_indicator(message_id)
         time.sleep(2)
 
-        # تسجيل رقم العميل من أول رسالة فقط، ثم مزامنته دون تكرار.
-        if sender != OWNER_NUMBER:
-            existing_customer = get_customer(sender)
-            add_customer(sender)
-            if existing_customer is None:
-                saved_first_contact = sync_customers_to_github()
-                print(
-                    f"[العملاء] أول تواصل من {sender}: "
-                    f"{'تم الحفظ على GitHub' if saved_first_contact else 'تعذر الحفظ على GitHub'}"
-                )
+        # لا نحفظ العميل عند أول رسالة؛ يتم الحفظ بعد إدخال الاسم فقط.
 
         # إشعار المالك
         if sender != OWNER_NUMBER and msg_body:
