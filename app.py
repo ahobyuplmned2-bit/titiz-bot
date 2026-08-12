@@ -901,7 +901,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
 
     if state == "awaiting_payment":
         session_data = user_sessions.get(sender, {})
-        if "استلام" in msg_normalized or msg_normalized == "pay_cod" or msg_normalized == "1":
+        if "استلام" in msg_normalized or raw_action in {"pay_cod", "1"}:
             cart_items = get_cart(sender)
             if cart_items:
                 items = [{"name": item["name"], "qty": item["quantity"],
@@ -922,7 +922,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 user_states.pop(sender, None)
                 send_message(sender, "❌ السلة فارغة! أضيفي منتجات أولاً 😊")
             return
-        elif "تحويل" in msg_normalized or "مسبق" in msg_normalized or msg_normalized == "pay_transfer" or msg_normalized == "2":
+        elif "تحويل" in msg_normalized or "مسبق" in msg_normalized or raw_action in {"pay_transfer", "2"}:
             user_states[sender] = "awaiting_transfer_proof"
             send_message(sender, "💰 *حسابات التحويل:*\n\n🟢 *نقطة جيب:* 906072\n🟡 *الكريمي نقطة حاسب:* 1202686\n🏦 *إيداع عبر الكريمي:* 3122678098\n\n📸 بعد التحويل أرسلي لنا صورة إشعار التحويل ✅")
             return
