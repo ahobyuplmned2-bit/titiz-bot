@@ -162,12 +162,18 @@ class WhatsAppAPI:
             }
             
             button_objects = []
-            for idx, button_text in enumerate(buttons[:3], 1):  # الحد الأقصى 3 أزرار
+            for idx, button in enumerate(buttons[:3], 1):  # الحد الأقصى 3 أزرار
+                if isinstance(button, dict):
+                    button_id = str(button.get("id") or idx)
+                    button_title = str(button.get("title") or "اختيار")
+                else:
+                    button_id = str(idx)
+                    button_title = str(button)
                 button_objects.append({
                     "type": "reply",
                     "reply": {
-                        "id": str(idx),
-                        "title": button_text
+                        "id": button_id[:256],
+                        "title": button_title[:20]
                     }
                 })
             
@@ -285,6 +291,6 @@ def format_product_card(product):
     else:
         message += f"❌ المنتج غير متوفر حالياً\n"
     
-    message += f"\n🛒 اكتبي *اضف* لإضافة المنتج إلى السلة"
+    message += f"\n\nاختاري الزر المناسب من الأسفل 👇\nأو اكتبي: اضف {product.get('name', 'المنتج')}"
     
     return message

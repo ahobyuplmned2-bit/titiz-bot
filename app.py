@@ -499,6 +499,18 @@ def send_image_by_id(to, media_id, caption=""):
 def send_buttons(to, text, buttons):
     return whatsapp.send_buttons(to, text, buttons)
 
+def send_product_card(to, product):
+    """إرسال صورة المنتج وحدها ثم وصفه وأزراره بمعرفات لا تتكرر."""
+    product_reply = format_product_card(product)
+    image_id = product.get("image_id", "")
+    if image_id:
+        send_image_by_id(to, image_id)
+    send_buttons(to, product_reply, [
+        {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
+        {"id": f"det_{product['id']}", "title": "📋 تفاصيل المنتج"},
+        {"id": "menu_cart", "title": "🛍️ عرض السلة"},
+    ])
+
 def send_list(to, text, button_text, sections):
     return whatsapp.send_list(to, text, button_text, sections)
 
@@ -834,6 +846,39 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
 def handle_customer_message(sender, msg_body, msg_normalized, message):
     """معالجة رسائل العملاء"""
     state = user_states.get(sender, "")
+    raw_action = (msg_body or "").strip().lower()
+
+    # أزرار المنتج: نستخدم النص الخام لأن normalize_text يزيل الشرطة السفلية.
+    if raw_action.startswith("add_"):
+        try:
+            product = get_product(int(raw_action.split("_", 1)[1]))
+        except (ValueError, IndexError):
+            product = None
+        if product:
+            add_to_cart(sender, product["id"], 1)
+            send_message(sender, f"✅ تم إضافة *{product['name']}* إلى السلة")
+            send_buttons(sender, "ماذا تريدين الآن؟", [
+                {"id": "menu_cart", "title": "🛒 عرض السلة"},
+                {"id": "menu_products", "title": "🛍️ متابعة التسوق"},
+            ])
+        else:
+            send_message(sender, "❌ لم أتمكن من العثور على هذا المنتج، جربي القائمة مرة أخرى.")
+        return
+
+    if raw_action.startswith("det_"):
+        try:
+            product = get_product(int(raw_action.split("_", 1)[1]))
+        except (ValueError, IndexError):
+            product = None
+        if product:
+            send_message(sender, f"📋 *تفاصيل المنتج*\n\n{product.get('description') or 'لا يوجد وصف إضافي.'}")
+            send_buttons(sender, "اختاري الإجراء المناسب:", [
+                {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
+                {"id": "menu_cart", "title": "🛍️ عرض السلة"},
+            ])
+        else:
+            send_message(sender, "❌ تفاصيل المنتج غير متاحة حالياً.")
+        return
 
     # === حالات الجلسة ===
 
@@ -923,11 +968,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             found = products_list[choice - 1]
             user_states.pop(sender, None)
             user_sessions.pop(sender, None)
-            product_reply = format_product_card(found)
-            if found.get('image_id'):
-                send_image_by_id(sender, found['image_id'], product_reply)
-            else:
-                send_message(sender, product_reply)
+            send_product_card(sender, found)
             return
         else:
             send_message(sender, f"❌ اختاري رقم من 1 إلى {len(products_list) if isinstance(products_list, list) else 0}")
@@ -1074,20 +1115,12 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
 
     if len(matching) == 1:
         found = matching[0]
-        product_reply = format_product_card(found)
-        if found.get('image_id'):
-            send_image_by_id(sender, found['image_id'], product_reply)
-        else:
-            send_message(sender, product_reply)
+        send_product_card(sender, found)
         return
     elif len(matching) > 1:
-        user_sessions[sender] = matching
-        user_states[sender] = "product_list"
-        list_reply = "🔍 وجدنا المنتجات التالية:\n\n"
-        for i, p in enumerate(matching[:10], 1):
-            list_reply += f"{i}- {p['name']} ({int(p['price'])} ريال)\n"
-        list_reply += "\n✍️ أرسلي رقم المنتج اللي تبينه 😊"
-        send_message(sender, list_reply)
+        send_message(sender, "🔍 وجدنا لكِ هذه المنتجات، اختاري الزر تحت المنتج المناسب:")
+        for product in matching[:10]:
+            send_product_card(sender, product)
         return
 
     # === رد افتراضي (آخر شي بعد كل البحث) ===
