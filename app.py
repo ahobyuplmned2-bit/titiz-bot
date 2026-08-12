@@ -13,6 +13,7 @@ import base64
 from datetime import datetime
 import time
 import unicodedata
+from threading import Lock, Thread
 
 # استيراد الملفات المخصصة
 from database import (
@@ -22,7 +23,9 @@ from database import (
     log_action, get_statistics, load_qa, save_qa, delete_qa,
     get_orders, get_customer_orders, get_customers, search_customers,
     update_order_payment_proof, save_user_session, load_user_session,
-    delete_user_session
+    delete_user_session, schedule_customer_followup,
+    cancel_customer_followup, get_due_customer_followups,
+    mark_customer_followup_sent
 )
 from whatsapp_api import WhatsAppAPI, format_product_card
 
@@ -49,6 +52,76 @@ init_db()
 # ===== متغيرات الجلسات =====
 user_sessions = {}
 user_states = {}
+
+# ===== تذكير استفسار المنتج وتقييم الرضا =====
+PRODUCT_FOLLOWUP_DELAY_SECONDS = max(
+    int(os.environ.get("PRODUCT_FOLLOWUP_DELAY_SECONDS", "1800")), 60
+)
+PRODUCT_FOLLOWUP_POLL_SECONDS = max(
+    int(os.environ.get("PRODUCT_FOLLOWUP_POLL_SECONDS", "30")), 10
+)
+PRODUCT_FOLLOWUP_SATISFIED_ID = "product_followup_satisfied"
+PRODUCT_FOLLOWUP_UNSATISFIED_ID = "product_followup_unsatisfied"
+PRODUCT_FOLLOWUP_MESSAGE = (
+    "مرحباً السادة! هل أنت راضٍ عن الردود من مساعدك الحصري، المتوفر على مدار الساعة "
+    "طوال أيام الأسبوع فقط لك؟ 😊\n"
+    "سأبقيك على اطلاع بأحدث العروض، وتوصيات المنتجات الرائجة، ومعلومات الطلبات في الوقت الفعلي.\n"
+    "إذا كان لديك أي طلبات أخرى، فقط ناديني! أنا هنا من أجلك. 🛍️✨\n"
+    "بعد محادثتنا وجدنا مجموعة خاصة"
+)
+PRODUCT_FOLLOWUP_SATISFIED_MESSAGE = (
+    "شكراً جزيلاً لك! 😊 نحن سعداء جداً برضاك عن الخدمة 👍 إذا احتجت أي مساعدة إضافية أو استفسار، "
+    "لا تتردد بالتواصل في أي وقت. يمكنك أيضاً زيارة قناتنا على واتساب والضغط على المتابعة "
+    "للحصول على توصيات منتجات مخصصة لك 🛒✨\n\n"
+    "اكتشف ما يناسبك الآن:\n"
+    "https://whatsapp.com/channel/0029VaqFTglLikgDDe0D5E2D"
+)
+PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE = (
+    "نعتذر إذا لم يكن الرد بالمستوى المطلوب 🙏\n"
+    "اكتبي لنا ما الذي لم يكن واضحاً أو ما الذي تحتاجينه، وسنساعدك مباشرة."
+)
+followup_worker_lock = Lock()
+followup_worker_started = False
+
+def schedule_product_followup(phone_number, product_name=""):
+    """جدولة تذكير واحد بعد رد متعلق بمنتج، مع استمرار الجدولة بعد إعادة التشغيل."""
+    if phone_number and phone_number != OWNER_NUMBER:
+        schedule_customer_followup(
+            phone_number,
+            product_name,
+            PRODUCT_FOLLOWUP_DELAY_SECONDS,
+        )
+
+def send_product_followup(phone_number, product_name=""):
+    """إرسال رسالة التذكير مع زري تقييم الرضا."""
+    send_buttons(phone_number, PRODUCT_FOLLOWUP_MESSAGE, [
+        {"id": PRODUCT_FOLLOWUP_SATISFIED_ID, "title": "👍 راضٍ"},
+        {"id": PRODUCT_FOLLOWUP_UNSATISFIED_ID, "title": "👎 غير راضٍ"},
+    ])
+
+def product_followup_worker():
+    """عامل خلفي يرسل التذكيرات المستحقة مرة واحدة فقط."""
+    while True:
+        try:
+            for followup in get_due_customer_followups():
+                if mark_customer_followup_sent(
+                    followup["phone_number"], followup["due_at"]
+                ):
+                    send_product_followup(
+                        followup["phone_number"], followup.get("product_name", "")
+                    )
+        except Exception as exc:
+            print(f"خطأ في عامل تذكير العملاء: {exc}")
+        time.sleep(PRODUCT_FOLLOWUP_POLL_SECONDS)
+
+def start_product_followup_worker():
+    """تشغيل عامل التذكير مرة واحدة لكل عملية تشغيل."""
+    global followup_worker_started
+    with followup_worker_lock:
+        if followup_worker_started:
+            return
+        Thread(target=product_followup_worker, daemon=True, name="product-followups").start()
+        followup_worker_started = True
 
 # ===== منع تكرار الرسائل =====
 processed_messages = {}
@@ -634,6 +707,7 @@ def send_product_card(to, product):
         {"id": f"det_{product['id']}", "title": "📋 تفاصيل المنتج"},
         {"id": "shopping_assistant", "title": "🔙 متابعة التسوق"},
     ])
+    schedule_product_followup(to, product.get("name", ""))
 
 def send_list(to, text, button_text, sections):
     return whatsapp.send_list(to, text, button_text, sections)
@@ -654,6 +728,8 @@ def send_response(to, response_data):
     """إرسال رد موحد (نص + صور)"""
     reply = response_data["reply"]
     images = response_data.get("images", [])
+    if images:
+        schedule_product_followup(to, response_data.get("original_keyword", ""))
 
     # إرسال النص
     if isinstance(reply, list):
@@ -1182,6 +1258,21 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     state = user_states.get(sender, "")
     raw_action = (msg_body or "").strip().lower()
 
+    # أي رسالة جديدة تعني أن العميل عاد للمحادثة؛ نلغي التذكير السابق.
+    if raw_action not in {
+        PRODUCT_FOLLOWUP_SATISFIED_ID,
+        PRODUCT_FOLLOWUP_UNSATISFIED_ID,
+    }:
+        cancel_customer_followup(sender)
+
+    if raw_action == PRODUCT_FOLLOWUP_SATISFIED_ID:
+        send_message(sender, PRODUCT_FOLLOWUP_SATISFIED_MESSAGE)
+        return
+
+    if raw_action == PRODUCT_FOLLOWUP_UNSATISFIED_ID:
+        send_message(sender, PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE)
+        return
+
     # أزرار المنتج: نستخدم النص الخام لأن normalize_text يزيل الشرطة السفلية.
     if raw_action.startswith("add_"):
         try:
@@ -1210,6 +1301,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
                 {"id": "menu_cart", "title": "🛍️ عرض السلة"},
             ])
+            schedule_product_followup(sender, product.get("name", ""))
         else:
             send_message(sender, "❌ تفاصيل المنتج غير متاحة حالياً.")
         return
@@ -1385,6 +1477,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 return
             if any(word in msg_normalized for word in ["سعر", "بكم", "تفاصيل", "وصف"]):
                 send_message(sender, format_product_card(last_product))
+                schedule_product_followup(sender, last_product.get("name", ""))
                 return
 
     # اختيار من قائمة منتجات
@@ -1642,6 +1735,8 @@ def home():
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "healthy"}), 200
+
+start_product_followup_worker()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))

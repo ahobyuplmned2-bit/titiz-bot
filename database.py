@@ -90,6 +90,19 @@ def init_db():
                 last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+
+        # تذكيرات متابعة استفسارات المنتجات، محفوظة لاستمرارها بعد إعادة التشغيل.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS customer_followups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                phone_number TEXT UNIQUE NOT NULL,
+                product_name TEXT,
+                due_at REAL NOT NULL,
+                sent_at REAL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         
         # جدول الأسئلة والأجوبة
         cursor.execute('''
@@ -285,6 +298,64 @@ def delete_user_session(phone_number):
         conn.execute('DELETE FROM user_sessions WHERE phone_number = ?', (phone_number,))
         conn.commit()
         conn.close()
+
+def schedule_customer_followup(phone_number, product_name="", delay_seconds=1800):
+    """جدولة تذكير متابعة واحد للعميل، مع استبدال أي تذكير سابق."""
+    due_at = datetime.utcnow().timestamp() + max(int(delay_seconds), 60)
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute('''
+            INSERT INTO customer_followups
+                (phone_number, product_name, due_at, sent_at, updated_at)
+            VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)
+            ON CONFLICT(phone_number) DO UPDATE SET
+                product_name = excluded.product_name,
+                due_at = excluded.due_at,
+                sent_at = NULL,
+                updated_at = CURRENT_TIMESTAMP
+        ''', (phone_number, product_name or "", due_at))
+        conn.commit()
+        conn.close()
+
+def cancel_customer_followup(phone_number):
+    """إلغاء تذكير العميل عند عودته للمحادثة أو تفاعله مع التذكير."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute('DELETE FROM customer_followups WHERE phone_number = ?', (phone_number,))
+        conn.commit()
+        conn.close()
+
+def get_due_customer_followups(limit=50):
+    """إرجاع التذكيرات المستحقة التي لم تُرسل بعد."""
+    now = datetime.utcnow().timestamp()
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute('''
+            SELECT phone_number, product_name, due_at
+            FROM customer_followups
+            WHERE sent_at IS NULL AND due_at <= ?
+            ORDER BY due_at ASC
+            LIMIT ?
+        ''', (now, int(limit))).fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+def mark_customer_followup_sent(phone_number, due_at):
+    """حجز التذكير للإرسال مرة واحدة فقط حتى لا يتكرر."""
+    sent_at = datetime.utcnow().timestamp()
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE customer_followups
+            SET sent_at = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE phone_number = ? AND due_at = ? AND sent_at IS NULL
+        ''', (sent_at, phone_number, due_at))
+        claimed = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return claimed
 
 def remove_from_cart(phone_number, product_id):
     """حذف منتج من السلة"""
