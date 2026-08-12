@@ -517,8 +517,83 @@ def github_save(filename, data, sha=""):
         print(f"[GitHub] خطأ: {e}")
         return False
 
+def sync_customers_to_github():
+    """دمج العملاء المحليين مع customers.json وحفظ نسخة واحدة لكل رقم هاتف."""
+    try:
+        if not GITHUB_TOKEN:
+            print("[GitHub] GITHUB_TOKEN غير موجود؛ لم يتم حفظ العملاء.")
+            return False
+
+        remote_data, sha = github_load("customers.json")
+        customers_by_phone = {}
+        if isinstance(remote_data, dict):
+            remote_records = remote_data.values()
+        elif isinstance(remote_data, list):
+            remote_records = remote_data
+        else:
+            remote_records = []
+
+        for record in remote_records:
+            if not isinstance(record, dict):
+                continue
+            phone = str(record.get("phone_number") or record.get("phone") or "").strip()
+            if phone:
+                customers_by_phone[phone] = record
+
+        for customer in get_customers(limit=10000):
+            phone = str(customer.get("phone_number") or "").strip()
+            if not phone:
+                continue
+            customers_by_phone[phone] = {
+                "phone_number": phone,
+                "name": customer.get("name") or "",
+                "address": customer.get("address") or "",
+                "first_order_date": customer.get("first_order_date"),
+                "order_count": int(customer.get("order_count") or 0),
+                "created_at": customer.get("created_at"),
+                "updated_at": customer.get("updated_at"),
+            }
+
+        if not customers_by_phone:
+            print("[GitHub] لا يوجد عملاء للحفظ.")
+            return False
+
+        result = github_save("customers.json", customers_by_phone, sha=sha)
+        if result:
+            print(f"[GitHub] تم حفظ {len(customers_by_phone)} عميل دون تكرار على GitHub")
+        return result
+    except Exception as e:
+        print(f"[GitHub] خطأ في حفظ العملاء: {e}")
+        return False
+
+def load_customers_from_github():
+    """استعادة العملاء المحفوظين في customers.json إلى قاعدة البيانات المحلية."""
+    try:
+        data, _ = github_load("customers.json")
+        if isinstance(data, dict):
+            records = data.values()
+        elif isinstance(data, list):
+            records = data
+        else:
+            records = []
+
+        restored = 0
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            phone = str(record.get("phone_number") or record.get("phone") or "").strip()
+            if phone:
+                before = get_customer(phone)
+                add_customer(phone, record.get("name") or None, record.get("address") or None)
+                if before is None:
+                    restored += 1
+        print(f"[بدء التشغيل] تم استعادة {restored} عميل من customers.json")
+    except Exception as e:
+        print(f"[بدء التشغيل] خطأ في استعادة العملاء: {e}")
+
 # تحميل البيانات بعد تعريف دوال GitHub، حتى لا يحدث استدعاء مبكر قبل github_load.
 load_products_from_github()
+load_customers_from_github()
 load_qa_from_github()
 load_custom_responses()
 
@@ -1184,8 +1259,15 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     # === حالات الجلسة ===
 
     if state == "awaiting_name":
+        customer_name = msg_body.strip()
+        add_customer(sender, customer_name)
+        customers_saved = sync_customers_to_github()
         user_states[sender] = "awaiting_address"
-        user_sessions[sender] = {"name": msg_body.strip()}
+        user_sessions[sender] = {"name": customer_name}
+        if customers_saved:
+            send_message(sender, "حياك الله 🌟\nأهلاً بك في Titiz\nتم حفظ بياناتك بنجاح\nلو احتجت اي أداة منزلية ارسل اسم المنتج")
+        else:
+            send_message(sender, "⚠️ تعذر حفظ بياناتك على GitHub حالياً، لكن سنكمل طلبك. يرجى إبلاغ الإدارة إذا تكرر الخطأ.")
         send_message(sender, "📍 تمام! الحين أرسلي لنا عنوان التوصيل (المنطقة أو أقرب نقطة) 😊\n📦 وين تحبين نحط لكِ المنتج؟ 🤔\n\nنقدر نحطه في أي مكان قريب منكِ:\n\n🏪 محل قريب من بيتكِ\n🛍️ بقالة في حارتكِ\n📍 أي نقطة تحدديها\n\nأرسلي لنا اسم المكان أو المنطقة وإحنا نوصله لأقرب نقطة منكِ 😊👌")
         return
 
@@ -1208,6 +1290,8 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         session_data = user_sessions.get(sender, {})
         session_data["address"] = msg_body.strip()
         user_sessions[sender] = session_data
+        add_customer(sender, session_data.get("name"), session_data["address"])
+        sync_customers_to_github()
         user_states[sender] = "awaiting_payment"
         send_payment_choice(sender)
         return
