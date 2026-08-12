@@ -18,8 +18,10 @@ import unicodedata
 from database import (
     init_db, add_customer, get_customer, add_product, get_all_products,
     get_product, add_to_cart, get_cart, clear_cart, remove_from_cart,
-    create_order, get_order, update_order_status,
-    log_action, get_statistics, load_qa, save_qa, delete_qa
+    create_order, get_order, update_order_status, update_cart_quantity,
+    log_action, get_statistics, load_qa, save_qa, delete_qa,
+    get_orders, get_customer_orders, get_customers, search_customers,
+    update_order_payment_proof
 )
 from whatsapp_api import WhatsAppAPI, format_product_card
 
@@ -516,7 +518,7 @@ def send_product_card(to, product):
     send_buttons(to, product_reply, [
         {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
         {"id": f"det_{product['id']}", "title": "📋 تفاصيل المنتج"},
-        {"id": "menu_cart", "title": "🛍️ عرض السلة"},
+        {"id": "menu_products", "title": "🔙 رجوع"},
     ])
 
 def send_list(to, text, button_text, sections):
@@ -567,14 +569,126 @@ def send_main_menu(to):
         "title": "الخدمات",
         "rows": [
             {"id": "menu_products", "title": "🛍️ تصفح المنتجات", "description": "عرض جميع المنتجات"},
+            {"id": "menu_search", "title": "🔍 البحث عن منتج", "description": "اكتبي اسم المنتج"},
             {"id": "menu_cart", "title": "🛒 السلة", "description": "عرض سلة المشتريات"},
             {"id": "menu_orders", "title": "📦 طلباتي", "description": "متابعة طلباتك"},
+            {"id": "menu_track", "title": "🚚 تتبع الطلب", "description": "عرض آخر حالة"},
             {"id": "menu_payment", "title": "💳 طرق الدفع", "description": "حسابات التحويل"},
             {"id": "menu_location", "title": "📍 مواقعنا", "description": "عناوين الفروع"},
             {"id": "menu_contact", "title": "📞 التواصل معنا", "description": "للاستفسارات"}
         ]
     }]
     send_list(to, "🏠 *أهلاً بكِ في Titiz!*\n\nاختاري من القائمة:", "📋 القائمة", sections)
+
+ORDER_STATUSES = [
+    "بانتظار مراجعة الدفع", "تم الدفع", "جديد", "جاري التجهيز",
+    "تم الشحن", "تم التسليم", "ملغي"
+]
+
+def normalize_order_number(value):
+    """توحيد رقم الطلب سواء أُرسل مع ORD- أو بدونه."""
+    value = (value or "").strip().upper()
+    if not value.startswith("ORD-"):
+        value = f"ORD-{value.zfill(6)}"
+    return value
+
+def format_order_for_admin(order):
+    """تنسيق شامل لطلب الإدارة."""
+    lines = [
+        f"📦 *تفاصيل الطلب: {order.get('order_number', 'غير محدد')}*",
+        f"👤 العميل: {order.get('customer_name') or 'غير محدد'}",
+        f"📱 الهاتف: {order.get('phone_number') or 'غير محدد'}",
+        f"📍 العنوان: {order.get('address') or 'غير محدد'}",
+        f"💳 طريقة الدفع: {order.get('payment_method') or 'غير محددة'}",
+        f"📊 الحالة: {order.get('order_status') or 'جديد'}",
+        f"🕐 التاريخ: {order.get('created_at') or 'غير محدد'}",
+        "",
+        "🛍️ *المنتجات:*"
+    ]
+    for item in order.get("products_data", []) or []:
+        quantity = item.get("quantity", item.get("qty", 1))
+        price = float(item.get("price", 0) or 0)
+        lines.append(f"• {item.get('name', 'منتج')} × {quantity} = {int(price * int(quantity))} ريال")
+    lines.append(f"\n💰 *الإجمالي: {int(float(order.get('total_price', 0) or 0))} ريال*")
+    if order.get("payment_proof_url"):
+        lines.append("📸 إشعار التحويل: مرفق بالطلب")
+    return "\n".join(lines)
+
+def send_customer_orders(to):
+    """عرض طلبات العميل مع الحالة الحالية وزر تحديث الحالة."""
+    orders = get_customer_orders(to)
+    if not orders:
+        send_message(to, "📦 لا توجد طلبات مسجلة على رقمك حالياً.")
+        return
+    text = "📦 *طلباتك الحالية:*\n\n"
+    for order in orders:
+        text += (
+            f"📋 *{order['order_number']}*\n"
+            f"الحالة: *{order.get('order_status') or 'جديد'}*\n"
+            f"الإجمالي: {int(float(order.get('total_price', 0) or 0))} ريال\n"
+            f"التاريخ: {order.get('created_at') or 'غير محدد'}\n\n"
+        )
+    send_message(to, text.rstrip())
+    send_buttons(to, "يمكنك تحديث القائمة في أي وقت:", [
+        {"id": "menu_orders", "title": "🔄 تحديث الحالة"},
+        {"id": "menu_products", "title": "🛍️ متابعة التسوق"},
+        {"id": "menu_cart", "title": "🛒 السلة"},
+    ])
+
+def send_cart_view(to):
+    """عرض السلة مع إجراءات تفاعلية لكل منتج."""
+    cart_items = get_cart(to)
+    if not cart_items:
+        send_message(to, "🛒 السلة فارغة!\n\nأضيفي منتجاً أولاً 😊")
+        send_buttons(to, "اختاري ما تريدين:", [
+            {"id": "menu_products", "title": "🛍️ متابعة التسوق"},
+            {"id": "menu_orders", "title": "📦 طلباتي"},
+        ])
+        return
+
+    total = 0
+    lines = ["🛒 *سلة المشتريات:*", ""]
+    action_rows = []
+    for item in cart_items:
+        item_total = item["price"] * item["quantity"]
+        total += item_total
+        lines.append(f"• {item['name']} × {item['quantity']} = {int(item_total)} ريال")
+        action_rows.extend([
+            {"id": f"inc_{item['product_id']}", "title": f"➕ {item['name'][:17]}", "description": "زيادة الكمية"},
+            {"id": f"dec_{item['product_id']}", "title": f"➖ {item['name'][:17]}", "description": "إنقاص الكمية"},
+            {"id": f"del_{item['product_id']}", "title": f"❌ حذف {item['name'][:15]}", "description": "حذف المنتج من السلة"},
+        ])
+    lines.extend(["", f"💰 *الإجمالي: {int(total)} ريال*", "🚚 التوصيل: مجاني"])
+    send_message(to, "\n".join(lines))
+    send_list(to, "اختاري إجراءً للسلة:", "إدارة السلة", [{
+        "title": "المنتجات",
+        "rows": action_rows[:10]
+    }])
+    send_buttons(to, "جاهزة لإكمال الطلب؟", [
+        {"id": "checkout", "title": "✅ إكمال الطلب"},
+        {"id": "clear_cart", "title": "🗑️ تفريغ السلة"},
+        {"id": "menu_products", "title": "🔙 متابعة التسوق"},
+    ])
+
+def send_payment_choice(to):
+    """إرسال طرق الدفع مرة واحدة في كل انتقال واضح إلى الدفع."""
+    send_buttons(to, "💳 اختاري طريقة الدفع:", [
+        {"id": "pay_cod", "title": "💵 الدفع عند الاستلام"},
+        {"id": "pay_transfer", "title": "💳 التحويل المسبق"},
+        {"id": "cancel_checkout", "title": "❌ إلغاء الطلب"},
+    ])
+
+def send_contact_menu(to):
+    """عرض خيارات التواصل بطريقة تفاعلية."""
+    send_list(to, "📞 اختاري طريقة التواصل:", "التواصل", [{
+        "title": "خدمة العملاء",
+        "rows": [
+            {"id": "contact_call", "title": "📞 اتصال", "description": "اتصلي بخدمة العملاء"},
+            {"id": "contact_whatsapp", "title": "💬 واتساب", "description": "محادثة خدمة العملاء"},
+            {"id": "contact_location", "title": "📍 موقعنا", "description": "فروع Titiz"},
+            {"id": "contact_hours", "title": "⏰ أوقات العمل", "description": "مواعيد الخدمة"},
+        ]
+    }])
 
 
 # ╔══════════════════════════════════════════════════════════════╗
@@ -721,6 +835,43 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             send_message(OWNER_NUMBER, "📦 المخزن فارغ")
         return True
 
+    # === البحث عن عميل ===
+    if msg_normalized.startswith("بحث "):
+        query = msg_body.split(" ", 1)[1].strip()
+        customers = search_customers(query)
+        if customers:
+            text = f"🔎 *نتائج البحث عن: {query}*\n\n"
+            for customer in customers:
+                text += (
+                    f"👤 {customer.get('name') or 'بدون اسم'}\n"
+                    f"📱 {customer.get('phone_number')}\n"
+                    f"📍 {customer.get('address') or 'بدون عنوان'}\n"
+                    f"📦 الطلبات: {customer.get('order_count', 0)}\n\n"
+                )
+            send_message(OWNER_NUMBER, text.rstrip())
+        else:
+            send_message(OWNER_NUMBER, f"❌ لم أجد عميلاً يطابق: {query}")
+        return True
+
+    # === بيانات عميل ===
+    if msg_normalized.startswith("عميل "):
+        query = msg_body.split(" ", 1)[1].strip()
+        customer = get_customer(query)
+        if not customer:
+            results = search_customers(query, limit=1)
+            customer = results[0] if results else None
+        if customer:
+            send_message(OWNER_NUMBER,
+                f"👤 *بيانات العميل*\n\n"
+                f"الاسم: {customer.get('name') or 'غير مسجل'}\n"
+                f"📱 الهاتف: {customer.get('phone_number')}\n"
+                f"📍 العنوان: {customer.get('address') or 'غير مسجل'}\n"
+                f"🗓️ أول طلب: {customer.get('first_order_date') or 'لا يوجد'}\n"
+                f"📦 عدد الطلبات: {customer.get('order_count', 0)}")
+        else:
+            send_message(OWNER_NUMBER, f"❌ لم أجد العميل: {query}")
+        return True
+
     # === الزبائن ===
     if msg_normalized in ["زبائن", "عملاء"]:
         from database import db_lock, DB_PATH
@@ -740,34 +891,68 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             send_message(OWNER_NUMBER, "📋 لا يوجد عملاء")
         return True
 
+    # === الطلبات الجديدة ===
+    if msg_normalized in ["طلبات جديدة", "طلبات الجديده", "الجديد"]:
+        orders = get_orders(status="جديد", limit=30)
+        if orders:
+            text = "🆕 *الطلبات الجديدة:*\n\n" + "\n".join(
+                f"📦 {o['order_number']} | {o.get('customer_name') or 'بدون اسم'} | {int(float(o.get('total_price', 0) or 0))} ريال"
+                for o in orders
+            )
+            send_message(OWNER_NUMBER, text)
+        else:
+            send_message(OWNER_NUMBER, "✅ لا توجد طلبات جديدة حالياً")
+        return True
+
     # === الطلبات ===
     if msg_normalized in ["طلبات"]:
-        from database import db_lock, DB_PATH
-        import sqlite3 as _sqlite3
-        with db_lock:
-            conn = _sqlite3.connect(DB_PATH)
-            conn.row_factory = _sqlite3.Row
-            orders = conn.execute("SELECT * FROM orders ORDER BY created_at DESC LIMIT 10").fetchall()
-            conn.close()
+        orders = get_orders(limit=20)
         if orders:
             orders_list = "📋 *آخر الطلبات:*\n\n"
             for o in orders:
-                orders_list += f"📦 *{o['order_number']}* | {o['order_status']} | {int(o['total_price'])} ريال\n"
+                orders_list += f"📦 *{o['order_number']}* | {o.get('customer_name') or 'بدون اسم'} | {o.get('order_status') or 'جديد'} | {int(float(o.get('total_price', 0) or 0))} ريال\n"
             send_message(OWNER_NUMBER, orders_list)
         else:
             send_message(OWNER_NUMBER, "📋 لا توجد طلبات")
+        return True
+
+    # === تفاصيل طلب ===
+    if msg_normalized.startswith("تفاصيل "):
+        order_number = normalize_order_number(msg_body.split(" ", 1)[1])
+        order = get_order(order_number)
+        send_message(OWNER_NUMBER, format_order_for_admin(order) if order else f"❌ لم أجد الطلب: {order_number}")
+        return True
+
+    # === تأكيد دفع حوالة ===
+    if msg_normalized.startswith("تأكيد دفع ") or msg_normalized.startswith("تأكيد الدفع "):
+        order_text = msg_body.split(" ", 2)[-1].strip()
+        order_number = normalize_order_number(order_text)
+        order = get_order(order_number)
+        if not order:
+            send_message(OWNER_NUMBER, f"❌ لم أجد الطلب: {order_number}")
+        elif order.get("payment_method") != "تحويل مسبق":
+            send_message(OWNER_NUMBER, "❌ هذا الطلب ليس بتحويل مسبق.")
+        else:
+            update_order_status(order_number, "تم الدفع")
+            if order.get("phone_number"):
+                send_message(order["phone_number"], "✅ تم استلام دفعتك بنجاح وسيتم تجهيز طلبك قريبًا.")
+            send_message(OWNER_NUMBER, f"✅ تم تأكيد الدفع للطلب {order_number} وإشعار العميل.")
         return True
 
     # === تغيير حالة طلب ===
     if msg_normalized.startswith("حاله ") or msg_normalized.startswith("حالة "):
         parts = msg_body.split(" ", 2)
         if len(parts) >= 3:
-            order_num = parts[1].strip().upper()
-            if not order_num.startswith("ORD-"):
-                order_num = f"ORD-{order_num.zfill(6)}"
+            order_num = normalize_order_number(parts[1])
             new_status = parts[2].strip()
-            update_order_status(order_num, new_status)
-            send_message(OWNER_NUMBER, f"✅ تم تحديث حالة {order_num} إلى: {new_status}")
+            if new_status not in ORDER_STATUSES:
+                send_message(OWNER_NUMBER, "❌ الحالة غير صحيحة. الحالات المتاحة:\n" + "، ".join(ORDER_STATUSES))
+            else:
+                update_order_status(order_num, new_status)
+                order = get_order(order_num)
+                if order and order.get("phone_number"):
+                    send_message(order["phone_number"], f"🔔 تحديث طلبك *{order_num}*\nالحالة الحالية: *{new_status}*")
+                send_message(OWNER_NUMBER, f"✅ تم تحديث حالة {order_num} إلى: {new_status}")
         else:
             send_message(OWNER_NUMBER, "❌ الصيغة: حالة [رقم الطلب] [الحالة الجديدة]")
         return True
@@ -813,9 +998,14 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
         help_text += "• ردودي\n\n"
         help_text += "📊 *أخرى:*\n"
         help_text += "• رد [رقم] [الرسالة]\n"
-        help_text += "• زبائن\n"
+        help_text += "• عملاء / زبائن\n"
+        help_text += "• عميل [رقم أو اسم]\n"
+        help_text += "• بحث [اسم أو رقم]\n"
         help_text += "• طلبات\n"
+        help_text += "• طلبات جديدة\n"
+        help_text += "• تفاصيل [رقم الطلب]\n"
         help_text += "• حالة [رقم] [الحالة]\n"
+        help_text += "• تأكيد دفع [رقم الطلب]\n"
         help_text += "• احصائيات\n"
         help_text += "• نسخ احتياطي"
         send_message(OWNER_NUMBER, help_text)
@@ -888,6 +1078,53 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_message(sender, "❌ تفاصيل المنتج غير متاحة حالياً.")
         return
 
+    if raw_action == "menu_cart":
+        send_cart_view(sender)
+        return
+
+    if raw_action == "menu_search":
+        send_message(sender, "🔍 اكتبي اسم المنتج أو صفيه بكلماتك، وسأبحث لكِ عنه 😊")
+        return
+
+    if raw_action == "menu_track":
+        send_customer_orders(sender)
+        return
+
+    if raw_action.startswith(("inc_", "dec_", "del_")):
+        try:
+            action, product_id_text = raw_action.split("_", 1)
+            product_id = int(product_id_text)
+            cart_item = next((item for item in get_cart(sender) if item["product_id"] == product_id), None)
+        except (ValueError, IndexError):
+            action, cart_item = "", None
+        if not cart_item:
+            send_message(sender, "❌ هذا المنتج غير موجود في السلة.")
+        elif action == "inc":
+            update_cart_quantity(sender, product_id, cart_item["quantity"] + 1)
+            send_cart_view(sender)
+        elif action == "dec":
+            update_cart_quantity(sender, product_id, cart_item["quantity"] - 1)
+            send_cart_view(sender)
+        else:
+            remove_from_cart(sender, product_id)
+            send_cart_view(sender)
+        return
+
+    if raw_action == "clear_cart":
+        clear_cart(sender)
+        send_message(sender, "🗑️ تم تفريغ السلة ✅")
+        send_buttons(sender, "اختاري ما تريدين:", [
+            {"id": "menu_products", "title": "🛍️ متابعة التسوق"},
+            {"id": "menu_orders", "title": "📦 طلباتي"},
+        ])
+        return
+
+    if raw_action == "cancel_checkout":
+        user_states.pop(sender, None)
+        user_sessions.pop(sender, None)
+        send_message(sender, "❌ تم إلغاء إتمام الطلب. السلة ما زالت محفوظة ويمكنك المتابعة لاحقاً.")
+        return
+
     # === حالات الجلسة ===
 
     if state == "awaiting_name":
@@ -896,15 +1133,27 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_message(sender, "📍 تمام! الحين أرسلي لنا عنوان التوصيل (المنطقة أو أقرب نقطة) 😊")
         return
 
+    if state == "awaiting_customer_confirmation":
+        if raw_action == "confirm_info" or msg_normalized in ["نعم", "صحيح", "صحيحه"]:
+            user_states[sender] = "awaiting_payment"
+            send_payment_choice(sender)
+        elif raw_action == "change_info" or "تعديل" in msg_normalized:
+            user_states[sender] = "awaiting_name"
+            send_message(sender, "👤 أرسلي الاسم الصحيح من فضلكِ 😊")
+        else:
+            send_buttons(sender, "هل البيانات صحيحة؟", [
+                {"id": "confirm_info", "title": "✅ نعم، صحيحة"},
+                {"id": "change_info", "title": "✏️ تعديل البيانات"},
+                {"id": "cancel_checkout", "title": "❌ إلغاء"},
+            ])
+        return
+
     if state == "awaiting_address":
         session_data = user_sessions.get(sender, {})
         session_data["address"] = msg_body.strip()
         user_sessions[sender] = session_data
         user_states[sender] = "awaiting_payment"
-        send_buttons(sender,
-            "💳 *اختاري طريقة الدفع:*\n\n✅ الدفع عند الاستلام\n✅ التحويل المسبق",
-            [{"id": "pay_cod", "title": "💵 عند الاستلام"},
-             {"id": "pay_transfer", "title": "💳 تحويل مسبق"}])
+        send_payment_choice(sender)
         return
 
     if state == "awaiting_payment":
@@ -954,12 +1203,17 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 add_customer(sender, name, address)
                 customer = get_customer(sender)
                 order_number, _ = create_order(customer["id"], items, total, "تحويل مسبق")
+                proof_id = message.get("image", {}).get("id", "")
+                if proof_id:
+                    update_order_payment_proof(order_number, proof_id)
                 clear_cart(sender)
                 user_states.pop(sender, None)
                 user_sessions.pop(sender, None)
                 send_message(sender, f"✅ *تم استلام طلبك!*\n\n📋 رقم الطلب: *{order_number}*\n💰 الإجمالي: {int(total)} ريال\n💳 الدفع: تحويل مسبق\n\n⏳ جاري مراجعة الدفع...\nسنؤكد لكِ خلال دقائق 😊")
                 notify_owner_new_order(order_number, sender, name, address, items, total, "تحويل مسبق")
-                send_message(OWNER_NUMBER, f"📸 صورة إشعار التحويل للطلب {order_number}")
+                send_message(OWNER_NUMBER, f"📸 *صورة إشعار التحويل للطلب {order_number}*\nمن العميل: {name or sender}")
+                if proof_id:
+                    send_image_by_id(OWNER_NUMBER, proof_id, f"إشعار التحويل — {order_number}")
             else:
                 user_states.pop(sender, None)
                 send_message(sender, "❌ السلة فارغة!")
@@ -994,18 +1248,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
 
     # === أوامر السلة ===
     if msg_normalized in [normalize_text(x) for x in ["السلة", "السله", "سلة", "سله", "عربتي", "cart", "menu_cart"]]:
-        cart_items = get_cart(sender)
-        if cart_items:
-            cart_text = "🛒 *سلة المشتريات:*\n\n"
-            total = 0
-            for item in cart_items:
-                item_total = item["price"] * item["quantity"]
-                total += item_total
-                cart_text += f"  • {item['name']} × {item['quantity']} = {int(item_total)} ريال\n"
-            cart_text += f"\n💰 *الإجمالي: {int(total)} ريال*\n🚚 التوصيل: مجاني\n\nاكتبي *اكمل الطلب* لإتمام الشراء ✅\nأو *افرغ السلة* لتفريغها 🗑️"
-            send_message(sender, cart_text)
-        else:
-            send_message(sender, "🛒 السلة فارغة!\n\nاكتبي اسم المنتج اللي تبينه 😊")
+        send_cart_view(sender)
         return
 
     if msg_normalized in [normalize_text(x) for x in ["افرغ السلة", "افرغ السله", "تفريغ السلة", "مسح السلة"]]:
@@ -1043,40 +1286,41 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         customer = get_customer(sender)
         if customer and customer.get("name"):
             user_sessions[sender] = {"name": customer["name"], "address": customer.get("address", "")}
-            user_states[sender] = "awaiting_payment"
-            send_buttons(sender, f"👤 الاسم: {customer['name']}\n📍 العنوان: {customer.get('address','غير محدد')}\n\nبيانات صحيحة؟",
-                [{"id": "pay_cod", "title": "✅ صحيحة، أكملي"},
-                 {"id": "change_info", "title": "✏️ تعديل البيانات"}])
+            user_states[sender] = "awaiting_customer_confirmation"
+            send_buttons(sender, f"👤 الاسم: {customer['name']}\n📍 العنوان: {customer.get('address','غير محدد')}\n\nهل البيانات صحيحة؟",
+                [{"id": "confirm_info", "title": "✅ نعم، صحيحة"},
+                 {"id": "change_info", "title": "✏️ تعديل البيانات"},
+                 {"id": "cancel_checkout", "title": "❌ إلغاء"}])
         else:
             user_states[sender] = "awaiting_name"
             send_message(sender, "👤 ايش اسمكِ الكريم؟ 😊")
         return
 
-    if msg_normalized == "change_info":
+    if raw_action == "change_info" or msg_normalized == "changeinfo":
         user_states[sender] = "awaiting_name"
         send_message(sender, "👤 ايش اسمكِ الكريم؟ 😊")
         return
 
     # طلباتي
-    if msg_normalized in [normalize_text(x) for x in ["طلباتي", "menu_orders"]]:
-        from database import db_lock, DB_PATH
-        import sqlite3 as _sqlite3
-        customer = get_customer(sender)
-        if customer:
-            with db_lock:
-                conn = _sqlite3.connect(DB_PATH)
-                conn.row_factory = _sqlite3.Row
-                orders = conn.execute("SELECT * FROM orders WHERE customer_id=? ORDER BY created_at DESC LIMIT 5", (customer["id"],)).fetchall()
-                conn.close()
-            if orders:
-                orders_text = "📦 *طلباتك:*\n\n"
-                for o in orders:
-                    orders_text += f"📋 *{o['order_number']}* | {o['order_status']} | {int(o['total_price'])} ريال\n"
-                send_message(sender, orders_text)
-            else:
-                send_message(sender, "📦 ما عندكِ طلبات سابقة")
-        else:
-            send_message(sender, "📦 ما عندكِ طلبات سابقة")
+    if raw_action == "menu_orders" or msg_normalized in [normalize_text("طلباتي"), normalize_text("menu_orders")]:
+        send_customer_orders(sender)
+        return
+
+    if msg_normalized in [normalize_text("تتبع الطلب"), normalize_text("تتبع"), "track"]:
+        send_customer_orders(sender)
+        return
+
+    if raw_action == "contact_call":
+        send_message(sender, "📞 يمكنك الاتصال بخدمة العملاء على: 777355955")
+        return
+    if raw_action == "contact_whatsapp":
+        send_message(sender, "💬 اكتبي رسالتك هنا، وموظفة Titiz ستساعدكِ فوراً.")
+        return
+    if raw_action == "contact_location":
+        send_message(sender, "📍 فروعنا:\n🏪 إب - بوابة ملعب الكبسي الخلفية\n🏪 السوق المركزي القديم")
+        return
+    if raw_action == "contact_hours":
+        send_message(sender, "⏰ أوقات العمل: يومياً من 8 صباحاً حتى 10 مساءً، وموظفتنا الذكية متاحة 24 ساعة.")
         return
 
     # أزرار القائمة التفاعلية
@@ -1090,9 +1334,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_message(sender, RESP_PRODUCTS_ASK)
         return
     if raw_action == "menu_payment" or msg_normalized == "menupayment":
-        resp = find_response(normalize_text("الدفع"))
-        if resp:
-            send_response(sender, resp)
+        send_message(sender, "💳 *طرق الدفع المتاحة:*\n\n✅ الدفع عند الاستلام\nنحط الطلب لأقرب نقطة منك وتدفعي وقت الاستلام.\n\n✅ التحويل المسبق\nتدفعي أولاً ثم يتم توصيل الطلب لباب المنزل.\n\n💰 حسابات التحويل:\n🟢 نقطة جيب: 906072\n🟡 الكريمي نقطة حاسب: 1202686\n🏦 إيداع عبر الكريمي: 3122678098")
         return
     if raw_action == "menu_location" or msg_normalized == "menulocation":
         resp = find_response(normalize_text("الموقع"))
@@ -1100,7 +1342,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_response(sender, resp)
         return
     if raw_action == "menu_contact" or msg_normalized == "menucontact":
-        send_message(sender, "📞 *التواصل معنا:*\n\nراسلينا هنا وبنرد عليكِ بأسرع وقت 😊\n\n📍 أو زورينا في أحد فروعنا:\n🏪 إب - بوابة ملعب الكبسي الخلفية\n🏪 السوق المركزي القديم")
+        send_contact_menu(sender)
         return
 
     # ╔══════════════════════════════════════════════════════════╗

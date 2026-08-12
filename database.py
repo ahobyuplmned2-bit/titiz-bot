@@ -124,6 +124,27 @@ def init_db():
                 UNIQUE(category, keyword)
             )
         ''')
+
+        # ترقية آمنة لقواعد البيانات القديمة دون حذف أي بيانات موجودة.
+        migrations = {
+            "customers": {
+                "first_order_date": "TIMESTAMP",
+                "order_count": "INTEGER DEFAULT 0",
+                "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            },
+            "orders": {
+                "payment_proof_url": "TEXT",
+                "order_status": "TEXT DEFAULT 'جديد'",
+                "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            },
+        }
+        for table, columns in migrations.items():
+            cursor.execute(f"PRAGMA table_info({table})")
+            existing_columns = {row[1] for row in cursor.fetchall()}
+            for column, definition in columns.items():
+                if column not in existing_columns:
+                    cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
         
         conn.commit()
         conn.close()
@@ -295,7 +316,12 @@ def get_order(order_number):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        cursor.execute('SELECT * FROM orders WHERE order_number = ?', (order_number,))
+        cursor.execute('''
+            SELECT o.*, c.phone_number, c.name AS customer_name, c.address
+            FROM orders o
+            LEFT JOIN customers c ON c.id = o.customer_id
+            WHERE o.order_number = ?
+        ''', (order_number,))
         order = cursor.fetchone()
         conn.close()
         
@@ -304,6 +330,101 @@ def get_order(order_number):
             order_dict['products_data'] = json.loads(order_dict['products_data'])
             return order_dict
         return None
+
+def get_orders(status=None, limit=50):
+    """الحصول على الطلبات للإدارة مع بيانات العميل."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        query = '''
+            SELECT o.*, c.phone_number, c.name AS customer_name, c.address
+            FROM orders o
+            LEFT JOIN customers c ON c.id = o.customer_id
+        '''
+        params = []
+        if status:
+            query += " WHERE o.order_status = ?"
+            params.append(status)
+        query += " ORDER BY o.created_at DESC LIMIT ?"
+        params.append(int(limit))
+        cursor.execute(query, params)
+        rows = []
+        for row in cursor.fetchall():
+            item = dict(row)
+            try:
+                item["products_data"] = json.loads(item.get("products_data") or "[]")
+            except (TypeError, json.JSONDecodeError):
+                item["products_data"] = []
+            rows.append(item)
+        conn.close()
+        return rows
+
+def get_customer_orders(phone_number, limit=20):
+    """الحصول على طلبات عميل محدد برقم واتساب."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT o.*, c.phone_number, c.name AS customer_name, c.address
+            FROM orders o
+            JOIN customers c ON c.id = o.customer_id
+            WHERE c.phone_number = ?
+            ORDER BY o.created_at DESC LIMIT ?
+        ''', (phone_number, int(limit)))
+        rows = []
+        for row in cursor.fetchall():
+            item = dict(row)
+            try:
+                item["products_data"] = json.loads(item.get("products_data") or "[]")
+            except (TypeError, json.JSONDecodeError):
+                item["products_data"] = []
+            rows.append(item)
+        conn.close()
+        return rows
+
+def get_customers(limit=100):
+    """الحصول على قائمة العملاء للإدارة."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM customers ORDER BY updated_at DESC LIMIT ?', (int(limit),))
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+def search_customers(query, limit=20):
+    """البحث عن عميل بالاسم أو الرقم أو العنوان."""
+    pattern = f"%{query.strip()}%"
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM customers
+            WHERE phone_number LIKE ? OR name LIKE ? OR address LIKE ?
+            ORDER BY updated_at DESC LIMIT ?
+        ''', (pattern, pattern, pattern, int(limit)))
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+def update_order_payment_proof(order_number, proof_url):
+    """حفظ صورة أو معرف إشعار التحويل للطلب."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE orders
+            SET payment_proof_url = ?, order_status = 'بانتظار مراجعة الدفع', updated_at = CURRENT_TIMESTAMP
+            WHERE order_number = ?
+        ''', (proof_url, order_number))
+        updated = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return updated
 
 def update_order_status(order_number, new_status):
     """تحديث حالة الطلب"""

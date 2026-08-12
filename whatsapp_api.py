@@ -204,9 +204,13 @@ class WhatsAppAPI:
             print(f"خطأ في إرسال الأزرار: {e}")
             return False
     
-    def send_list(self, recipient_phone, message_text, sections):
+    def send_list(self, recipient_phone, message_text, button_text="اختر", sections=None):
         """إرسال قائمة تفاعلية"""
         try:
+            # دعم الاستدعاء القديم send_list(phone, text, sections)
+            if sections is None and isinstance(button_text, list):
+                sections = button_text
+                button_text = "اختر"
             headers = {
                 "Authorization": f"Bearer {self.access_token}",
                 "Content-Type": "application/json"
@@ -222,7 +226,7 @@ class WhatsAppAPI:
                         "text": message_text
                     },
                     "action": {
-                        "button": "اختر",
+                        "button": button_text[:20],
                         "sections": sections
                     }
                 }
