@@ -537,7 +537,7 @@ def send_buttons(to, text, buttons):
 def send_welcome(to):
     """إرسال الترحيب الجديد مع أزرار الوصول السريع."""
     send_buttons(to, WELCOME_MESSAGE, [
-        {"id": "menu_products", "title": "🛍️ المنتجات"},
+        {"id": "browse_products", "title": "🛍️ المنتجات"},
         {"id": "menu_cart", "title": "🛒 السلة"},
         {"id": "menu_orders", "title": "📦 طلباتي"},
     ])
@@ -607,7 +607,7 @@ def send_main_menu(to):
     sections = [{
         "title": "الخدمات",
         "rows": [
-            {"id": "menu_products", "title": "🛍️ تصفح المنتجات", "description": "عرض جميع المنتجات"},
+            {"id": "browse_products", "title": "🛍️ تصفح المنتجات", "description": "عرض جميع المنتجات"},
             {"id": "menu_search", "title": "🔍 البحث عن منتج", "description": "اكتبي اسم المنتج"},
             {"id": "menu_cart", "title": "🛒 السلة", "description": "عرض سلة المشتريات"},
             {"id": "menu_orders", "title": "📦 طلباتي", "description": "متابعة طلباتك"},
@@ -1392,7 +1392,11 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     # أزرار القائمة التفاعلية
-    if raw_action == "menu_products" or msg_normalized == "menuproducts":
+    if raw_action == "shopping_assistant" or raw_action == "menu_products" or msg_normalized == "menuproducts":
+        send_message(sender, SHOPPING_ASSISTANT_MESSAGE)
+        return
+
+    if raw_action == "browse_products" or msg_normalized == "browseproducts":
         products = get_all_products()
         if products:
             send_message(sender, "🛍️ هذه منتجاتنا الحالية، اختاري الزر المناسب تحت كل منتج:")
