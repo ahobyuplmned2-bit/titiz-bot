@@ -1130,7 +1130,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     if state == "awaiting_name":
         user_states[sender] = "awaiting_address"
         user_sessions[sender] = {"name": msg_body.strip()}
-        send_message(sender, "📍 تمام! الحين أرسلي لنا عنوان التوصيل (المنطقة أو أقرب نقطة) 😊")
+        send_message(sender, "📍 تمام! الحين أرسلي لنا عنوان التوصيل (المنطقة أو أقرب نقطة) 😊\n📦 وين تحبين نحط لكِ المنتج؟ 🤔\n\nنقدر نحطه في أي مكان قريب منكِ:\n\n🏪 محل قريب من بيتكِ\n🛍️ بقالة في حارتكِ\n📍 أي نقطة تحدديها\n\nأرسلي لنا اسم المكان أو المنطقة وإحنا نوصله لأقرب نقطة منكِ 😊👌")
         return
 
     if state == "awaiting_customer_confirmation":
