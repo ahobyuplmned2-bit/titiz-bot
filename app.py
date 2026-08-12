@@ -339,7 +339,7 @@ add_response(
     "مع السلامة يا غالية! 💛👋\nنورتينا والله!\nإحنا هنا بأي وقت تحتاجينا 😊\nلا تنسينا! ❤️"
 )
 
-WELCOME_MESSAGE = "يا غالية خلينا بموضوعنا 😊✨\nإحنا محل *Titiz* للأدوات المنزلية 🏠\n\nعندنا منتجات حلوة وأسعار تناسب الجميع 👌\nوالتوصيل مجاني لباب بيتكِ! 🚚\n\nاكتبي اسم المنتج اللي تبينه 😍\nأو اكتبي *القائمة* لعرض الخيارات 📋"
+WELCOME_MESSAGE = "أهلاً بك! أنا معك، كيف يمكنني مساعدتك اليوم؟\nهل تبحثين عن منتجات معينة، أم تودين الاستفسار عن طلباتك؟ 😊"
 
 # ===== تحميل الردود المخصصة من قاعدة البيانات =====
 def load_custom_responses():
@@ -498,6 +498,14 @@ def send_image_by_id(to, media_id, caption=""):
 
 def send_buttons(to, text, buttons):
     return whatsapp.send_buttons(to, text, buttons)
+
+def send_welcome(to):
+    """إرسال الترحيب الجديد مع أزرار الوصول السريع."""
+    send_buttons(to, WELCOME_MESSAGE, [
+        {"id": "menu_products", "title": "🛍️ المنتجات"},
+        {"id": "menu_cart", "title": "🛒 السلة"},
+        {"id": "menu_orders", "title": "📦 طلباتي"},
+    ])
 
 def send_product_card(to, product):
     """إرسال صورة المنتج وحدها ثم وصفه وأزراره بمعرفات لا تتكرر."""
@@ -1072,20 +1080,26 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     # أزرار القائمة التفاعلية
-    if msg_normalized == "menu_products":
-        send_message(sender, RESP_PRODUCTS_ASK)
+    if raw_action == "menu_products" or msg_normalized == "menuproducts":
+        products = get_all_products()
+        if products:
+            send_message(sender, "🛍️ هذه منتجاتنا الحالية، اختاري الزر المناسب تحت كل منتج:")
+            for product in products[:10]:
+                send_product_card(sender, product)
+        else:
+            send_message(sender, RESP_PRODUCTS_ASK)
         return
-    if msg_normalized == "menu_payment":
+    if raw_action == "menu_payment" or msg_normalized == "menupayment":
         resp = find_response(normalize_text("الدفع"))
         if resp:
             send_response(sender, resp)
         return
-    if msg_normalized == "menu_location":
+    if raw_action == "menu_location" or msg_normalized == "menulocation":
         resp = find_response(normalize_text("الموقع"))
         if resp:
             send_response(sender, resp)
         return
-    if msg_normalized == "menu_contact":
+    if raw_action == "menu_contact" or msg_normalized == "menucontact":
         send_message(sender, "📞 *التواصل معنا:*\n\nراسلينا هنا وبنرد عليكِ بأسرع وقت 😊\n\n📍 أو زورينا في أحد فروعنا:\n🏪 إب - بوابة ملعب الكبسي الخلفية\n🏪 السوق المركزي القديم")
         return
 
@@ -1124,7 +1138,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     # === رد افتراضي (آخر شي بعد كل البحث) ===
-    send_message(sender, WELCOME_MESSAGE)
+    send_welcome(sender)
 
 
 # ╔══════════════════════════════════════════════════════════════╗
