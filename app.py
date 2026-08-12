@@ -25,7 +25,7 @@ from database import (
     update_order_payment_proof, save_user_session, load_user_session,
     delete_user_session, schedule_customer_followup,
     cancel_customer_followup, get_due_customer_followups,
-    mark_customer_followup_sent
+    mark_customer_followup_sent, get_customer_followup
 )
 from whatsapp_api import WhatsAppAPI, format_product_card
 
@@ -60,8 +60,12 @@ PRODUCT_FOLLOWUP_DELAY_SECONDS = max(
 PRODUCT_FOLLOWUP_POLL_SECONDS = max(
     int(os.environ.get("PRODUCT_FOLLOWUP_POLL_SECONDS", "30")), 10
 )
+PRODUCT_NEXT_DAY_DELAY_SECONDS = max(
+    int(os.environ.get("PRODUCT_NEXT_DAY_DELAY_SECONDS", "86400")), 60
+)
 PRODUCT_FOLLOWUP_SATISFIED_ID = "product_followup_satisfied"
 PRODUCT_FOLLOWUP_UNSATISFIED_ID = "product_followup_unsatisfied"
+PRODUCT_RECOMMENDATION_KIND = "next_day_recommendation"
 PRODUCT_FOLLOWUP_MESSAGE = (
     "مرحباً السادة! هل أنت راضٍ عن الردود من مساعدك الحصري، المتوفر على مدار الساعة "
     "طوال أيام الأسبوع فقط لك؟ 😊\n"
@@ -79,6 +83,13 @@ PRODUCT_FOLLOWUP_SATISFIED_MESSAGE = (
 PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE = (
     "نعتذر إذا لم يكن الرد بالمستوى المطلوب 🙏\n"
     "اكتبي لنا ما الذي لم يكن واضحاً أو ما الذي تحتاجينه، وسنساعدك مباشرة."
+)
+PRODUCT_NEXT_DAY_MESSAGE_TEMPLATE = (
+    "مرحبًا! 🎉 بعد محادثتنا، وجدنا لك مجموعة خاصة من {product_name} 🍅 "
+    "التي تناسب كل احتياجاتك بأساليب وأشكال رائعة! لا تفوت فرصة الحصول على الأفضل "
+    "لجعل مائدتك أكثر لذة وسحرًا! 🌟✨ اختَر الأفضل وامنح أطباقك نكهة لا تُنسى! 😋🍴\n\n"
+    "انضم القناة الآن، آلاف المنتجات المختارة من أجلك:\n"
+    "https://whatsapp.com/channel/0029VaqFTglLikgDDe0D5E2D"
 )
 followup_worker_lock = Lock()
 followup_worker_started = False
@@ -99,6 +110,13 @@ def send_product_followup(phone_number, product_name=""):
         {"id": PRODUCT_FOLLOWUP_UNSATISFIED_ID, "title": "👎 غير راضٍ"},
     ])
 
+def send_next_day_recommendation(phone_number, product_name=""):
+    """إرسال توصية اليوم التالي باسم المنتج الذي بحث عنه العميل."""
+    send_message(
+        phone_number,
+        PRODUCT_NEXT_DAY_MESSAGE_TEMPLATE.format(product_name=product_name or "المنتجات المنزلية"),
+    )
+
 def product_followup_worker():
     """عامل خلفي يرسل التذكيرات المستحقة مرة واحدة فقط."""
     while True:
@@ -107,9 +125,14 @@ def product_followup_worker():
                 if mark_customer_followup_sent(
                     followup["phone_number"], followup["due_at"]
                 ):
-                    send_product_followup(
-                        followup["phone_number"], followup.get("product_name", "")
-                    )
+                    if followup.get("followup_kind") == PRODUCT_RECOMMENDATION_KIND:
+                        send_next_day_recommendation(
+                            followup["phone_number"], followup.get("product_name", "")
+                        )
+                    else:
+                        send_product_followup(
+                            followup["phone_number"], followup.get("product_name", "")
+                        )
         except Exception as exc:
             print(f"خطأ في عامل تذكير العملاء: {exc}")
         time.sleep(PRODUCT_FOLLOWUP_POLL_SECONDS)
@@ -1267,9 +1290,17 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
 
     if raw_action == PRODUCT_FOLLOWUP_SATISFIED_ID:
         send_message(sender, PRODUCT_FOLLOWUP_SATISFIED_MESSAGE)
+        followup = get_customer_followup(sender) or {}
+        schedule_customer_followup(
+            sender,
+            followup.get("product_name", ""),
+            PRODUCT_NEXT_DAY_DELAY_SECONDS,
+            PRODUCT_RECOMMENDATION_KIND,
+        )
         return
 
     if raw_action == PRODUCT_FOLLOWUP_UNSATISFIED_ID:
+        cancel_customer_followup(sender)
         send_message(sender, PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE)
         return
 

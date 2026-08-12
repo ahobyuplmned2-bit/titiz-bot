@@ -99,6 +99,7 @@ def init_db():
                 product_name TEXT,
                 due_at REAL NOT NULL,
                 sent_at REAL,
+                followup_kind TEXT DEFAULT 'satisfaction',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -150,6 +151,9 @@ def init_db():
                 "order_status": "TEXT DEFAULT 'جديد'",
                 "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
                 "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            },
+            "customer_followups": {
+                "followup_kind": "TEXT DEFAULT 'satisfaction'",
             },
         }
         for table, columns in migrations.items():
@@ -299,21 +303,22 @@ def delete_user_session(phone_number):
         conn.commit()
         conn.close()
 
-def schedule_customer_followup(phone_number, product_name="", delay_seconds=1800):
-    """جدولة تذكير متابعة واحد للعميل، مع استبدال أي تذكير سابق."""
+def schedule_customer_followup(phone_number, product_name="", delay_seconds=1800, followup_kind="satisfaction"):
+    """جدولة متابعة واحدة للعميل، مع استبدال أي متابعة سابقة."""
     due_at = datetime.utcnow().timestamp() + max(int(delay_seconds), 60)
     with db_lock:
         conn = sqlite3.connect(DB_PATH)
         conn.execute('''
             INSERT INTO customer_followups
-                (phone_number, product_name, due_at, sent_at, updated_at)
-            VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)
+                (phone_number, product_name, due_at, sent_at, followup_kind, updated_at)
+            VALUES (?, ?, ?, NULL, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(phone_number) DO UPDATE SET
                 product_name = excluded.product_name,
                 due_at = excluded.due_at,
                 sent_at = NULL,
+                followup_kind = excluded.followup_kind,
                 updated_at = CURRENT_TIMESTAMP
-        ''', (phone_number, product_name or "", due_at))
+        ''', (phone_number, product_name or "", due_at, followup_kind or "satisfaction"))
         conn.commit()
         conn.close()
 
@@ -332,7 +337,7 @@ def get_due_customer_followups(limit=50):
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         rows = conn.execute('''
-            SELECT phone_number, product_name, due_at
+            SELECT phone_number, product_name, due_at, followup_kind
             FROM customer_followups
             WHERE sent_at IS NULL AND due_at <= ?
             ORDER BY due_at ASC
@@ -340,6 +345,19 @@ def get_due_customer_followups(limit=50):
         ''', (now, int(limit))).fetchall()
         conn.close()
         return [dict(row) for row in rows]
+
+def get_customer_followup(phone_number):
+    """الحصول على آخر متابعة للعميل، بما فيها المتابعة التي أُرسلت."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute('''
+            SELECT phone_number, product_name, due_at, sent_at, followup_kind
+            FROM customer_followups
+            WHERE phone_number = ?
+        ''', (phone_number,)).fetchone()
+        conn.close()
+        return dict(row) if row else None
 
 def mark_customer_followup_sent(phone_number, due_at):
     """حجز التذكير للإرسال مرة واحدة فقط حتى لا يتكرر."""
