@@ -21,7 +21,8 @@ from database import (
     create_order, get_order, update_order_status, update_cart_quantity,
     log_action, get_statistics, load_qa, save_qa, delete_qa,
     get_orders, get_customer_orders, get_customers, search_customers,
-    update_order_payment_proof
+    update_order_payment_proof, save_user_session, load_user_session,
+    delete_user_session
 )
 from whatsapp_api import WhatsAppAPI, format_product_card
 
@@ -52,6 +53,30 @@ user_states = {}
 # ===== منع تكرار الرسائل =====
 processed_messages = {}
 DEDUP_WINDOW = 30
+product_send_guard = {}
+PRODUCT_SEND_WINDOW = 20
+
+def restore_customer_session(sender):
+    """استعادة حالة العميل من قاعدة البيانات عند أول رسالة بعد العودة."""
+    if sender in user_states or sender in user_sessions:
+        return
+    saved = load_user_session(sender)
+    if not saved:
+        return
+    saved_data = saved.get("data", {})
+    if saved.get("state"):
+        user_states[sender] = saved["state"]
+    if saved_data:
+        user_sessions[sender] = saved_data
+
+def persist_customer_session(sender):
+    """حفظ آخر حالة وسياق للعميل، أو حذفها بعد اكتمال/إلغاء الطلب."""
+    state = user_states.get(sender)
+    data = user_sessions.get(sender)
+    if state or data:
+        save_user_session(sender, state, data)
+    else:
+        delete_user_session(sender)
 
 # ===== صور المنتجات الثابتة =====
 IMG_QUDOR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663669337302/FErlTSZcVDmLLuCl.jpg"
@@ -342,6 +367,14 @@ add_response(
 )
 
 WELCOME_MESSAGE = "أهلاً بك! أنا معك، كيف يمكنني مساعدتك اليوم؟\nهل تبحثين عن منتجات معينة، أم تودين الاستفسار عن طلباتك؟ 😊"
+SHOPPING_ASSISTANT_MESSAGE = (
+    "أهلاً بك! أنا مساعدك الذكي من Titiz، ويمكنني مساعدتك في القيام بالكثير من المهام التجارية، مثل:\n\n"
+    "- *البحث عن المنتجات:* العثور على جميع الأدوات المنزلية والمنتجات بأسعار تنافسية.\n"
+    "- *تحليل السوق:* اكتشاف أحدث الاتجاهات وتقييم فرص الربح لمنتجات معينة.\n"
+    "- *دعم المندوبات:* الإجابة عن استفساراتك حول الطلبات، الشحن، وطرق الدفع.\n"
+    "- *التصميم بالذكاء الاصطناعي:* مساعدتك في ابتكار تصاميم لمنتجاتك.\n\n"
+    "ببساطة، أخبرني عما تبحث عنه وسأقوم بالباقي!"
+)
 
 # ===== تحميل الردود المخصصة من قاعدة البيانات =====
 def load_custom_responses():
@@ -511,6 +544,12 @@ def send_welcome(to):
 
 def send_product_card(to, product):
     """إرسال صورة المنتج وحدها ثم وصفه وأزراره بمعرفات لا تتكرر."""
+    guard_key = (to, int(product.get("id", 0)))
+    now = time.time()
+    if now - product_send_guard.get(guard_key, 0) < PRODUCT_SEND_WINDOW:
+        print(f"[تجاهل تكرار المنتج] {guard_key}")
+        return False
+    product_send_guard[guard_key] = now
     product_reply = format_product_card(product)
     image_id = product.get("image_id", "")
     if image_id:
@@ -518,7 +557,7 @@ def send_product_card(to, product):
     send_buttons(to, product_reply, [
         {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
         {"id": f"det_{product['id']}", "title": "📋 تفاصيل المنتج"},
-        {"id": "menu_products", "title": "🔙 رجوع"},
+        {"id": "shopping_assistant", "title": "🔙 متابعة التسوق"},
     ])
 
 def send_list(to, text, button_text, sections):
@@ -631,7 +670,7 @@ def send_customer_orders(to):
     send_message(to, text.rstrip())
     send_buttons(to, "يمكنك تحديث القائمة في أي وقت:", [
         {"id": "menu_orders", "title": "🔄 تحديث الحالة"},
-        {"id": "menu_products", "title": "🛍️ متابعة التسوق"},
+        {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
         {"id": "menu_cart", "title": "🛒 السلة"},
     ])
 
@@ -641,7 +680,7 @@ def send_cart_view(to):
     if not cart_items:
         send_message(to, "🛒 السلة فارغة!\n\nأضيفي منتجاً أولاً 😊")
         send_buttons(to, "اختاري ما تريدين:", [
-            {"id": "menu_products", "title": "🛍️ متابعة التسوق"},
+            {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
             {"id": "menu_orders", "title": "📦 طلباتي"},
         ])
         return
@@ -667,7 +706,7 @@ def send_cart_view(to):
     send_buttons(to, "جاهزة لإكمال الطلب؟", [
         {"id": "checkout", "title": "✅ إكمال الطلب"},
         {"id": "clear_cart", "title": "🗑️ تفريغ السلة"},
-        {"id": "menu_products", "title": "🔙 متابعة التسوق"},
+        {"id": "shopping_assistant", "title": "🔙 متابعة التسوق"},
     ])
 
 def send_payment_choice(to):
@@ -1055,6 +1094,7 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
 
 def handle_customer_message(sender, msg_body, msg_normalized, message):
     """معالجة رسائل العملاء"""
+    restore_customer_session(sender)
     state = user_states.get(sender, "")
     raw_action = (msg_body or "").strip().lower()
 
@@ -1069,7 +1109,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_message(sender, f"✅ تم إضافة *{product['name']}* إلى السلة")
             send_buttons(sender, "ماذا تريدين الآن؟", [
                 {"id": "menu_cart", "title": "🛒 عرض السلة"},
-                {"id": "menu_products", "title": "🛍️ متابعة التسوق"},
+                {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
             ])
         else:
             send_message(sender, "❌ لم أتمكن من العثور على هذا المنتج، جربي القائمة مرة أخرى.")
@@ -1092,6 +1132,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
 
     if raw_action == "menu_cart":
         send_cart_view(sender)
+        return
+
+    if raw_action == "shopping_assistant":
+        send_message(sender, SHOPPING_ASSISTANT_MESSAGE)
         return
 
     if raw_action == "menu_search":
@@ -1126,7 +1170,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         clear_cart(sender)
         send_message(sender, "🗑️ تم تفريغ السلة ✅")
         send_buttons(sender, "اختاري ما تريدين:", [
-            {"id": "menu_products", "title": "🛍️ متابعة التسوق"},
+            {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
             {"id": "menu_orders", "title": "📦 طلباتي"},
         ])
         return
@@ -1234,14 +1278,26 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_message(sender, "📸 أرسلي صورة إشعار التحويل من فضلكِ 😊")
             return
 
+    if state == "product_context":
+        context = user_sessions.get(sender, {})
+        last_product = context.get("last_product") if isinstance(context, dict) else None
+        if last_product:
+            if raw_action in {"add", "اضف", "أضف", "إضافة", "طلب", "شراء"}:
+                add_to_cart(sender, last_product["id"], 1)
+                send_message(sender, f"✅ تم إضافة *{last_product['name']}* إلى السلة")
+                return
+            if any(word in msg_normalized for word in ["سعر", "بكم", "تفاصيل", "وصف"]):
+                send_message(sender, format_product_card(last_product))
+                return
+
     # اختيار من قائمة منتجات
     if state == "product_list" and msg_normalized.isdigit():
         choice = int(msg_normalized)
         products_list = user_sessions.get(sender, [])
         if isinstance(products_list, list) and 1 <= choice <= len(products_list):
             found = products_list[choice - 1]
-            user_states.pop(sender, None)
-            user_sessions.pop(sender, None)
+            user_states[sender] = "product_context"
+            user_sessions[sender] = {"last_product": found}
             send_product_card(sender, found)
             return
         else:
@@ -1468,7 +1524,10 @@ def webhook():
                 return jsonify({"status": "ok"}), 200
 
         # معالجة رسائل العملاء (والمالك للاختبار)
-        handle_customer_message(sender, msg_body, msg_normalized, message)
+        try:
+            handle_customer_message(sender, msg_body, msg_normalized, message)
+        finally:
+            persist_customer_session(sender)
 
     except (KeyError, IndexError):
         pass

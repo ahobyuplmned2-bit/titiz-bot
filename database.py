@@ -244,6 +244,48 @@ def clear_cart(phone_number):
         conn.commit()
         conn.close()
 
+def save_user_session(phone_number, state=None, session_data=None):
+    """حفظ حالة المحادثة وسياقها ليستمر بعد إعادة التشغيل أو العودة لاحقاً."""
+    payload = {"state": state, "data": session_data or {}}
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute('''
+            INSERT INTO user_sessions (phone_number, session_data, last_activity)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(phone_number) DO UPDATE SET
+                session_data = excluded.session_data,
+                last_activity = CURRENT_TIMESTAMP
+        ''', (phone_number, json.dumps(payload, ensure_ascii=False)))
+        conn.commit()
+        conn.close()
+
+def load_user_session(phone_number):
+    """استعادة آخر حالة وسياق محفوظ للعميل."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            'SELECT session_data, last_activity FROM user_sessions WHERE phone_number = ?',
+            (phone_number,)
+        ).fetchone()
+        conn.close()
+    if not row:
+        return None
+    try:
+        data = json.loads(row["session_data"] or "{}")
+        data["last_activity"] = row["last_activity"]
+        return data
+    except (TypeError, json.JSONDecodeError):
+        return None
+
+def delete_user_session(phone_number):
+    """حذف جلسة العميل عند الإلغاء أو اكتمال الطلب."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute('DELETE FROM user_sessions WHERE phone_number = ?', (phone_number,))
+        conn.commit()
+        conn.close()
+
 def remove_from_cart(phone_number, product_id):
     """حذف منتج من السلة"""
     with db_lock:
