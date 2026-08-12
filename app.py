@@ -1618,13 +1618,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     if raw_action == "browse_products" or msg_normalized == "browseproducts":
-        products = get_all_products()
-        if products:
-            send_message(sender, "🛍️ هذه منتجاتنا الحالية، اختاري الزر المناسب تحت كل منتج:")
-            for product in products[:10]:
-                send_product_card(sender, product)
-        else:
-            send_message(sender, RESP_PRODUCTS_ASK)
+        send_message(sender, "✍️ اكتبي اسم المنتج الذي تبحثين عنه 😊\n\nمثلاً: قدور، فرامة، أو ثلاجة شاي")
         return
     if raw_action == "menu_payment" or msg_normalized == "menupayment":
         send_message(sender, "💳 *طرق الدفع المتاحة:*\n\n✅ الدفع عند الاستلام\nنحط الطلب لأقرب نقطة منك وتدفعي وقت الاستلام.\n\n✅ التحويل المسبق\nتدفعي أولاً ثم يتم توصيل الطلب لباب المنزل.\n\n💰 حسابات التحويل:\n🟢 نقطة جيب: 906072\n🟡 الكريمي نقطة حاسب: 1202686\n🏦 إيداع عبر الكريمي: 3122678098")
