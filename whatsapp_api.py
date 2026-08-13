@@ -268,6 +268,37 @@ class WhatsAppAPI:
         except Exception as e:
             print(f"خطأ في إرسال الأزرار: {e}")
             return False
+
+    def send_url_button(self, recipient_phone, message_text, button_title, url):
+        """إرسال زر CTA يفتح رابطاً خارجياً مثل محادثة واتساب للمندوبة."""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": recipient_phone,
+                "type": "interactive",
+                "interactive": {
+                    "type": "cta_url",
+                    "body": {"text": message_text},
+                    "action": {
+                        "name": "cta_url",
+                        "parameters": {
+                            "display_text": str(button_title)[:20],
+                            "url": str(url),
+                        },
+                    },
+                },
+            }
+            response = requests.post(self.messages_url, headers=headers, json=payload, timeout=10)
+            if response.status_code != 200:
+                print(f"خطأ زر الرابط: {response.status_code} {response.text[:300]}")
+            return response.status_code == 200
+        except Exception as e:
+            print(f"خطأ في إرسال زر الرابط: {e}")
+            return False
     
     def send_list(self, recipient_phone, message_text, button_text="اختر", sections=None):
         """إرسال قائمة تفاعلية"""

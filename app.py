@@ -14,6 +14,7 @@ from datetime import datetime
 import time
 import unicodedata
 from threading import Lock, Thread
+from urllib.parse import quote
 
 # استيراد الملفات المخصصة
 from database import (
@@ -338,6 +339,47 @@ RESP_DISCOUNT = (
     "اكتبي اسم المنتج أو أرسلي صورة المنتج، وأنا أطلع لكِ السعر الحالي مباشرة 🛍️"
 )
 
+DELEGATE_WHATSAPP_NUMBER = "967712282204"
+DELEGATE_WHATSAPP_URL = (
+    f"https://wa.me/{DELEGATE_WHATSAPP_NUMBER}"
+    f"?text={quote('مرحباً، أريد الاستفسار عن السعر والمنتج')}"
+)
+PRICE_INQUIRY_RESPONSE = (
+    "أبشري يا غالية 😊\n\n"
+    "أسعارنا مخفّضة من البداية ونحرص دائماً نعطيك أفضل سعر ممكن 💛\n"
+    "إذا كانت الكمية أكثر من قطعة، أرسلي اسم المنتج والعدد المطلوب، وبنراجع لكِ أفضل سعر مع الإدارة بإذن الله 🤝"
+)
+PRICE_INQUIRY_KEYWORDS = [
+    "بكم", "بكم هذا", "بكم هذي", "بكم المنتج", "كم السعر", "السعر كم",
+    "كم سعره", "كم سعرها", "كم سعر المنتج", "كم حقه", "كم حقها",
+    "كم حق المنتج", "بكم تبيعوا", "كم تبيعوا", "كم القيمة", "قيمة المنتج",
+]
+_NORMALIZED_PRICE_INQUIRY_KEYWORDS = {normalize_text(k) for k in PRICE_INQUIRY_KEYWORDS}
+
+
+def is_price_inquiry(msg_normalized):
+    if not msg_normalized:
+        return False
+    return msg_normalized in _NORMALIZED_PRICE_INQUIRY_KEYWORDS or any(
+        len(keyword) >= 4 and keyword in msg_normalized
+        for keyword in _NORMALIZED_PRICE_INQUIRY_KEYWORDS
+    )
+
+
+def send_price_inquiry_response(to):
+    """إرسال رد سؤال السعر مع زر CTA يفتح محادثة المندوبة."""
+    if not whatsapp.send_url_button(
+        to,
+        PRICE_INQUIRY_RESPONSE,
+        "📞 التواصل مع المندوبة",
+        DELEGATE_WHATSAPP_URL,
+    ):
+        send_message(
+            to,
+            PRICE_INQUIRY_RESPONSE
+            + f"\n\n📞 للتواصل مع المندوبة مباشرة:\n{DELEGATE_WHATSAPP_URL}",
+        )
+
 add_response(
     [
         "نقصوا لنا", "نقصوا السعر", "نقص السعر", "نقصي السعر", "نقص لنا",
@@ -376,6 +418,8 @@ add_response(
     ],
     RESP_DISCOUNT,
 )
+
+add_response(PRICE_INQUIRY_KEYWORDS, PRICE_INQUIRY_RESPONSE)
 
 add_response(
     ["ثلاجة", "ثلاجه", "الثلاجة", "الثلاجه", "شاي", "ثلاجة شاي",
@@ -2955,6 +2999,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     # أسئلة الطلبات تُعرض من قاعدة البيانات مباشرة ولا تُعامل كبحث عن منتج.
     if is_order_inquiry(msg_normalized):
         send_customer_orders(sender)
+        return
+
+    if is_price_inquiry(msg_normalized):
+        send_price_inquiry_response(sender)
         return
 
     # ╔══════════════════════════════════════════════════════════╗
