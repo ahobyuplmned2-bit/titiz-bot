@@ -243,6 +243,14 @@ def normalize_text(text):
     return text
 
 
+def is_low_information_query(normalized_text):
+    """تمييز الحروف والمدخلات القصيرة التي لا تصلح للبحث عن منتج."""
+    compact = re.sub(r"\s+", "", normalized_text or "")
+    if len(compact) < 3:
+        return True
+    return len(set(compact)) == 1
+
+
 # ╔══════════════════════════════════════════════════════════════╗
 # ║         نظام الردود الموحد (Unified Response System)        ║
 # ╚══════════════════════════════════════════════════════════════╝
@@ -1902,6 +1910,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     # === البحث في المنتجات (قاعدة البيانات) ===
+    if is_low_information_query(msg_normalized):
+        send_welcome(sender)
+        return
+
     products = get_all_products()
     matching = []
     for p in products:
