@@ -5,9 +5,8 @@
     "description": "ملف استيل كبير للتنظيف وجمع الأوساخ، بمقبض عملي ومناسب للاستخدام المنزلي.",
     "keywords": "ملف,ملف استيل,ملف كبير,جاروف,جاروف تنظيف,مجرفة,مجرفة نفايات,مغرفة زبالة,مغرفة نفايات,أداة تنظيف,أدوات تنظيف,مستلزمات المنزل,تنظيف البيت",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/dustpan/steel-dustpan.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/dustpan/steel-dustpan.jpg\"]",
+    "variants": ""
   },
   "صحون كيك تيفال 3 قطع": {
     "name": "صحون كيك تيفال 3 قطع",
@@ -15,9 +14,8 @@
     "description": "طقم صحون وقوالب كيك تيفال مكون من 3 قطع بأشكال مختلفة، مناسب للخبز وتحضير الحلويات.",
     "keywords": "صحون كيك,صواني كيك,قوالب كيك,طقم كيك,تيفال,صحون تيفال,صواني تيفال,قالب كيك,قوالب حلويات,صواني فرن,3 قطع,ثلاث قطع,أدوات حلويات,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/cake-pans/tefal-cake-pans-3pcs.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/cake-pans/tefal-cake-pans-3pcs.jpg\"]",
+    "variants": ""
   },
   "طقم قدور هندي 5 قطع": {
     "name": "طقم قدور هندي 5 قطع",
@@ -25,9 +23,8 @@
     "description": "طقم قدور هندي من المعدن بجودة عالية، مكون من 5 قطع للاستخدام اليومي في المطبخ.",
     "keywords": "قدور,طقم قدور,قدور هندي,طقم قدور هندي,قدور هندية,قدور ستيل,قدور استيل,حلل,طقم حلل,طنجرة,طناجر,5 قطع,خمس قطع,قدور المائدة,أدوات مطبخ,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/indian-pots/indian-pots-5pcs.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/indian-pots/indian-pots-5pcs.jpg\"]",
+    "variants": ""
   },
   "سلك مواعين استيل أصلي 3 حبات": {
     "name": "سلك مواعين استيل أصلي 3 حبات",
@@ -35,9 +32,8 @@
     "description": "سلك مواعين استيل أصلي للتنظيف وإزالة الدهون من الأواني، العبوة 3 حبات.",
     "keywords": "سلك مواعين,سلك مواعين استيل,سلك صحون,سلك جلي,ليفة مواعين,ليفة استيل,سلك تنظيف,سلك دهون,سلك أصلي,سلك الاصلي,3 حبات,ثلاث حبات,أدوات تنظيف,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/scrubbers/stainless-scrubber-3pcs.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/scrubbers/stainless-scrubber-3pcs.jpg\"]",
+    "variants": ""
   },
   "سلك مواعين استيل أصلي حبة واحدة": {
     "name": "سلك مواعين استيل أصلي حبة واحدة",
@@ -45,9 +41,8 @@
     "description": "سلك مواعين استيل أصلي للتنظيف وإزالة الدهون من الأواني، حبة واحدة وزن 50 جراماً.",
     "keywords": "سلك مواعين,سلك مواعين استيل,سلك صحون,سلك جلي,ليفة مواعين,ليفة استيل,سلك تنظيف,سلك دهون,سلك أصلي,سلك الاصلي,حبة واحدة,حبه واحده,50 جرام,أدوات تنظيف,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/scrubbers/stainless-scrubber-single.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/scrubbers/stainless-scrubber-single.jpg\"]",
+    "variants": ""
   },
   "خلاط سيلفر كريست 2500 واط": {
     "name": "خلاط سيلفر كريست 2500 واط",
@@ -55,9 +50,8 @@
     "description": "خلاط سيلفر كريست كهربائي بقدرة 2500 واط، مناسب لخلط العصائر والمكونات وطحنها.",
     "keywords": "خلاط,خلاط كهربائي,خلاط سيلفر كريست,سيلفر كريست,Silver Crest,خلاط 2500 واط,خلاط 2500W,خلاط عصير,خلاط فواكه,خلاط مطبخ,مطحنة,طاحونة,خلاط قوي,أدوات مطبخ,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/silver-crest-blender/silver-crest-blender-2500w.png"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/silver-crest-blender/silver-crest-blender-2500w.png\"]",
+    "variants": ""
   },
   "ملاعق خشب 3 قطع": {
     "name": "ملاعق خشب 3 قطع",
@@ -65,19 +59,8 @@
     "description": "طقم ملاعق وأدوات مطبخ خشبية من الخيزران، مكون من 3 قطع، مناسب للطبخ والتحريك.",
     "keywords": "ملاعق خشب,ملاعق خشبية,ملاعق مطبخ,أدوات خشبية,طقم ملاعق خشب,ملاعق بامبو,ملاعق خيزران,أدوات طبخ,3 قطع,ثلاث قطع,مستلزمات المطبخ,أدوات المائدة",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/wooden-spoons/wooden-spoons-3pcs.png"
-    ]
-  },
-  "مفك علب أصلي ضمان سنة": {
-    "name": "مفك علب أصلي ضمان سنة",
-    "price": "1000",
-    "description": "مفك علب أصلي 3 في 1 لفتح العلب والزجاجات، مع ضمان سنة.",
-    "keywords": "مفك علب,فتاحة علب,فتاحة قوارير,فتاحة زجاجات,مفك مطبخ,مفك علب أصلي,فتاحة علب أصلية,3 في 1,ضمان سنة,ضمان عام,أداة مطبخ,أدوات المطبخ",
-    "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/can-opener/original-can-opener.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/wooden-spoons/wooden-spoons-3pcs.png\"]",
+    "variants": ""
   },
   "طقم قدور الدار 10 قطع": {
     "name": "طقم قدور الدار 10 قطع",
@@ -85,24 +68,33 @@
     "description": "طقم قدور الدار مكون من 10 قطع، مناسب للاستخدام اليومي وتحضير مختلف الوجبات.",
     "keywords": "طقم قدور,قدور الدار,طقم قدور الدار,قدور,حلل,طقم حلل,قدور ألمنيوم,قدور المطبخ,10 قطع,عشر قطع,أدوات مطبخ,مستلزمات المطبخ,الدار",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/al-dar-pots/al-dar-pots-10pcs.png"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/al-dar-pots/al-dar-pots-10pcs.png\"]",
+    "variants": ""
   },
   "كتلي شاي ستيل أبو صفارة": {
     "name": "كتلي شاي ستيل أبو صفارة",
     "price": "2700",
     "description": "كتلي شاي ستيل أبو صفارة من المائدة، مناسب لتحضير وتقديم الشاي، ومتوفر بأربعة أحجام.",
     "keywords": "كتلي شاي,كتلي شاهي,كتلي ستيل,كتلي ابو صفارة,كتلي أبو صفارة,كتلي صفارة,غلاية شاي,غلاية شاهي,غلاية ماء,براد شاي,براد شاهي,دلة شاي,ستانلس ستيل,ستيل,المائدة,أدوات المائدة,مستلزمات المطبخ,1 لتر,لتر واحد,لتر ونصف,1.5 لتر,2 لتر,لترين,3 لتر,ثلاثة لتر",
-    "variants": [
-      {"name": "1 لتر", "price": "2700"},
-      {"name": "1.5 لتر", "price": "3500"},
-      {"name": "2 لتر", "price": "4000"},
-      {"name": "3 لتر", "price": "4500"}
-    ],
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-kettle/steel-whistling-kettle.jpg"
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-kettle/steel-whistling-kettle.jpg\"]",
+    "variants": [
+      {
+        "name": "1 لتر",
+        "price": "2700"
+      },
+      {
+        "name": "1.5 لتر",
+        "price": "3500"
+      },
+      {
+        "name": "2 لتر",
+        "price": "4000"
+      },
+      {
+        "name": "3 لتر",
+        "price": "4500"
+      }
     ]
   },
   "ملاعق أكل ثقيلة أصلية ذهبية 12 حبة": {
@@ -111,22 +103,25 @@
     "description": "طقم ملاعق أكل ثقيلة بتصميم ذهبي أنيق، العدد 12 حبة، من أدوات المائدة المناسبة للبيت والضيافة.",
     "keywords": "ملاعق,ملعقة,ملاعق أكل,ملاعق اكل,ملاعق طعام,ملاعق ذهبية,ملاعق ستيل,ملاعق استانلس,طقم ملاعق,طقم معالق,معالق اكل,معالق طعام,12 حبة,12 قطعه,12 قطعة,ملاعق أصلية,ملاعق الاصلي,AGF,أدوات المائدة,منتجات المائدة,مستلزمات المطبخ,ضيافة",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/spoons/gold-heavy-spoons.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/spoons/gold-heavy-spoons.jpg\"]",
+    "variants": ""
   },
   "مكنسة سوبر هلال سوري": {
     "name": "مكنسة سوبر هلال سوري",
     "price": "500",
     "description": "مكنسة سوبر هلال سوري للتنظيف المنزلي، متوفرة بحجم كبير وصغير وبألوان مختلفة.",
     "keywords": "مكنسة,مكنسه,مكنسة بيت,مكنسة منزلية,مكنسة سوبر,مكنسه سوبر,مكنسة هلال,هلال سوري,مكنسة سورية,مكنسة كبير,مكنسة كبيرة,مكنسة صغير,مكنسة صغيرة,مكنسة تنظيف,أدوات تنظيف,مستلزمات المنزل,تنظيف البيت",
-    "variants": [
-      {"name": "كبير", "price": "900"},
-      {"name": "صغير", "price": "500"}
-    ],
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/brooms/saifi-star-broom.jpg"
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/brooms/saifi-star-broom.jpg\"]",
+    "variants": [
+      {
+        "name": "كبير",
+        "price": "900"
+      },
+      {
+        "name": "صغير",
+        "price": "500"
+      }
     ]
   },
   "كرسي ترمس أصلي 5 أرجل": {
@@ -135,9 +130,8 @@
     "description": "كرسي ترمس أصلي بخمس أرجل، عملي للاستخدام المنزلي ومناسب للجلوس والاستخدامات اليومية.",
     "keywords": "كرسي,كرسي ترمس,كرسي بلاستيك,كرسي اصلي,كرسي أصلي,كرسي 5 ارجل,كرسي خمسة ارجل,كرسي حمام,مقعد,مقعد بلاستيك,كراسي منزلية,أدوات منزلية,الهلال والنجمة",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/chair/thermos-chair.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/chair/thermos-chair.jpg\"]",
+    "variants": ""
   },
   "قطاعة خضروات يدوية سايفي ستار": {
     "name": "قطاعة خضروات يدوية سايفي ستار",
@@ -145,9 +139,8 @@
     "description": "قطاعة خضروات يدوية بشفرات ستيل قابلة للتعديل، تساعد على تقطيع الخضروات بأشكال متعددة.",
     "keywords": "قطاعة,قطاعة خضروات,قطاعة خضار,قطاعة يدوية,قطاعة سايفي ستار,سايفي ستار,شرائح خضار,تقطيع خضروات,شفرة ستيل,شفرات ستيل,سلايسر,سلایسر,slicer,مبشرة,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/vegetable-slicer/adjustable-slicer.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/vegetable-slicer/adjustable-slicer.jpg\"]",
+    "variants": ""
   },
   "خلاط يدوي 4 في 1 المائدة 200 واط": {
     "name": "خلاط يدوي 4 في 1 المائدة 200 واط",
@@ -155,9 +148,8 @@
     "description": "خلاط يدوي 4 في 1 من المائدة بقدرة 200 واط، مع ملحقات للخفق والخلط والتقطيع للاستخدامات المنزلية.",
     "keywords": "خلاط,خلاط يدوي,خلاط كهربائي,خلاط المائدة,المائدة,خلاط 4 في 1,خلاط 4in1,خلاط 200 واط,خلاط 200W,هاند بلندر,hand blender,خفاقة,خفاق,فرامة,كأس خلط,أدوات مطبخ,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/hand-blender/hand-blender-4in1.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/hand-blender/hand-blender-4in1.jpg\"]",
+    "variants": ""
   },
   "خلاط سوبر اقتصادي 2 في 1 المائدة 250 واط": {
     "name": "خلاط سوبر اقتصادي 2 في 1 المائدة 250 واط",
@@ -165,9 +157,8 @@
     "description": "خلاط سوبر اقتصادي 2 في 1 من المائدة بقدرة 250 واط، مناسب لخلط العصائر وطحن المكونات المنزلية.",
     "keywords": "خلاط سوبر,خلاط اقتصادي,خلاط 2 في 1,خلاط 2in1,خلاط 250 واط,خلاط 250W,خلاط عصير,خلاط فواكه,خلاط مطبخ,مطحنة,طاحونة صغيرة,خلاط المائدة,المائدة,خلاط كهربائي,أدوات مطبخ,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/super-blender/super-blender-2in1.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/super-blender/super-blender-2in1.jpg\"]",
+    "variants": ""
   },
   "قلص شاي صيفي ستار الاصلي 6 قطع": {
     "name": "قلص شاي صيفي ستار الاصلي 6 قطع",
@@ -175,18 +166,16 @@
     "description": "طقم قلص شاي زجاج صيفي ستار أصلي مكون من 6 قطع، مناسب لتقديم الشاي والضيافة ومنتجات المائدة.",
     "keywords": "قلص,قلاص,اقلاص,أقلاص,قلص شاي,قلاص شاي,اقلاص شاي,أقلاص شاي,قلاص شاهي,قلص شاهي,كأس شاي,كاس شاي,كوب شاي,كوباية شاي,أكواب شاي,اكواب شاي,كؤوس شاي,كاسات شاي,كاسات شاهي,طقم شاي,طقم شاهي,طقم كاسات شاي,طقم أكواب شاي,طقم اكواب شاي,طقم قلص شاي,طقم قلاص شاي,كاسات زجاج,أكواب زجاج,اكواب زجاج,كؤوس زجاج,كاسات زجاجية,كوب زجاج,كأس زجاج,صيفي ستار,صيفي,ستار,قلص صيفي ستار,كاسات صيفي ستار,Saifi Star,6 قطع,ست قطع,ستة قطع,طقم 6 قطع,مجموعة 6 قطع,شاي,شاهي,تقديم الشاي,ضيافة,كاسات ضيافة,أدوات المائدة,منتجات المائدة,مستلزمات المطبخ,أصلي,الاصلي,الأصلي",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/ss33.png",
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/ss49.png",
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/ss47.png",
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/tea-set-box.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/ss33.png\", \"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/ss49.png\", \"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/ss47.png\", \"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/tea-set-box.jpg\"]",
+    "variants": ""
   },
   "علب حافظات هندي ابو 7 طقم": {
     "name": "علب حافظات هندي ابو 7 طقم",
     "price": "1600",
     "description": "طقم حافظات طعام هندي ماركة (Dakar Lux) مكون من 7 قطع بأحجام متدرجة عملية لتلبية جميع احتياجات حفظ وتخزين الأطعمة، يأتي بتصميم جذاب بأغطية ذهبية ونقوش فاخرة وموفر بألوان رائعة (أزرق، أحمر، وبني) لتناسب كافة الأذواق.",
     "keywords": "حافظات هندي,طقم حافظات,حافظات طعام,Dakar Lux,أدوات منزلية,حافظات 7 قطع,تخزين الطعام,حافظات بلاستيك,مستلزمات المطبخ,حافظات ملونة,عروض المطبخ,أدوات مطبخ,حافظات حرارية,حافظة طعام,طقم تخزين",
-    "image_id": "2139902276909246"
+    "image_id": "2139902276909246",
+    "image_urls": "",
+    "variants": ""
   }
 }
