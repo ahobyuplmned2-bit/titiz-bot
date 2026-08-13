@@ -47,6 +47,19 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = "ahobyuplmned2-bit/titiz-bot"
 GITHUB_API = f"https://api.github.com/repos/{GITHUB_REPO}/contents"
 
+# ===== الصوت والفهم الذكي =====
+# يمكن استخدام OpenAI مباشرة أو أي خدمة متوافقة مع واجهتي audio/transcriptions و chat/completions.
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1").rstrip("/")
+VOICE_TRANSCRIPTION_API_KEY = os.environ.get("VOICE_TRANSCRIPTION_API_KEY", OPENAI_API_KEY)
+VOICE_TRANSCRIPTION_API_BASE = os.environ.get(
+    "VOICE_TRANSCRIPTION_API_BASE", OPENAI_API_BASE
+).rstrip("/")
+VOICE_TRANSCRIPTION_MODEL = os.environ.get("VOICE_TRANSCRIPTION_MODEL", "whisper-1")
+SMART_AI_API_KEY = os.environ.get("SMART_AI_API_KEY", OPENAI_API_KEY)
+SMART_AI_API_BASE = os.environ.get("SMART_AI_API_BASE", OPENAI_API_BASE).rstrip("/")
+SMART_AI_MODEL = os.environ.get("SMART_AI_MODEL", "gpt-5-mini")
+
 # ===== تهيئة الخدمات =====
 whatsapp = WhatsAppAPI(ACCESS_TOKEN, PHONE_NUMBER_ID)
 init_db()
@@ -705,6 +718,119 @@ load_custom_responses()
 
 def send_message(to, text):
     return whatsapp.send_message(to, text)
+
+def _audio_extension(mime_type):
+    """اختيار امتداد مؤقت مناسب لصوت واتساب."""
+    mime = (mime_type or "").lower()
+    if "mpeg" in mime or "mp3" in mime:
+        return ".mp3"
+    if "mp4" in mime or "m4a" in mime:
+        return ".m4a"
+    if "aac" in mime:
+        return ".aac"
+    if "amr" in mime:
+        return ".amr"
+    return ".ogg"
+
+def download_whatsapp_audio(audio_data):
+    """تنزيل ملف صوتي من WhatsApp Cloud API باستخدام media_id أو url."""
+    media_id = (audio_data or {}).get("id", "")
+    media_url = (audio_data or {}).get("url", "")
+    if not media_id and not media_url:
+        raise ValueError("لم يصل معرف ملف الصوت من واتساب")
+    if not ACCESS_TOKEN:
+        raise ValueError("ACCESS_TOKEN غير مضبوط")
+
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+    if media_id:
+        media_response = requests.get(
+            f"https://graph.facebook.com/v26.0/{media_id}",
+            headers=headers,
+            params={"phone_number_id": PHONE_NUMBER_ID},
+            timeout=15,
+        )
+        media_response.raise_for_status()
+        media_url = media_response.json().get("url", "")
+    if not media_url:
+        raise ValueError("لم يتم الحصول على رابط ملف الصوت")
+
+    audio_response = requests.get(media_url, headers=headers, timeout=30)
+    audio_response.raise_for_status()
+    if len(audio_response.content) > 16 * 1024 * 1024:
+        raise ValueError("ملف الصوت أكبر من الحد المدعوم")
+    mime_type = audio_response.headers.get("Content-Type") or audio_data.get(
+        "mime_type", "audio/ogg"
+    )
+    return audio_response.content, mime_type
+
+def transcribe_voice_message(message):
+    """تحويل الرسالة الصوتية إلى نص عربي باستخدام خدمة تفريغ الصوت."""
+    if not VOICE_TRANSCRIPTION_API_KEY:
+        print("[الصوت] VOICE_TRANSCRIPTION_API_KEY غير مضبوط")
+        return None
+    audio_bytes, mime_type = download_whatsapp_audio(message.get("audio", {}))
+    extension = _audio_extension(mime_type)
+    headers = {"Authorization": f"Bearer {VOICE_TRANSCRIPTION_API_KEY}"}
+    files = {"file": (f"voice{extension}", audio_bytes, mime_type)}
+    form_data = {
+        "model": VOICE_TRANSCRIPTION_MODEL,
+        "language": "ar",
+        "response_format": "json",
+        "prompt": "هذه رسالة صوتية عربية باللهجة اليمنية عن متجر Titiz للأدوات المنزلية والطلبات والدفع والتوصيل.",
+    }
+    response = requests.post(
+        f"{VOICE_TRANSCRIPTION_API_BASE}/audio/transcriptions",
+        headers=headers,
+        files=files,
+        data=form_data,
+        timeout=90,
+    )
+    response.raise_for_status()
+    text = (response.json().get("text") or "").strip()
+    return text or None
+
+def generate_smart_reply(sender, user_text):
+    """إنشاء رد عربي ذكي للاستفسارات التي لا يغطيها الرد المبرمج."""
+    if not SMART_AI_API_KEY or not user_text:
+        return None
+    products = get_all_products()[:40]
+    product_context = "\n".join(
+        f"- {p.get('name', '')}: {p.get('price', 0)} ريال — {p.get('description', '')}"
+        for p in products
+    ) or "لا توجد منتجات محملة حالياً."
+    state = user_states.get(sender, "")
+    system_prompt = (
+        "أنت موظفة Titiz الذكية لمتجر أدوات منزلية في إب، اليمن. "
+        "أجيبي بالعربية وبأسلوب يمني لطيف وواضح، مع إيموجي قليلة ومناسبة. "
+        "افهمي السؤال حتى لو كان باللهجة أو به أخطاء إملائية. "
+        "لا تخترعي منتجاً أو سعراً أو حالة طلب غير موجودة. "
+        "إذا كان السؤال عن منتج موجود في القائمة فاذكري اسمه وسعره ووصفه باختصار، "
+        "وإذا أراد العميل الشراء فاطلبي منه كتابة اسم المنتج أو استخدام السلة. "
+        "لا تطلبي بيانات حساسة، ولا تدّعي تنفيذ طلب أو دفع لم ينفذه النظام.\n\n"
+        f"حالة المحادثة الحالية: {state or 'لا توجد حالة خاصة'}\n"
+        f"المنتجات المتاحة:\n{product_context}"
+    )
+    payload = {
+        "model": SMART_AI_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_text},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 500,
+    }
+    response = requests.post(
+        f"{SMART_AI_API_BASE}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {SMART_AI_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=45,
+    )
+    response.raise_for_status()
+    result = response.json()
+    return (result.get("choices", [{}])[0].get("message", {}).get("content") or "").strip() or None
 
 def deliver_pending_replies(to):
     """إرسال ردود الإدارة المؤجلة بعد أن يبدأ العميل محادثته."""
@@ -1746,7 +1872,17 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_product_card(sender, product)
         return
 
-    # === رد افتراضي (آخر شي بعد كل البحث) ===
+    # === الرد الذكي للاستفسارات التي لم تطابق كلمة مفتاحية أو منتجاً ===
+    try:
+        smart_reply = generate_smart_reply(sender, msg_body)
+    except Exception as exc:
+        print(f"[الذكاء] تعذر إنشاء الرد الذكي: {exc}")
+        smart_reply = None
+    if smart_reply:
+        send_message(sender, smart_reply)
+        return
+
+    # === رد افتراضي عند عدم توفر خدمة الذكاء ===
     send_welcome(sender)
 
 
@@ -1794,6 +1930,7 @@ def webhook():
 
         # استخراج النص
         msg_body = ""
+        processing_message = message
         if message.get("type") == "text":
             msg_body = message.get("text", {}).get("body", "").strip()
         elif message.get("type") == "interactive":
@@ -1804,6 +1941,24 @@ def webhook():
                 msg_body = interactive.get("list_reply", {}).get("id", "")
         elif message.get("type") == "image":
             msg_body = message.get("image", {}).get("caption", "").strip()
+        elif message.get("type") == "audio":
+            try:
+                msg_body = transcribe_voice_message(message) or ""
+            except Exception as exc:
+                print(f"[الصوت] تعذر تفريغ الرسالة الصوتية: {exc}")
+                send_message(
+                    sender,
+                    "🎙️ وصلتني رسالتك الصوتية، لكن تعذر فهم التسجيل حالياً. "
+                    "أرسليها مرة أخرى أو اكتبي طلبك نصاً من فضلكِ 😊",
+                )
+                return jsonify({"status": "ok"}), 200
+            if not msg_body:
+                send_message(sender, "🎙️ لم أتمكن من سماع كلمات واضحة في التسجيل. أرسليه مرة أخرى من فضلكِ 😊")
+                return jsonify({"status": "ok"}), 200
+            # بعد التفريغ نعامل الصوت كنص حتى تعمل حالات الاسم والعنوان والطلب بشكل طبيعي.
+            processing_message = dict(message)
+            processing_message["type"] = "text"
+            processing_message["text"] = {"body": msg_body}
 
         msg_normalized = normalize_text(msg_body)
 
@@ -1819,13 +1974,13 @@ def webhook():
 
         # معالجة أوامر المالك
         if sender == OWNER_NUMBER:
-            if handle_owner_command(sender, msg_body, msg_normalized, message):
+            if handle_owner_command(sender, msg_body, msg_normalized, processing_message):
                 return jsonify({"status": "ok"}), 200
 
         # معالجة رسائل العملاء (والمالك للاختبار)
         try:
             deliver_pending_replies(sender)
-            handle_customer_message(sender, msg_body, msg_normalized, message)
+            handle_customer_message(sender, msg_body, msg_normalized, processing_message)
         finally:
             persist_customer_session(sender)
 
