@@ -72,6 +72,10 @@ def init_db():
             cursor.execute('ALTER TABLE products ADD COLUMN image_urls TEXT')
         except sqlite3.OperationalError:
             pass
+        try:
+            cursor.execute('ALTER TABLE products ADD COLUMN variants TEXT')
+        except sqlite3.OperationalError:
+            pass
         
         # جدول السلة
         cursor.execute('''
@@ -80,10 +84,20 @@ def init_db():
                 phone_number TEXT NOT NULL,
                 product_id INTEGER NOT NULL,
                 quantity INTEGER DEFAULT 1,
+                variant_name TEXT,
+                variant_price REAL,
                 added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (product_id) REFERENCES products(id)
             )
         ''')
+        try:
+            cursor.execute('ALTER TABLE cart ADD COLUMN variant_name TEXT')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            cursor.execute('ALTER TABLE cart ADD COLUMN variant_price REAL')
+        except sqlite3.OperationalError:
+            pass
         
         # جدول جلسات المستخدمين
         cursor.execute('''
@@ -229,29 +243,29 @@ def get_customer(phone_number):
         
         return dict(customer) if customer else None
 
-def add_to_cart(phone_number, product_id, quantity=1):
+def add_to_cart(phone_number, product_id, quantity=1, variant_name="", variant_price=None):
     """إضافة منتج إلى السلة"""
     with db_lock:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT id, quantity FROM cart 
-            WHERE phone_number = ? AND product_id = ?
-        ''', (phone_number, product_id))
+            SELECT id, quantity FROM cart
+            WHERE phone_number = ? AND product_id = ? AND COALESCE(variant_name, '') = ?
+        ''', (phone_number, product_id, variant_name or ""))
         
         existing = cursor.fetchone()
         
         if existing:
             cursor.execute('''
                 UPDATE cart SET quantity = quantity + ? 
-                WHERE phone_number = ? AND product_id = ?
-            ''', (quantity, phone_number, product_id))
+                WHERE phone_number = ? AND product_id = ? AND COALESCE(variant_name, '') = ?
+            ''', (quantity, phone_number, product_id, variant_name or ""))
         else:
             cursor.execute('''
-                INSERT INTO cart (phone_number, product_id, quantity)
-                VALUES (?, ?, ?)
-            ''', (phone_number, product_id, quantity))
+                INSERT INTO cart (phone_number, product_id, quantity, variant_name, variant_price)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (phone_number, product_id, quantity, variant_name or "", variant_price))
         
         conn.commit()
         conn.close()
@@ -264,7 +278,10 @@ def get_cart(phone_number):
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT c.id, c.product_id, c.quantity, p.name, p.price, p.image_id
+            SELECT c.id, c.product_id, c.quantity, p.name,
+                   COALESCE(c.variant_price, p.price) AS price,
+                   COALESCE(c.variant_name, '') AS variant_name,
+                   p.image_id
             FROM cart c
             JOIN products p ON c.product_id = p.id
             WHERE c.phone_number = ?
@@ -665,7 +682,7 @@ def update_order_status(order_number, new_status):
         conn.close()
         return updated
 
-def add_product(name, price, description="", image_id="", quantity=0, keywords="", image_urls=""):
+def add_product(name, price, description="", image_id="", quantity=0, keywords="", image_urls="", variants=""):
     """إضافة منتج جديد"""
     with db_lock:
         conn = sqlite3.connect(DB_PATH)
@@ -673,9 +690,9 @@ def add_product(name, price, description="", image_id="", quantity=0, keywords="
         
         try:
             cursor.execute('''
-                INSERT INTO products (name, price, description, image_id, quantity, keywords, image_urls)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (name, price, description, image_id, quantity, keywords, image_urls))
+                INSERT INTO products (name, price, description, image_id, quantity, keywords, image_urls, variants)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (name, price, description, image_id, quantity, keywords, image_urls, variants))
             conn.commit()
             product_id = cursor.lastrowid
         except sqlite3.IntegrityError:
@@ -685,17 +702,17 @@ def add_product(name, price, description="", image_id="", quantity=0, keywords="
         return product_id
 
 
-def update_product_metadata(name, price, description="", image_id="", keywords="", image_urls=""):
+def update_product_metadata(name, price, description="", image_id="", keywords="", image_urls="", variants=""):
     """تحديث بيانات المنتج من products.json دون تغيير الكمية أو حالة التوفر."""
     with db_lock:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE products
-            SET price = ?, description = ?, image_id = ?, keywords = ?, image_urls = ?,
+            SET price = ?, description = ?, image_id = ?, keywords = ?, image_urls = ?, variants = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE name = ?
-        ''', (price, description, image_id, keywords, image_urls, name))
+        ''', (price, description, image_id, keywords, image_urls, variants, name))
         updated = cursor.rowcount > 0
         conn.commit()
         conn.close()

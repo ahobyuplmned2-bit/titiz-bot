@@ -529,13 +529,20 @@ def sync_products_to_github():
         products_dict = remote_data if isinstance(remote_data, dict) else {}
         products = get_all_products()
         for p in products:
+            raw_variants = p.get("variants", "")
+            if isinstance(raw_variants, str) and raw_variants.startswith("["):
+                try:
+                    raw_variants = json.loads(raw_variants)
+                except json.JSONDecodeError:
+                    pass
             products_dict[p["name"]] = {
                 "name": p["name"],
                 "price": str(int(p["price"])),
                 "description": p.get("description", ""),
                 "keywords": p.get("keywords", ""),
                 "image_id": p.get("image_id", ""),
-                "image_urls": p.get("image_urls", "")
+                "image_urls": p.get("image_urls", ""),
+                "variants": raw_variants
             }
         if not products_dict:
             print("[GitHub] تم منع كتابة products.json فارغاً فوق النسخة الحالية.")
@@ -576,14 +583,17 @@ def load_products_from_github():
                 image_urls = info.get("image_urls", "")
                 if isinstance(image_urls, list):
                     image_urls = json.dumps(image_urls, ensure_ascii=False)
+                variants = info.get("variants", "")
+                if isinstance(variants, list):
+                    variants = json.dumps(variants, ensure_ascii=False)
                 keywords = info.get("keywords", "")
                 if isinstance(keywords, list):
                     keywords = ",".join(keywords)
                 if normalize_text(name) not in existing_names:
-                    add_product(name, price, desc, image_id, 100, keywords, image_urls)
+                    add_product(name, price, desc, image_id, 100, keywords, image_urls, variants)
                     count += 1
                 else:
-                    update_product_metadata(name, price, desc, image_id, keywords, image_urls)
+                    update_product_metadata(name, price, desc, image_id, keywords, image_urls, variants)
             print(f"[بدء التشغيل] تم تحميل {count} منتج من GitHub (إجمالي: {len(data)})")
         else:
             print("[بدء التشغيل] لا توجد منتجات على GitHub")
@@ -1059,6 +1069,36 @@ def send_buttons(to, text, buttons):
 def send_carousel(to, text, cards):
     return whatsapp.send_carousel(to, text, cards)
 
+
+def product_variants(product):
+    raw_variants = product.get("variants", "")
+    if isinstance(raw_variants, str):
+        if not raw_variants.startswith("["):
+            return []
+        try:
+            raw_variants = json.loads(raw_variants)
+        except json.JSONDecodeError:
+            return []
+    return raw_variants if isinstance(raw_variants, list) else []
+
+
+def send_variant_list(to, product):
+    """عرض أحجام المنتج وأسعارها في قائمة واتساب قابلة للاختيار."""
+    rows = []
+    for index, variant in enumerate(product_variants(product)):
+        label = str(variant.get("name") or variant.get("label") or "الخيار")
+        price = int(float(variant.get("price") or 0))
+        rows.append({
+            "id": f"variant_{product['id']}_{index}",
+            "title": f"{label} - {price} ريال"[:24],
+            "description": "اختيار هذا الحجم والسعر",
+        })
+    if rows:
+        send_list(to, "اختاري الحجم والسعر المناسب:", "اختيار الحجم", [{
+            "title": "الأحجام المتوفرة",
+            "rows": rows[:10],
+        }])
+
 def send_welcome(to):
     """إرسال الترحيب الجديد مع أزرار الوصول السريع."""
     send_buttons(to, WELCOME_MESSAGE, [
@@ -1114,6 +1154,11 @@ def send_product_card(to, product):
         send_image_by_id(to, image_id)
     elif image_urls:
         send_image(to, image_urls[0])
+    if product_variants(product):
+        send_message(to, product_reply)
+        send_variant_list(to, product)
+        schedule_product_followup(to, product.get("name", ""))
+        return True
     send_buttons(to, product_reply, [
         {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
         {"id": f"det_{product['id']}", "title": "📋 تفاصيل المنتج"},
@@ -1287,7 +1332,8 @@ def send_cart_view(to):
     for item in cart_items:
         item_total = item["price"] * item["quantity"]
         total += item_total
-        lines.append(f"• {item['name']} × {item['quantity']} = {int(item_total)} ريال")
+        variant_label = f" ({item['variant_name']})" if item.get("variant_name") else ""
+        lines.append(f"• {item['name']}{variant_label} × {item['quantity']} = {int(item_total)} ريال")
         action_rows.extend([
             {"id": f"inc_{item['product_id']}", "title": f"➕ {item['name'][:17]}", "description": "زيادة الكمية"},
             {"id": f"dec_{item['product_id']}", "title": f"➖ {item['name'][:17]}", "description": "إنقاص الكمية"},
@@ -1747,6 +1793,35 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     if raw_action == PRODUCT_FOLLOWUP_UNSATISFIED_ID:
         cancel_customer_followup(sender)
         send_message(sender, PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE)
+        return
+
+    # اختيار حجم المنتج: نستخدم النص الخام لأن normalize_text يزيل الشرطة السفلية.
+    if raw_action.startswith("variant_"):
+        try:
+            _, product_id_text, variant_index_text = raw_action.split("_", 2)
+            product = get_product(int(product_id_text))
+            variant_index = int(variant_index_text)
+            variants = product_variants(product or {})
+            selected = variants[variant_index]
+        except (ValueError, IndexError, TypeError, AttributeError):
+            product = None
+            selected = None
+        if product and selected:
+            variant_name = str(selected.get("name") or selected.get("label") or "الخيار")
+            variant_price = int(float(selected.get("price") or 0))
+            add_to_cart(sender, product["id"], 1, variant_name, variant_price)
+            send_message(
+                sender,
+                f"✅ تم إضافة *{product['name']}*\n"
+                f"📏 الحجم: {variant_name}\n"
+                f"💰 السعر: {variant_price} ريال إلى السلة",
+            )
+            send_buttons(sender, "ماذا تريدين الآن؟", [
+                {"id": "menu_cart", "title": "🛒 عرض السلة"},
+                {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
+            ])
+        else:
+            send_message(sender, "❌ لم أتمكن من العثور على هذا الخيار، أرسلي اسم المنتج مرة أخرى.")
         return
 
     # أزرار المنتج: نستخدم النص الخام لأن normalize_text يزيل الشرطة السفلية.

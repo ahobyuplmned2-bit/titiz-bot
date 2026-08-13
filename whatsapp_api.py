@@ -337,7 +337,19 @@ def format_product_card(product):
     if product.get('description'):
         message += f"{product['description']}\n\n"
     
-    message += f"💰 السعر: {product.get('price', 0)} ريال\n"
+    variants = product.get("variants", "")
+    if isinstance(variants, str) and variants.startswith("["):
+        try:
+            variants = json.loads(variants)
+        except json.JSONDecodeError:
+            variants = []
+    if isinstance(variants, list) and variants:
+        message += "💰 *الأسعار حسب الحجم:*\n"
+        for variant in variants:
+            label = variant.get("name") or variant.get("label") or "الخيار"
+            message += f"• {label}: {int(float(variant.get('price') or 0))} ريال\n"
+    else:
+        message += f"💰 السعر: {product.get('price', 0)} ريال\n"
     
     if product.get('quantity', 0) > 0:
         message += f"✅ المنتج متوفر\n"
