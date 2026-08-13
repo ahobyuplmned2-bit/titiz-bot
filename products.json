@@ -186,5 +186,30 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/al-dar-juicers/steel-square-juicer.jpg\"]",
     "variants": ""
+  },
+  "فرامة الضغطة الذكية من المائدة": {
+    "name": "فرامة الضغطة الذكية من المائدة",
+    "price": "2000",
+    "description": "فرامة الضغطة الذكية من المائدة بشفرات قوية، سهلة الاستخدام والتنظيف، ومناسبة لتقطيع الخضروات والمكونات بسرعة.",
+    "keywords": "فرامة,فرامة الضغطة,فرامة الضغطة الذكية,فرامة المائدة,فرامة خضروات,فرامة خضار,قطاعة خضروات,قطاعة خضار,فرامة يدوية,فرامة كبيرة,فرامة وسط,فرامة صغيرة,فرامة كبير,فرامة صغير,فرامة MD-5266,MD-5266,MD-5076,MD-5066,3 شفرات,5 شفرات,فرم الخضروات,تقطيع الخضار,تقطيع البصل,فرامة مطبخ,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ",
+    "variants": [
+      {"name": "الكبير MD-5266", "price": "3000"},
+      {"name": "الوسط MD-5076", "price": "2500"},
+      {"name": "الصغير MD-5066", "price": "2000"}
+    ],
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/pressure-chopper/pressure-chopper-variants.png"
+    ]
+  },
+  "طقم قدور الدار 10 قطع": {
+    "name": "طقم قدور الدار 10 قطع",
+    "price": "6500",
+    "description": "طقم قدور الدار الأصلي مكون من 10 قطع، من الألمنيوم الخام، مناسب للطبخ اليومي وتحضير مختلف الوجبات.",
+    "keywords": "طقم قدور,قدور الدار,طقم قدور الدار,قدور,حلل,طقم حلل,قدور ألمنيوم,قدور المنيوم,قدور المطبخ,10 قطع,عشر قطع,طقم قدور 10 قطع,قدور الدار 10,الدار,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/al-dar-pots/al-dar-pots-10pcs-new.jpg"
+    ]
   }
 }
