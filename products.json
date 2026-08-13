@@ -233,5 +233,16 @@
       "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/potato-peeler/almaeda-original-potato-peeler.jpg"
     ],
     "variants": ""
+  },
+  "مسدس غاز ولاعة غاز أصلية من المائدة": {
+    "name": "مسدس غاز ولاعة غاز أصلية من المائدة",
+    "price": "400",
+    "description": "ولاعة غاز إلكترونية أصلية من المائدة، بتصميم مسدس عملي لإشعال مواقد وعيون الغاز والفرن بسهولة.",
+    "keywords": "مسدس غاز,مسدس الغاز,ولاعة غاز,ولاعة الغاز,ولاعة مطبخ,ولاعة للمطبخ,قداحة غاز,قداحة مطبخ,ولاعة إلكترونية,ولاعة الكترونية,ولاعة إشعال,ولاعة اشعال,إشعال الغاز,اشعال الغاز,ولاعة مواقد,ولاعة فرن,ولاعة عيون الغاز,ولاعة بوتاجاز,ولاعة أصلية,ولاعة اصلية,ولاعة المائدة,مسدس ولاعة,ولاعة طويلة,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/gas-lighter/almaeda-electronic-gas-lighter.png"
+    ],
+    "variants": ""
   }
 }
