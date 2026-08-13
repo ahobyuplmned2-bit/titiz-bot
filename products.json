@@ -179,5 +179,25 @@
     "image_urls": [
       "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/crown-pots/crown-pots-open-5pcs.jpg"
     ]
+  },
+  "عصارة الدار بلاستيك مدورة أصلية": {
+    "name": "عصارة الدار بلاستيك مدورة أصلية",
+    "price": "1000",
+    "description": "عصارة الدار البلاستيك المدورة الأصلية للخضروات والمكسرات والفلفل والقلات، سهلة الاستخدام ومناسبة للمطبخ.",
+    "keywords": "عصارة,عصارة الدار,عصارة اصلية,عصارة أصلية,عصارة بلاستيك,عصارة بلاستيك مدورة,عصارة مدورة,عصارة خضروات,عصارة خضار,عصارة مكسرات,عصارة فلفل,عصارة قلات,عصارة يدوية,عصارة مطبخ,عصارة المائدة,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/al-dar-juicers/plastic-round-juicer.jpg"
+    ]
+  },
+  "عصارة الدار ستيل مربعة أصلية": {
+    "name": "عصارة الدار ستيل مربعة أصلية",
+    "price": "1000",
+    "description": "عصارة الدار الستيل المربعة الأصلية للخضروات والمكسرات والفلفل والقلات، بتصميم متين وسهلة الاستخدام.",
+    "keywords": "عصارة,عصارة الدار,عصارة اصلية,عصارة أصلية,عصارة ستيل,عصارة استيل,عصارة مربعة,عصارة ستيل مربعة,عصارة خضروات,عصارة خضار,عصارة مكسرات,عصارة فلفل,عصارة قلات,عصارة يدوية,عصارة مطبخ,عصارة المائدة,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/al-dar-juicers/steel-square-juicer.jpg"
+    ]
   }
 }
