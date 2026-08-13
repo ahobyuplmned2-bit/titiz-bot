@@ -153,6 +153,55 @@ class WhatsAppAPI:
             print(f"خطأ في إرسال الصورة: {e}")
             return False
 
+    def send_carousel(self, recipient_phone, message_text, cards):
+        """إرسال كاروسيل أفقي من 2 إلى 10 بطاقات صور مع أزرار سريعة."""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Content-Type": "application/json",
+            }
+            carousel_cards = []
+            for index, card in enumerate(cards[:10]):
+                buttons = []
+                for button in card.get("buttons", [])[:2]:
+                    buttons.append({
+                        "type": "quick_reply",
+                        "quick_reply": {
+                            "id": str(button.get("id", ""))[:256],
+                            "title": str(button.get("title", "اختيار"))[:20],
+                        },
+                    })
+                carousel_cards.append({
+                    "card_index": index,
+                    "type": "quick_reply",
+                    "header": {
+                        "type": "image",
+                        "image": {"link": card["image_url"]},
+                    },
+                    "body": {"text": card.get("body", "")[:160]},
+                    "action": {"buttons": buttons},
+                })
+            if len(carousel_cards) < 2:
+                return False
+            payload = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": recipient_phone,
+                "type": "interactive",
+                "interactive": {
+                    "type": "carousel",
+                    "body": {"text": message_text[:1024]},
+                    "action": {"cards": carousel_cards},
+                },
+            }
+            response = requests.post(self.messages_url, headers=headers, json=payload, timeout=15)
+            if response.status_code != 200:
+                print(f"خطأ كاروسيل واتساب: {response.status_code} {response.text[:300]}")
+            return response.status_code == 200
+        except Exception as e:
+            print(f"خطأ في إرسال الكاروسيل: {e}")
+            return False
+
     def send_buttons(self, recipient_phone, message_text, buttons):
         """إرسال رسالة مع أزرار"""
         try:

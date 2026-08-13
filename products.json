@@ -1,4 +1,17 @@
 {
+  "قلص شاي صيفي ستار الاصلي 6 قطع": {
+    "name": "قلص شاي صيفي ستار الاصلي 6 قطع",
+    "price": "1400",
+    "description": "طقم قلص شاي زجاج صيفي ستار أصلي مكون من 6 قطع، مناسب لتقديم الشاي والضيافة ومنتجات المائدة.",
+    "keywords": "قلص,قلاص,قلص شاي,قلاص شاي,قلاص شاهي,قلص شاهي,كأس شاي,كاس شاي,كوب شاي,كوباية شاي,أكواب شاي,اكواب شاي,كؤوس شاي,كاسات شاي,كاسات شاهي,طقم شاي,طقم شاهي,طقم كاسات شاي,طقم أكواب شاي,طقم اكواب شاي,طقم قلص شاي,طقم قلاص شاي,كاسات زجاج,أكواب زجاج,اكواب زجاج,كؤوس زجاج,كاسات زجاجية,كوب زجاج,كأس زجاج,صيفي ستار,صيفي,ستار,قلص صيفي ستار,كاسات صيفي ستار,Saifi Star,6 قطع,ست قطع,ستة قطع,طقم 6 قطع,مجموعة 6 قطع,شاي,شاهي,تقديم الشاي,ضيافة,كاسات ضيافة,أدوات المائدة,منتجات المائدة,مستلزمات المطبخ,أصلي,الاصلي,الأصلي",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/ss33.png",
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/ss49.png",
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/ss47.png",
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/tea-set-box.jpg"
+    ]
+  },
   "علب حافظات هندي ابو 7 طقم": {
     "name": "علب حافظات هندي ابو 7 طقم",
     "price": "1600",

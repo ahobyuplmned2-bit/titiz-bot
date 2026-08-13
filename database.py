@@ -68,6 +68,10 @@ def init_db():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        try:
+            cursor.execute('ALTER TABLE products ADD COLUMN image_urls TEXT')
+        except sqlite3.OperationalError:
+            pass
         
         # جدول السلة
         cursor.execute('''
@@ -661,7 +665,7 @@ def update_order_status(order_number, new_status):
         conn.close()
         return updated
 
-def add_product(name, price, description="", image_id="", quantity=0, keywords=""):
+def add_product(name, price, description="", image_id="", quantity=0, keywords="", image_urls=""):
     """إضافة منتج جديد"""
     with db_lock:
         conn = sqlite3.connect(DB_PATH)
@@ -669,9 +673,9 @@ def add_product(name, price, description="", image_id="", quantity=0, keywords="
         
         try:
             cursor.execute('''
-                INSERT INTO products (name, price, description, image_id, quantity, keywords)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (name, price, description, image_id, quantity, keywords))
+                INSERT INTO products (name, price, description, image_id, quantity, keywords, image_urls)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (name, price, description, image_id, quantity, keywords, image_urls))
             conn.commit()
             product_id = cursor.lastrowid
         except sqlite3.IntegrityError:

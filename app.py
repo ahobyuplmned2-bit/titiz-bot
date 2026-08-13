@@ -534,7 +534,8 @@ def sync_products_to_github():
                 "price": str(int(p["price"])),
                 "description": p.get("description", ""),
                 "keywords": p.get("keywords", ""),
-                "image_id": p.get("image_id", "")
+                "image_id": p.get("image_id", ""),
+                "image_urls": p.get("image_urls", "")
             }
         if not products_dict:
             print("[GitHub] تم منع كتابة products.json فارغاً فوق النسخة الحالية.")
@@ -573,10 +574,13 @@ def load_products_from_github():
                         pass
                     desc = info.get("description", "")
                     image_id = info.get("image_id", "")
+                    image_urls = info.get("image_urls", "")
+                    if isinstance(image_urls, list):
+                        image_urls = json.dumps(image_urls, ensure_ascii=False)
                     keywords = info.get("keywords", "")
                     if isinstance(keywords, list):
                         keywords = ",".join(keywords)
-                    add_product(name, price, desc, image_id, 100, keywords)
+                    add_product(name, price, desc, image_id, 100, keywords, image_urls)
                     count += 1
             print(f"[بدء التشغيل] تم تحميل {count} منتج من GitHub (إجمالي: {len(data)})")
         else:
@@ -1049,6 +1053,10 @@ def send_image_by_id(to, media_id, caption=""):
 def send_buttons(to, text, buttons):
     return whatsapp.send_buttons(to, text, buttons)
 
+
+def send_carousel(to, text, cards):
+    return whatsapp.send_carousel(to, text, cards)
+
 def send_welcome(to):
     """إرسال الترحيب الجديد مع أزرار الوصول السريع."""
     send_buttons(to, WELCOME_MESSAGE, [
@@ -1066,9 +1074,44 @@ def send_product_card(to, product):
         return False
     product_send_guard[guard_key] = now
     product_reply = format_product_card(product)
+    raw_image_urls = product.get("image_urls", "")
+    if isinstance(raw_image_urls, str):
+        try:
+            image_urls = json.loads(raw_image_urls) if raw_image_urls.startswith("[") else []
+        except json.JSONDecodeError:
+            image_urls = []
+    else:
+        image_urls = raw_image_urls or []
+    if len(image_urls) >= 2:
+        carousel_body = (
+            f"📦 {product.get('name', 'المنتج')}\n"
+            f"💰 السعر: {int(product.get('price', 0))} ريال\n"
+            "اختاري الصورة أو أضيفي المنتج للسلة 👇"
+        )
+        carousel_cards = [
+            {
+                "image_url": url,
+                "body": carousel_body,
+                "buttons": [
+                    {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
+                    {"id": f"det_{product['id']}", "title": "📋 التفاصيل"},
+                ],
+            }
+            for url in image_urls[:10]
+            if isinstance(url, str) and url.startswith("http")
+        ]
+        if len(carousel_cards) >= 2 and send_carousel(
+            to,
+            f"🫖 صور {product.get('name', 'المنتج')} — السعر موحد 1400 ريال",
+            carousel_cards,
+        ):
+            schedule_product_followup(to, product.get("name", ""))
+            return True
     image_id = product.get("image_id", "")
     if image_id:
         send_image_by_id(to, image_id)
+    elif image_urls:
+        send_image(to, image_urls[0])
     send_buttons(to, product_reply, [
         {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
         {"id": f"det_{product['id']}", "title": "📋 تفاصيل المنتج"},
