@@ -59,6 +59,9 @@ VOICE_TRANSCRIPTION_MODEL = os.environ.get("VOICE_TRANSCRIPTION_MODEL", "whisper
 SMART_AI_API_KEY = os.environ.get("SMART_AI_API_KEY", OPENAI_API_KEY)
 SMART_AI_API_BASE = os.environ.get("SMART_AI_API_BASE", OPENAI_API_BASE).rstrip("/")
 SMART_AI_MODEL = os.environ.get("SMART_AI_MODEL", "gpt-5-mini")
+VOICE_MAX_RETRIES = max(int(os.environ.get("VOICE_MAX_RETRIES", "3")), 1)
+VOICE_RETRY_BASE_SECONDS = max(float(os.environ.get("VOICE_RETRY_BASE_SECONDS", "2")), 1.0)
+VOICE_DEDUP_SECONDS = max(int(os.environ.get("VOICE_DEDUP_SECONDS", "120")), 30)
 
 # ===== تهيئة الخدمات =====
 whatsapp = WhatsAppAPI(ACCESS_TOKEN, PHONE_NUMBER_ID)
@@ -67,6 +70,8 @@ init_db()
 # ===== متغيرات الجلسات =====
 user_sessions = {}
 user_states = {}
+voice_processing_lock = Lock()
+voice_recent_media = {}
 
 # ===== تذكير استفسار المنتج وتقييم الرضا =====
 PRODUCT_FOLLOWUP_DELAY_SECONDS = max(
@@ -732,6 +737,31 @@ def _audio_extension(mime_type):
         return ".amr"
     return ".ogg"
 
+def _request_with_429_retry(request_func, request_name, *args, **kwargs):
+    """تنفيذ طلب خارجي مع انتظار تدريجي عند تجاوز الحد 429."""
+    last_response = None
+    for attempt in range(VOICE_MAX_RETRIES):
+        response = request_func(*args, **kwargs)
+        last_response = response
+        if response.status_code != 429:
+            return response
+
+        retry_after_header = getattr(response, "headers", {}).get("Retry-After")
+        try:
+            retry_after = float(retry_after_header) if retry_after_header else 0
+        except (TypeError, ValueError):
+            retry_after = 0
+        delay = max(retry_after, VOICE_RETRY_BASE_SECONDS * (2 ** attempt))
+        print(
+            f"[الصوت] {request_name}: 429 Too Many Requests "
+            f"(محاولة {attempt + 1}/{VOICE_MAX_RETRIES})، انتظار {delay:.1f} ثانية"
+        )
+        if attempt < VOICE_MAX_RETRIES - 1:
+            time.sleep(delay)
+
+    last_response.raise_for_status()
+    return last_response
+
 def download_whatsapp_audio(audio_data):
     """تنزيل ملف صوتي من WhatsApp Cloud API باستخدام media_id أو url."""
     media_id = (audio_data or {}).get("id", "")
@@ -743,7 +773,9 @@ def download_whatsapp_audio(audio_data):
 
     headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
     if media_id:
-        media_response = requests.get(
+        media_response = _request_with_429_retry(
+            requests.get,
+            "جلب بيانات الصوت من واتساب",
             f"https://graph.facebook.com/v26.0/{media_id}",
             headers=headers,
             params={"phone_number_id": PHONE_NUMBER_ID},
@@ -754,7 +786,13 @@ def download_whatsapp_audio(audio_data):
     if not media_url:
         raise ValueError("لم يتم الحصول على رابط ملف الصوت")
 
-    audio_response = requests.get(media_url, headers=headers, timeout=30)
+    audio_response = _request_with_429_retry(
+        requests.get,
+        "تنزيل ملف الصوت من واتساب",
+        media_url,
+        headers=headers,
+        timeout=30,
+    )
     audio_response.raise_for_status()
     if len(audio_response.content) > 16 * 1024 * 1024:
         raise ValueError("ملف الصوت أكبر من الحد المدعوم")
@@ -768,26 +806,40 @@ def transcribe_voice_message(message):
     if not VOICE_TRANSCRIPTION_API_KEY:
         print("[الصوت] VOICE_TRANSCRIPTION_API_KEY غير مضبوط")
         return None
-    audio_bytes, mime_type = download_whatsapp_audio(message.get("audio", {}))
-    extension = _audio_extension(mime_type)
-    headers = {"Authorization": f"Bearer {VOICE_TRANSCRIPTION_API_KEY}"}
-    files = {"file": (f"voice{extension}", audio_bytes, mime_type)}
-    form_data = {
-        "model": VOICE_TRANSCRIPTION_MODEL,
-        "language": "ar",
-        "response_format": "json",
-        "prompt": "هذه رسالة صوتية عربية باللهجة اليمنية عن متجر Titiz للأدوات المنزلية والطلبات والدفع والتوصيل.",
-    }
-    response = requests.post(
-        f"{VOICE_TRANSCRIPTION_API_BASE}/audio/transcriptions",
-        headers=headers,
-        files=files,
-        data=form_data,
-        timeout=90,
-    )
-    response.raise_for_status()
-    text = (response.json().get("text") or "").strip()
-    return text or None
+    audio_data = message.get("audio", {})
+    media_id = audio_data.get("id", "")
+    if not voice_processing_lock.acquire(blocking=False):
+        raise RuntimeError("VOICE_BUSY")
+    try:
+        now = time.time()
+        if media_id and now - voice_recent_media.get(media_id, 0) < VOICE_DEDUP_SECONDS:
+            raise RuntimeError("VOICE_DUPLICATE")
+        audio_bytes, mime_type = download_whatsapp_audio(audio_data)
+        extension = _audio_extension(mime_type)
+        headers = {"Authorization": f"Bearer {VOICE_TRANSCRIPTION_API_KEY}"}
+        files = {"file": (f"voice{extension}", audio_bytes, mime_type)}
+        form_data = {
+            "model": VOICE_TRANSCRIPTION_MODEL,
+            "language": "ar",
+            "response_format": "json",
+            "prompt": "هذه رسالة صوتية عربية باللهجة اليمنية عن متجر Titiz للأدوات المنزلية والطلبات والدفع والتوصيل.",
+        }
+        response = _request_with_429_retry(
+            requests.post,
+            "تحويل الصوت إلى نص",
+            f"{VOICE_TRANSCRIPTION_API_BASE}/audio/transcriptions",
+            headers=headers,
+            files=files,
+            data=form_data,
+            timeout=90,
+        )
+        response.raise_for_status()
+        text = (response.json().get("text") or "").strip()
+        if media_id:
+            voice_recent_media[media_id] = time.time()
+        return text or None
+    finally:
+        voice_processing_lock.release()
 
 def generate_smart_reply(sender, user_text):
     """إنشاء رد عربي ذكي للاستفسارات التي لا يغطيها الرد المبرمج."""
@@ -819,7 +871,9 @@ def generate_smart_reply(sender, user_text):
         "temperature": 0.2,
         "max_tokens": 500,
     }
-    response = requests.post(
+    response = _request_with_429_retry(
+        requests.post,
+        "إنشاء الرد الذكي",
         f"{SMART_AI_API_BASE}/chat/completions",
         headers={
             "Authorization": f"Bearer {SMART_AI_API_KEY}",
@@ -1944,6 +1998,30 @@ def webhook():
         elif message.get("type") == "audio":
             try:
                 msg_body = transcribe_voice_message(message) or ""
+            except RuntimeError as exc:
+                if str(exc) == "VOICE_BUSY":
+                    send_message(sender, "🎙️ ما زلت أعالج رسالة صوتية سابقة، انتظري لحظات ثم أرسلي التسجيل مرة أخرى 😊")
+                elif str(exc) == "VOICE_DUPLICATE":
+                    send_message(sender, "🎙️ تم استلام هذا التسجيل مسبقاً، أرسلي تسجيلاً جديداً إذا احتجتِ 😊")
+                else:
+                    print(f"[الصوت] خطأ في معالجة التسجيل: {exc}")
+                    send_message(sender, "🎙️ الخدمة مشغولة حالياً. انتظري دقيقة ثم أرسلي التسجيل مرة أخرى 😊")
+                return jsonify({"status": "ok"}), 200
+            except requests.HTTPError as exc:
+                status_code = getattr(getattr(exc, "response", None), "status_code", None)
+                if status_code == 429:
+                    print("[الصوت] استمر 429 بعد إعادة المحاولة")
+                    send_message(
+                        sender,
+                        "🎙️ خدمة فهم الصوت مشغولة حالياً. انتظري دقيقة واحدة ثم أرسلي التسجيل مرة أخرى 😊",
+                    )
+                else:
+                    print(f"[الصوت] فشل طلب خدمة الصوت HTTP {status_code}: {exc}")
+                    send_message(
+                        sender,
+                        "🎙️ تعذر فهم التسجيل حالياً. أرسليه مرة أخرى أو اكتبي طلبك نصاً من فضلكِ 😊",
+                    )
+                return jsonify({"status": "ok"}), 200
             except Exception as exc:
                 print(f"[الصوت] تعذر تفريغ الرسالة الصوتية: {exc}")
                 send_message(
