@@ -1081,8 +1081,39 @@ def send_welcome(to):
         {"id": "menu_orders", "title": "📦 طلباتي"},
     ])
 
+
+_catalog_metadata_cache = None
+
+
+def canonicalize_product(product):
+    """توحيد بيانات البطاقة من products.json لمنع بقاء صورة قديمة في SQLite."""
+    global _catalog_metadata_cache
+    if not isinstance(product, dict):
+        return product
+    if _catalog_metadata_cache is None:
+        try:
+            with open(os.path.join(os.path.dirname(__file__), "products.json"), encoding="utf-8") as handle:
+                raw_catalog = json.load(handle)
+            _catalog_metadata_cache = {
+                normalize_text(str(name)): info
+                for name, info in raw_catalog.items()
+                if isinstance(info, dict)
+            }
+        except (OSError, json.JSONDecodeError):
+            _catalog_metadata_cache = {}
+    catalog_entry = _catalog_metadata_cache.get(normalize_text(str(product.get("name", ""))))
+    if not catalog_entry:
+        return product
+    merged = dict(product)
+    for field in ("price", "description", "keywords", "image_id", "image_urls", "variants"):
+        if field in catalog_entry:
+            merged[field] = catalog_entry[field]
+    return merged
+
+
 def send_product_card(to, product):
     """إرسال صورة المنتج وحدها ثم وصفه وأزراره بمعرفات لا تتكرر."""
+    product = canonicalize_product(product)
     guard_key = (to, int(product.get("id", 0)))
     now = time.time()
     if now - product_send_guard.get(guard_key, 0) < PRODUCT_SEND_WINDOW:
@@ -1146,6 +1177,7 @@ def send_matching_products_carousel(to, products):
     cards = []
     scheduled_names = []
     for product in products[:10]:
+        product = canonicalize_product(product)
         raw_urls = product.get("image_urls", "")
         if isinstance(raw_urls, str):
             try:
@@ -1176,7 +1208,7 @@ def send_matching_products_carousel(to, products):
 
     # بديل آمن إذا لم تتوفر روابط صور عامة كافية للكاروسيل.
     for product in products[:10]:
-        send_product_card(to, product)
+        send_product_card(to, canonicalize_product(product))
     return bool(products)
 
 def send_list(to, text, button_text, sections):
