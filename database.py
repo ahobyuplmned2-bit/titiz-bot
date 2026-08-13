@@ -274,11 +274,32 @@ def get_customer(phone_number):
         
         return dict(customer) if customer else None
 
+def _positive_price(value):
+    """تحويل السعر إلى رقم موجب؛ السعر الفارغ أو الصفري غير صالح."""
+    try:
+        price = float(value)
+    except (TypeError, ValueError):
+        return None
+    return price if price > 0 else None
+
+
 def add_to_cart(phone_number, product_id, quantity=1, variant_name="", variant_price=None):
     """إضافة منتج إلى السلة"""
     with db_lock:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
+
+        selected_price = _positive_price(variant_price) if variant_price is not None else None
+        if variant_price is not None and selected_price is None:
+            conn.close()
+            return False
+        if variant_price is None:
+            product_row = cursor.execute(
+                "SELECT price FROM products WHERE id = ?", (product_id,)
+            ).fetchone()
+            if not product_row or _positive_price(product_row[0]) is None:
+                conn.close()
+                return False
         
         cursor.execute('''
             SELECT id, quantity FROM cart
@@ -296,10 +317,11 @@ def add_to_cart(phone_number, product_id, quantity=1, variant_name="", variant_p
             cursor.execute('''
                 INSERT INTO cart (phone_number, product_id, quantity, variant_name, variant_price)
                 VALUES (?, ?, ?, ?, ?)
-            ''', (phone_number, product_id, quantity, variant_name or "", variant_price))
+            ''', (phone_number, product_id, quantity, variant_name or "", selected_price))
         
         conn.commit()
         conn.close()
+        return True
 
 def get_cart(phone_number):
     """الحصول على سلة العميل"""
@@ -715,6 +737,9 @@ def update_order_status(order_number, new_status):
 
 def add_product(name, price, description="", image_id="", quantity=0, keywords="", image_urls="", variants=""):
     """إضافة منتج جديد"""
+    validated_price = _positive_price(price)
+    if validated_price is None:
+        return None
     with db_lock:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -723,7 +748,7 @@ def add_product(name, price, description="", image_id="", quantity=0, keywords="
             cursor.execute('''
                 INSERT INTO products (name, price, description, image_id, quantity, keywords, image_urls, variants)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (name, price, description, image_id, quantity, keywords, image_urls, variants))
+            ''', (name, validated_price, description, image_id, quantity, keywords, image_urls, variants))
             conn.commit()
             product_id = cursor.lastrowid
         except sqlite3.IntegrityError:
@@ -735,6 +760,9 @@ def add_product(name, price, description="", image_id="", quantity=0, keywords="
 
 def update_product_metadata(name, price, description="", image_id="", keywords="", image_urls="", variants=""):
     """تحديث بيانات المنتج من products.json دون تغيير الكمية أو حالة التوفر."""
+    validated_price = _positive_price(price)
+    if validated_price is None:
+        return False
     with db_lock:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -743,7 +771,7 @@ def update_product_metadata(name, price, description="", image_id="", keywords="
             SET price = ?, description = ?, image_id = ?, keywords = ?, image_urls = ?, variants = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE name = ?
-        ''', (price, description, image_id, keywords, image_urls, variants, name))
+        ''', (validated_price, description, image_id, keywords, image_urls, variants, name))
         updated = cursor.rowcount > 0
         conn.commit()
         conn.close()
@@ -773,8 +801,12 @@ def update_product_fields(product_id, name=None, price=None, description=None):
             assignments.append("name = ?")
             values.append(name)
         if price is not None:
+            validated_price = _positive_price(price)
+            if validated_price is None:
+                conn.close()
+                return "invalid_price"
             assignments.append("price = ?")
-            values.append(float(price))
+            values.append(validated_price)
         if description is not None:
             assignments.append("description = ?")
             values.append(description)

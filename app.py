@@ -31,7 +31,7 @@ from database import (
     update_product_fields,
     claim_processed_webhook_message
 )
-from whatsapp_api import WhatsAppAPI, format_product_card
+from whatsapp_api import WhatsAppAPI, format_product_card, parse_product_price
 
 app = Flask(__name__)
 
@@ -1071,10 +1071,12 @@ def send_variant_list(to, product):
     rows = []
     for index, variant in enumerate(product_variants(product)):
         label = str(variant.get("name") or variant.get("label") or "الخيار")
-        price = int(float(variant.get("price") or 0))
+        price = parse_product_price(variant.get("price"))
+        if price is None:
+            continue
         rows.append({
             "id": f"variant_{product['id']}_{index}",
-            "title": f"{label} - {price} ريال"[:24],
+            "title": f"{label} - {int(price)} ريال"[:24],
             "description": "اختيار هذا الحجم والسعر",
         })
     if rows:
@@ -1131,6 +1133,12 @@ def send_product_card(to, product):
         return False
     product_send_guard[guard_key] = now
     product_reply = format_product_card(product)
+    variants = product_variants(product)
+    valid_variants = [v for v in variants if parse_product_price(v.get("price")) is not None]
+    base_price = parse_product_price(product.get("price"))
+    if not valid_variants and base_price is None:
+        send_message(to, "⚠️ هذا المنتج غير متاح حالياً لأن سعره غير محدد.")
+        return False
     raw_image_urls = product.get("image_urls", "")
     if isinstance(raw_image_urls, str):
         try:
@@ -1140,26 +1148,25 @@ def send_product_card(to, product):
     else:
         image_urls = raw_image_urls or []
     if len(image_urls) >= 2:
-        carousel_body = (
-            f"📦 {product.get('name', 'المنتج')}\n"
-            f"💰 السعر: {int(product.get('price', 0))} ريال\n"
-            "اختاري الصورة أو أضيفي المنتج للسلة 👇"
-        )
+        carousel_body = product_reply
+        carousel_buttons = [
+            {"id": f"variants_{product['id']}", "title": "📏 اختيار الحجم"}
+        ] if valid_variants else [
+            {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"}
+        ]
+        carousel_buttons.append({"id": f"det_{product['id']}", "title": "📋 التفاصيل"})
         carousel_cards = [
             {
                 "image_url": url,
                 "body": carousel_body,
-                "buttons": [
-                    {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
-                    {"id": f"det_{product['id']}", "title": "📋 التفاصيل"},
-                ],
+                "buttons": carousel_buttons,
             }
             for url in image_urls[:10]
             if isinstance(url, str) and url.startswith("http")
         ]
         if len(carousel_cards) >= 2 and send_carousel(
             to,
-            f"🫖 صور {product.get('name', 'المنتج')} — السعر موحد 1400 ريال",
+            f"🖼️ صور {product.get('name', 'المنتج')}",
             carousel_cards,
         ):
             schedule_product_followup(to, product.get("name", ""))
@@ -1169,7 +1176,7 @@ def send_product_card(to, product):
         send_image_by_id(to, image_id)
     elif image_urls:
         send_image(to, image_urls[0])
-    if product_variants(product):
+    if valid_variants:
         send_message(to, product_reply)
         send_variant_list(to, product)
         schedule_product_followup(to, product.get("name", ""))
@@ -1222,8 +1229,13 @@ def send_matching_products_carousel(to, products, query_key=""):
             if card_key in seen_card_keys:
                 continue
             seen_card_keys.add(card_key)
+            valid_variants = [v for v in product_variants(product) if parse_product_price(v.get("price")) is not None]
+            if not valid_variants and parse_product_price(product.get("price")) is None:
+                continue
             buttons = [{"id": f"det_{product['id']}", "title": "📋 التفاصيل"}]
-            if not product_variants(product):
+            if valid_variants:
+                buttons.insert(0, {"id": f"variants_{product['id']}", "title": "📏 اختيار الحجم"})
+            else:
                 buttons.insert(0, {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"})
             cards.append({
                 "image_url": url,
@@ -1594,7 +1606,13 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             price_num = re.search(r'\d+', price_value)
             price_val = float(price_num.group()) if price_num else 0
             if product_name:
-                add_product(product_name, price_val, product_desc, "", 100, keywords_str)
+                if price_val <= 0:
+                    send_message(OWNER_NUMBER, "❌ لا يمكن إضافة المنتج بدون سعر صحيح أكبر من صفر.\nالصيغة: اضف اسم المنتج | السعر | الوصف | الكلمات المفتاحية")
+                    return True
+                product_id = add_product(product_name, price_val, product_desc, "", 100, keywords_str)
+                if not product_id:
+                    send_message(OWNER_NUMBER, f"❌ لم تتم إضافة المنتج؛ الاسم موجود مسبقاً أو السعر غير صالح: {product_name}")
+                    return True
                 saved = sync_products_to_github()
                 if saved:
                     send_message(OWNER_NUMBER, f"✅ تم إضافة وحفظ المنتج دائمًا على GitHub:\n📦 {product_name}\n💰 {int(price_val)} ريال\n📝 {product_desc}\n🔑 كلمات: {keywords_str or 'لا يوجد'}\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
@@ -1625,6 +1643,8 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                 )
                 if updated == "duplicate":
                     send_message(OWNER_NUMBER, f"❌ الاسم الجديد موجود بالفعل: {new_name}")
+                elif updated == "invalid_price":
+                    send_message(OWNER_NUMBER, "❌ لا يمكن تعديل المنتج بسعر فارغ أو صفر. أدخل سعراً أكبر من صفر.")
                 elif updated:
                     saved = sync_products_to_github(remove_names=[product["name"]])
                     status = "✅ وحُفظ على GitHub" if saved else "⚠️ تم محلياً، لكن تعذّر الحفظ على GitHub"
@@ -1698,10 +1718,14 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             product, matches = find_admin_product(product_name)
             if not product:
                 send_message(OWNER_NUMBER, admin_product_match_error(product_name, matches))
-            elif update_product_fields(product["id"], price=new_price):
-                saved = sync_products_to_github()
-                status = "وحُفظ على GitHub ✅" if saved else "تم محلياً فقط ⚠️"
-                send_message(OWNER_NUMBER, f"✅ تم تعديل سعر {product['name']} إلى {int(new_price)} ريال\n{status}")
+            else:
+                price_update = update_product_fields(product["id"], price=new_price)
+                if price_update == "invalid_price":
+                    send_message(OWNER_NUMBER, "❌ لا يمكن تعديل السعر إلى صفر أو قيمة فارغة. أدخل سعراً أكبر من صفر.")
+                elif price_update:
+                    saved = sync_products_to_github()
+                    status = "وحُفظ على GitHub ✅" if saved else "تم محلياً فقط ⚠️"
+                    send_message(OWNER_NUMBER, f"✅ تم تعديل سعر {product['name']} إلى {int(new_price)} ريال\n{status}")
         else:
             send_message(OWNER_NUMBER, "❌ الصيغة: عدل سعر | اسم المنتج | السعر الجديد")
         return True
@@ -1938,8 +1962,11 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                 conn = _sqlite3.connect(DB_PATH)
                 cursor = conn.execute("UPDATE products SET image_id=? WHERE name LIKE ?", (media_id, f"%{caption}%"))
                 if cursor.rowcount == 0:
-                    add_product(caption, 0, "", media_id, 100, "")
-                    send_message(OWNER_NUMBER, f"✅ تم حفظ الصورة كمنتج جديد: {caption}\nعدل السعر: عدل سعر {caption} [السعر]")
+                    created_id = add_product(caption, 0, "", media_id, 100, "")
+                    if created_id:
+                        send_message(OWNER_NUMBER, f"✅ تم حفظ الصورة كمنتج جديد: {caption}")
+                    else:
+                        send_message(OWNER_NUMBER, f"❌ لم تُحفظ الصورة كمنتج جديد لأن السعر غير محدد. أرسل السعر أولاً ثم أرسل الصورة مع كابشن: {caption}")
                 else:
                     send_message(OWNER_NUMBER, f"✅ تم إضافة صورة للمنتج: {caption}")
                 conn.commit()
@@ -1985,6 +2012,18 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_message(sender, PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE)
         return
 
+    # فتح قائمة أحجام المنتج من بطاقة الكاروسيل.
+    if raw_action.startswith("variants_"):
+        try:
+            product = get_product(int(raw_action.split("_", 1)[1]))
+        except (ValueError, IndexError):
+            product = None
+        if product and any(parse_product_price(v.get("price")) is not None for v in product_variants(product)):
+            send_variant_list(sender, product)
+        else:
+            send_message(sender, "❌ لا توجد خيارات مسعّرة لهذا المنتج حالياً.")
+        return
+
     # اختيار حجم المنتج: نستخدم النص الخام لأن normalize_text يزيل الشرطة السفلية.
     if raw_action.startswith("variant_"):
         try:
@@ -1998,8 +2037,13 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             selected = None
         if product and selected:
             variant_name = str(selected.get("name") or selected.get("label") or "الخيار")
-            variant_price = int(float(selected.get("price") or 0))
-            add_to_cart(sender, product["id"], 1, variant_name, variant_price)
+            variant_price = parse_product_price(selected.get("price"))
+            if variant_price is None:
+                send_message(sender, "⚠️ لا يمكن إضافة هذا الخيار لأن سعره غير محدد حالياً.")
+                return
+            if not add_to_cart(sender, product["id"], 1, variant_name, variant_price):
+                send_message(sender, "⚠️ لا يمكن إضافة هذا الخيار لأن سعره غير صالح حالياً.")
+                return
             send_message(
                 sender,
                 f"✅ تم إضافة *{product['name']}*\n"
@@ -2021,12 +2065,14 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         except (ValueError, IndexError):
             product = None
         if product:
-            add_to_cart(sender, product["id"], 1)
-            send_message(sender, f"✅ تم إضافة *{product['name']}* إلى السلة")
-            send_buttons(sender, "ماذا تريدين الآن؟", [
-                {"id": "menu_cart", "title": "🛒 عرض السلة"},
-                {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
-            ])
+            if add_to_cart(sender, product["id"], 1):
+                send_message(sender, f"✅ تم إضافة *{product['name']}* إلى السلة")
+                send_buttons(sender, "ماذا تريدين الآن؟", [
+                    {"id": "menu_cart", "title": "🛒 عرض السلة"},
+                    {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
+                ])
+            else:
+                send_message(sender, "⚠️ لا يمكن إضافة المنتج لأن سعره غير محدد حالياً.")
         else:
             send_message(sender, "❌ لم أتمكن من العثور على هذا المنتج، جربي القائمة مرة أخرى.")
         return
@@ -2039,7 +2085,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if product:
             send_message(sender, f"📋 *تفاصيل المنتج*\n\n{product.get('description') or 'لا يوجد وصف إضافي.'}")
             send_buttons(sender, "اختاري الإجراء المناسب:", [
-                {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
+                {"id": f"variants_{product['id']}", "title": "📏 اختيار الحجم"} if product_variants(product) else {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
                 {"id": "menu_cart", "title": "🛍️ عرض السلة"},
             ])
             schedule_product_followup(sender, product.get("name", ""))
@@ -2238,8 +2284,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         last_product = context.get("last_product") if isinstance(context, dict) else None
         if last_product:
             if raw_action in {"add", "اضف", "أضف", "إضافة", "طلب", "شراء"}:
-                add_to_cart(sender, last_product["id"], 1)
-                send_message(sender, f"✅ تم إضافة *{last_product['name']}* إلى السلة")
+                if add_to_cart(sender, last_product["id"], 1):
+                    send_message(sender, f"✅ تم إضافة *{last_product['name']}* إلى السلة")
+                else:
+                    send_message(sender, "⚠️ لا يمكن إضافة المنتج لأن سعره غير محدد حالياً.")
                 return
             if any(word in msg_normalized for word in ["سعر", "بكم", "تفاصيل", "وصف"]):
                 send_message(sender, format_product_card(last_product))
@@ -2289,8 +2337,11 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             for p in products:
                 p_norm = normalize_text(p['name'])
                 if product_name in p_norm or p_norm in product_name:
-                    add_to_cart(sender, p['id'], 1)
-                    send_message(sender, f"✅ تم إضافة *{p['name']}* للسلة!\n💰 السعر: {int(p['price'])} ريال\n\nاكتبي *السلة* لعرض المشتريات\nأو *اكمل الطلب* لإتمام الشراء 😊")
+                    if not add_to_cart(sender, p['id'], 1):
+                        send_message(sender, "⚠️ لا يمكن إضافة المنتج لأن سعره غير محدد حالياً.")
+                        return
+                    price = parse_product_price(p.get("price"))
+                    send_message(sender, f"✅ تم إضافة *{p['name']}* للسلة!\n💰 السعر: {int(price)} ريال\n\nاكتبي *السلة* لعرض المشتريات\nأو *اكمل الطلب* لإتمام الشراء 😊")
                     return
             send_message(sender, f"❌ ما لقينا المنتج\nجربي اسم ثاني 😊")
             return

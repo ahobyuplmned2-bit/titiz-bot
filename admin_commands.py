@@ -112,6 +112,8 @@ class AdminCommands:
             price = float(args[1])
         except ValueError:
             return "❌ السعر يجب أن يكون رقماً"
+        if price <= 0:
+            return "❌ السعر يجب أن يكون أكبر من صفر"
         
         description = ' '.join(args[2:])
         
@@ -120,7 +122,7 @@ class AdminCommands:
         if product_id:
             return f"✅ تم إضافة المنتج: {name}\n💰 السعر: {price} ريال"
         else:
-            return f"❌ المنتج {name} موجود بالفعل"
+            return f"❌ لم تتم إضافة المنتج؛ الاسم موجود مسبقاً أو السعر غير صالح: {name}"
     
     @staticmethod
     def handle_list_products():

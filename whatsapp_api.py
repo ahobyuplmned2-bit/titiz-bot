@@ -6,6 +6,22 @@
 import requests
 import time
 import json
+import re
+
+
+def parse_product_price(value):
+    """استخراج سعر موجب من القيم النصية أو الرقمية بشكل آمن."""
+    if isinstance(value, bool):
+        return None
+    text = str(value or "").replace(",", "").replace("٬", "").strip()
+    match = re.search(r"\d+(?:\.\d+)?", text)
+    if not match:
+        return None
+    try:
+        price = float(match.group(0))
+    except ValueError:
+        return None
+    return price if price > 0 else None
 
 class WhatsAppAPI:
     """فئة للتعامل مع WhatsApp API"""
@@ -344,12 +360,21 @@ def format_product_card(product):
         except json.JSONDecodeError:
             variants = []
     if isinstance(variants, list) and variants:
-        message += "💰 *الأسعار حسب الحجم:*\n"
+        valid_variants = []
         for variant in variants:
-            label = variant.get("name") or variant.get("label") or "الخيار"
-            message += f"• {label}: {int(float(variant.get('price') or 0))} ريال\n"
+            price = parse_product_price(variant.get("price"))
+            if price is not None:
+                valid_variants.append((variant, price))
+        if valid_variants:
+            message += "💰 *الأسعار حسب الحجم:*\n"
+            for variant, price in valid_variants:
+                label = variant.get("name") or variant.get("label") or "الخيار"
+                message += f"• {label}: {int(price)} ريال\n"
+        else:
+            message += "💰 السعر: غير محدد حالياً\n"
     else:
-        message += f"💰 السعر: {product.get('price', 0)} ريال\n"
+        price = parse_product_price(product.get("price"))
+        message += f"💰 السعر: {int(price)} ريال\n" if price is not None else "💰 السعر: غير محدد حالياً\n"
     
     if product.get('quantity', 0) > 0:
         message += f"✅ المنتج متوفر\n"
