@@ -1223,7 +1223,8 @@ def send_matching_products_carousel(to, products, query_key=""):
         if not valid_urls:
             continue
         scheduled_names.append(product.get("name", ""))
-        body = format_product_card(product)
+        # النسخة المختصرة تضع السعر قبل الوصف حتى لا يحذفه حد 160 حرفاً في بطاقة WhatsApp.
+        body = format_product_card(product, compact=True)
         for url in valid_urls:
             card_key = (product.get("id") or product.get("name", ""), url)
             if card_key in seen_card_keys:

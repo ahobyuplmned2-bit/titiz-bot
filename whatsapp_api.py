@@ -345,20 +345,18 @@ def create_carousel_message(products):
     
     return sections
 
-def format_product_card(product):
-    """تنسيق بطاقة المنتج"""
-    
-    message = f"📦 *{product.get('name', 'منتج')}*\n\n"
-    
-    if product.get('description'):
-        message += f"{product['description']}\n\n"
-    
+def format_product_card(product, compact=False):
+    """تنسيق بطاقة المنتج، مع نسخة مختصرة للكاروسيل تحفظ السعر دائماً."""
+
+    name = str(product.get("name", "منتج"))
     variants = product.get("variants", "")
     if isinstance(variants, str) and variants.startswith("["):
         try:
             variants = json.loads(variants)
         except json.JSONDecodeError:
             variants = []
+
+    price_lines = []
     if isinstance(variants, list) and variants:
         valid_variants = []
         for variant in variants:
@@ -366,21 +364,41 @@ def format_product_card(product):
             if price is not None:
                 valid_variants.append((variant, price))
         if valid_variants:
-            message += "💰 *الأسعار حسب الحجم:*\n"
-            for variant, price in valid_variants:
-                label = variant.get("name") or variant.get("label") or "الخيار"
-                message += f"• {label}: {int(price)} ريال\n"
+            if compact:
+                price_lines.append(
+                    "💰 " + " | ".join(
+                        f"{variant.get('name') or variant.get('label') or 'الخيار'}: {int(price)}"
+                        for variant, price in valid_variants
+                    ) + " ريال"
+                )
+            else:
+                price_lines.append("💰 *الأسعار حسب الحجم:*")
+                price_lines.extend(
+                    f"• {variant.get('name') or variant.get('label') or 'الخيار'}: {int(price)} ريال"
+                    for variant, price in valid_variants
+                )
         else:
-            message += "💰 السعر: غير محدد حالياً\n"
+            price_lines.append("💰 السعر: غير محدد حالياً")
     else:
         price = parse_product_price(product.get("price"))
-        message += f"💰 السعر: {int(price)} ريال\n" if price is not None else "💰 السعر: غير محدد حالياً\n"
-    
-    if product.get('quantity', 0) > 0:
-        message += f"✅ المنتج متوفر\n"
-    else:
-        message += f"❌ المنتج غير متوفر حالياً\n"
-    
-    message += f"\n\nاختاري الزر المناسب من الأسفل 👇\nأو اكتبي: اضف {product.get('name', 'المنتج')}"
-    
+        price_lines.append(f"💰 السعر: {int(price)} ريال" if price is not None else "💰 السعر: غير محدد حالياً")
+
+    availability = "✅ المنتج متوفر" if product.get("quantity", 0) > 0 else "❌ المنتج غير متوفر حالياً"
+    description = str(product.get("description") or "").strip()
+
+    if compact:
+        # السعر يأتي قبل الوصف، والوصف يُضاف فقط إذا بقي مجال داخل حد WhatsApp للبطاقة.
+        message = "\n\n".join([f"📦 *{name}*", "\n".join(price_lines), availability])
+        if description:
+            short_description = " ".join(description.split())[:55].rstrip()
+            candidate = f"{message}\n\n{short_description}"
+            if len(candidate) <= 155:
+                message = candidate
+        return message
+
+    message = f"📦 *{name}*\n\n"
+    if description:
+        message += f"{description}\n\n"
+    message += "\n".join(price_lines) + f"\n\n{availability}\n"
+    message += f"\nاختاري الزر المناسب من الأسفل 👇\nأو اكتبي: اضف {name}"
     return message
