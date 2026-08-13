@@ -819,6 +819,18 @@ PAYMENT_COD = "الدفع عند الاستلام"
 PAYMENT_TRANSFER = "التحويل المسبق"
 TRANSFER_PAYMENT_METHODS = {PAYMENT_TRANSFER, "تحويل مسبق"}
 PAYMENT_CONFIRMATION_MESSAGE = "تم استلام دفعتك بنجاح وسيتم تجهيز طلبك قريبًا."
+CHANNEL_INVITE_URL = "https://whatsapp.com/channel/0029VaqFTglLikgDDe0D5E2D"
+ORDER_THANK_YOU_MESSAGE = (
+    "🎉 شكراً جزيلاً لطلبكِ وثقتكِ بنا يا غالية! 💛\n\n"
+    "✅ تم استلام طلبك بنجاح، وسنبدأ بتجهيزه قريباً 📦\n"
+    "سنظل على تواصل معكِ حتى يصلكِ طلبك بأمان 🚚✨\n\n"
+    "📲 أرسلي رابط قناتنا لمن تحبين، لتصلهن أحدث المنتجات والعروض 🛍️💫\n"
+    f"🔗 {CHANNEL_INVITE_URL}"
+)
+
+def send_order_thank_you(to):
+    """إرسال رسالة الشكر ورابط القناة مرة واحدة بعد تسجيل الطلب."""
+    return send_message(to, ORDER_THANK_YOU_MESSAGE)
 
 def normalize_order_number(value):
     """توحيد رقم الطلب سواء أُرسل مع ORD- أو بدونه."""
@@ -1491,6 +1503,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 user_states.pop(sender, None)
                 user_sessions.pop(sender, None)
                 send_message(sender, f"✅ *تم تأكيد طلبك بنجاح!*\n\n📋 رقم الطلب: *{order_number}*\n💰 الإجمالي: {int(total)} ريال\n💵 الدفع: عند الاستلام\n📍 العنوان: {address}\n\n🚚 سيتم توصيل طلبك قريباً!\nشكراً لثقتكِ بنا يا غالية 💛😊")
+                send_order_thank_you(sender)
                 notify_owner_new_order(order_number, sender, name, address, items, total, "الدفع عند الاستلام")
             else:
                 user_states.pop(sender, None)
@@ -1532,6 +1545,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 user_states.pop(sender, None)
                 user_sessions.pop(sender, None)
                 send_message(sender, f"✅ *تم استلام طلبك!*\n\n📋 رقم الطلب: *{order_number}*\n💰 الإجمالي: {int(total)} ريال\n💳 الدفع: {PAYMENT_TRANSFER}\n\n⏳ الحالة: *بانتظار مراجعة الدفع*\nسنؤكد لكِ خلال دقائق 😊")
+                send_order_thank_you(sender)
                 notify_owner_new_order(order_number, sender, name, address, items, total, PAYMENT_TRANSFER)
                 send_message(OWNER_NUMBER, f"📸 *صورة إشعار التحويل للطلب {order_number}*\nمن العميل: {name or sender}\n📊 الحالة: *بانتظار مراجعة الدفع*")
                 send_image_by_id(OWNER_NUMBER, proof_id, f"إشعار التحويل — {order_number}")
