@@ -27,7 +27,7 @@ from database import (
     cancel_customer_followup, get_due_customer_followups,
     mark_customer_followup_sent, get_customer_followup,
     record_contact, has_contact, queue_pending_reply,
-    get_pending_replies, mark_pending_reply_sent
+    get_pending_replies, mark_pending_reply_sent, update_product_metadata
 )
 from whatsapp_api import WhatsAppAPI, format_product_card
 
@@ -566,22 +566,24 @@ def load_products_from_github():
             existing = get_all_products()
             existing_names = [normalize_text(p["name"]) for p in existing]
             for name, info in data.items():
+                price = 0
+                try:
+                    price = float(info.get("price", "0"))
+                except:
+                    pass
+                desc = info.get("description", "")
+                image_id = info.get("image_id", "")
+                image_urls = info.get("image_urls", "")
+                if isinstance(image_urls, list):
+                    image_urls = json.dumps(image_urls, ensure_ascii=False)
+                keywords = info.get("keywords", "")
+                if isinstance(keywords, list):
+                    keywords = ",".join(keywords)
                 if normalize_text(name) not in existing_names:
-                    price = 0
-                    try:
-                        price = float(info.get("price", "0"))
-                    except:
-                        pass
-                    desc = info.get("description", "")
-                    image_id = info.get("image_id", "")
-                    image_urls = info.get("image_urls", "")
-                    if isinstance(image_urls, list):
-                        image_urls = json.dumps(image_urls, ensure_ascii=False)
-                    keywords = info.get("keywords", "")
-                    if isinstance(keywords, list):
-                        keywords = ",".join(keywords)
                     add_product(name, price, desc, image_id, 100, keywords, image_urls)
                     count += 1
+                else:
+                    update_product_metadata(name, price, desc, image_id, keywords, image_urls)
             print(f"[بدء التشغيل] تم تحميل {count} منتج من GitHub (إجمالي: {len(data)})")
         else:
             print("[بدء التشغيل] لا توجد منتجات على GitHub")

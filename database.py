@@ -684,6 +684,23 @@ def add_product(name, price, description="", image_id="", quantity=0, keywords="
         conn.close()
         return product_id
 
+
+def update_product_metadata(name, price, description="", image_id="", keywords="", image_urls=""):
+    """تحديث بيانات المنتج من products.json دون تغيير الكمية أو حالة التوفر."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE products
+            SET price = ?, description = ?, image_id = ?, keywords = ?, image_urls = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE name = ?
+        ''', (price, description, image_id, keywords, image_urls, name))
+        updated = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return updated
+
 def get_product(product_id):
     """الحصول على بيانات المنتج"""
     with db_lock:

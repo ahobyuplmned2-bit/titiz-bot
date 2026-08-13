@@ -173,7 +173,7 @@ class WhatsAppAPI:
                     })
                 carousel_cards.append({
                     "card_index": index,
-                    "type": "quick_reply",
+                    "type": "cta_url",
                     "header": {
                         "type": "image",
                         "image": {"link": card["image_url"]},
