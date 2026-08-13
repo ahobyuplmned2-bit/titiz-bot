@@ -18,6 +18,7 @@ assert not app.is_order_inquiry(app.normalize_text("قلص"))
 
 sent_for_orders = []
 app.send_customer_orders = lambda recipient: sent_for_orders.append(recipient)
+app.send_customer_order_details = lambda recipient, order=None: sent_for_orders.append(recipient)
 app.restore_customer_session = lambda recipient: None
 app.cancel_customer_followup = lambda recipient: None
 

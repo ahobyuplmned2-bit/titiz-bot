@@ -1485,8 +1485,8 @@ def send_customer_orders(to):
     send_message(to, text.rstrip())
     send_buttons(to, "يمكنك تحديث القائمة في أي وقت:", [
         {"id": "menu_orders", "title": "🔄 تحديث الحالة"},
-        {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
-        {"id": "menu_cart", "title": "🛒 السلة"},
+        {"id": "order_details", "title": "📋 تفاصيل آخر طلب"},
+        {"id": "cancel_order_request", "title": "❌ إلغاء آخر طلب"},
     ])
 
 
@@ -1533,6 +1533,227 @@ def is_order_inquiry(msg_normalized):
     return any(
         len(keyword) >= 4 and keyword in msg_normalized
         for keyword in _NORMALIZED_ORDER_INQUIRY_KEYWORDS
+    )
+
+
+ORDER_DETAIL_KEYWORDS = [
+    "تفاصيل طلبي", "تفاصيل الطلب", "ايش داخل طلبي", "ايش داخل الطلب",
+    "ايش في طلبي", "ايش في الطلب", "محتويات طلبي", "محتويات الطلب",
+    "منتجات طلبي", "المنتجات في طلبي", "ايش المنتجات في الطلب", "كم قطعة في الطلب",
+    "كم قطعه في الطلب", "اجمالي طلبي", "اجمالي الطلب", "قيمة طلبي", "قيمه الطلب",
+    "ايش طلبت", "ايش طلبت منك", "ايش طلبت منكم", "ماذا طلبت", "وش طلبت",
+    "ايش رفعت", "ايش رفعت لسه", "ايش سجلت", "الطلب اللي رفعته", "الطلب الي رفعته",
+]
+PAYMENT_STATUS_KEYWORDS = [
+    "هل وصل التحويل", "وصل التحويل", "تأكد التحويل", "تاكد التحويل",
+    "هل تأكد الدفع", "هل تاكد الدفع", "حالة الدفع", "حاله الدفع",
+    "اشعار التحويل", "إشعار التحويل", "ارسلت التحويل", "أرسلت التحويل",
+    "ارسلت صورة التحويل", "أرسلت صورة التحويل", "هل استلمتوا الحوالة",
+    "الحوالة وصلت", "الحواله وصلت", "خلصت الدفع", "تم الدفع", "الدفع تم",
+    "متى يتأكد الدفع", "متى يتاكد الدفع", "راجعوا التحويل", "راجعوا الحوالة",
+]
+CANCEL_ORDER_KEYWORDS = [
+    "الغي طلبي", "الغاء الطلب", "الغاء طلبي", "ألغي الطلب", "أريد إلغاء الطلب",
+    "ما عاد اشتي الطلب", "ما عاد اريد الطلب", "شيلوا طلبي", "اشطبوا الطلب",
+    "لا عاد اريد الطلب", "الغوا الطلب", "الغو الطلب", "الغوا الطلب حقي",
+    "الغوا الطلبية", "اشطب طلبي", "شطب الطلب", "الغوا الاوردر", "الغوا الاورد", "الغوا طلبي",
+]
+ADDRESS_UPDATE_KEYWORDS = [
+    "غير العنوان", "غيروا العنوان", "تغيير العنوان", "تعديل العنوان",
+    "اريد اغير العنوان", "أريد أغير العنوان", "غير نقطة التوصيل",
+    "غيروا نقطة التوصيل", "وصلوه مكان ثاني", "العنوان غلط", "كتبت العنوان غلط",
+    "مكان التوصيل غلط", "غيروا مكان التوصيل", "غير مكان الاستلام", "نقطة الاستلام غلط",
+]
+ORDER_EDIT_KEYWORDS = [
+    "أعدل طلبي", "اعدل طلبي", "تعديل الطلب", "غير الطلب", "غيروا الطلب",
+    "اضيف للطلب", "أضيف للطلب", "احذف من الطلب", "أحذف من الطلب",
+    "غير الكمية في الطلب", "زودوا المنتج في الطلب", "نقصوا المنتج من الطلب",
+    "اريد اضافة منتج للطلب", "أريد إضافة منتج للطلب", "ابغى ازيد الطلب",
+    "اشتي ازيد الطلب", "نسيت منتج", "نسيت أضيف منتج",
+]
+CUSTOMER_COMPLAINT_KEYWORDS = [
+    "الطلب ناقص", "طلبي ناقص", "وصلني منتج غلط", "المنتج غلط",
+    "الطلب ما وصل", "طلبي ما وصل", "الطلب متأخر", "طلبي متأخر",
+    "في مشكلة بالطلب", "في مشكله بالطلب", "شكوى على الطلب", "اشتكاء على الطلب",
+    "الطلب ناقص منه", "وصل ناقص", "ما استلمت الطلب", "ما استلمت المنتج",
+    "ابي ارجع المنتج", "ابغى ارجع المنتج", "اشتي ارجع المنتج", "استبدال المنتج",
+    "استرجاع الطلب", "استرجاع المبلغ", "رجعوا فلوسي", "ارجعوا المبلغ",
+]
+_NORMALIZED_ORDER_DETAIL_KEYWORDS = {normalize_text(k) for k in ORDER_DETAIL_KEYWORDS}
+_NORMALIZED_PAYMENT_STATUS_KEYWORDS = {normalize_text(k) for k in PAYMENT_STATUS_KEYWORDS}
+_NORMALIZED_CANCEL_ORDER_KEYWORDS = {normalize_text(k) for k in CANCEL_ORDER_KEYWORDS}
+_NORMALIZED_ADDRESS_UPDATE_KEYWORDS = {normalize_text(k) for k in ADDRESS_UPDATE_KEYWORDS}
+_NORMALIZED_ORDER_EDIT_KEYWORDS = {normalize_text(k) for k in ORDER_EDIT_KEYWORDS}
+_NORMALIZED_CUSTOMER_COMPLAINT_KEYWORDS = {normalize_text(k) for k in CUSTOMER_COMPLAINT_KEYWORDS}
+
+
+def _matches_keyword_set(msg_normalized, keywords):
+    """مطابقة عبارة كاملة أو جزء واضح منها مع تجاهل الهمزات والترقيم."""
+    if not msg_normalized:
+        return False
+    return msg_normalized in keywords or any(
+        len(keyword) >= 5 and keyword in msg_normalized for keyword in keywords
+    )
+
+
+def is_order_detail_inquiry(msg_normalized):
+    return _matches_keyword_set(msg_normalized, _NORMALIZED_ORDER_DETAIL_KEYWORDS)
+
+
+def is_payment_status_inquiry(msg_normalized):
+    return _matches_keyword_set(msg_normalized, _NORMALIZED_PAYMENT_STATUS_KEYWORDS)
+
+
+def is_cancel_order_request(msg_normalized):
+    return _matches_keyword_set(msg_normalized, _NORMALIZED_CANCEL_ORDER_KEYWORDS)
+
+
+def is_address_update_request(msg_normalized):
+    return _matches_keyword_set(msg_normalized, _NORMALIZED_ADDRESS_UPDATE_KEYWORDS)
+
+
+def is_order_edit_request(msg_normalized):
+    return _matches_keyword_set(msg_normalized, _NORMALIZED_ORDER_EDIT_KEYWORDS)
+
+
+def is_customer_complaint(msg_normalized):
+    return _matches_keyword_set(msg_normalized, _NORMALIZED_CUSTOMER_COMPLAINT_KEYWORDS)
+
+
+def extract_order_number(value):
+    """استخراج رقم الطلب عند إرساله مع ORD أو كلمة طلب، دون اعتبار أي رقم عشوائي طلباً."""
+    text = str(value or "").strip()
+    if not re.search(r"ord|طلب|رقم|حاله|حالة|تتبع|تفاصيل|وضع", text, re.IGNORECASE):
+        return ""
+    match = re.search(r"(?:ord\s*[-_]?\s*|طلب\s*(?:رقم)?\s*)?(\d{3,8})", text, re.IGNORECASE)
+    return normalize_order_number(match.group(1)) if match else ""
+
+
+def latest_customer_order(phone_number):
+    orders = get_customer_orders(phone_number, limit=1)
+    return orders[0] if orders else None
+
+
+def customer_order_by_number(phone_number, order_number):
+    if not order_number:
+        return None
+    order = get_order(order_number)
+    if order and order.get("phone_number") == phone_number:
+        return order
+    return None
+
+
+def format_customer_order_details(order):
+    """تنسيق تفاصيل طلب العميل دون كشف بيانات إدارية غير لازمة."""
+    lines = [
+        f"📦 *تفاصيل طلبك: {order.get('order_number', 'غير محدد')}*",
+        f"📊 الحالة: *{order.get('order_status') or 'جديد'}*",
+        f"💳 الدفع: {order.get('payment_method') or 'غير محدد'}",
+        f"🕐 التاريخ: {order.get('created_at') or 'غير محدد'}",
+        "",
+        "🛍️ *المنتجات:*",
+    ]
+    for item in order.get("products_data", []) or []:
+        quantity = int(item.get("quantity", item.get("qty", 1)) or 1)
+        price = float(item.get("price", 0) or 0)
+        lines.append(f"• {item.get('name', 'منتج')} × {quantity} = {int(price * quantity)} ريال")
+    lines.append(f"\n💰 *الإجمالي: {int(float(order.get('total_price', 0) or 0))} ريال*")
+    if order.get("payment_proof_url"):
+        lines.append("📸 تم استلام صورة إشعار التحويل مع الطلب.")
+    return "\n".join(lines)
+
+
+def send_customer_order_details(to, order=None):
+    order = order or latest_customer_order(to)
+    if not order:
+        send_message(to, "📦 لا توجد طلبات مسجلة على رقمك حالياً.")
+        return
+    send_message(to, format_customer_order_details(order))
+    send_buttons(to, "اختاري الإجراء المناسب:", [
+        {"id": "menu_orders", "title": "🔄 تحديث الطلبات"},
+        {"id": "order_payment_status", "title": "💳 حالة الدفع"},
+        {"id": "cancel_order_request", "title": "❌ إلغاء الطلب"},
+    ])
+
+
+def send_customer_payment_status(to):
+    order = latest_customer_order(to)
+    if not order:
+        send_message(to, "💳 لا يوجد طلب مسجل حتى الآن. يمكنك إضافة منتج ثم إكمال الطلب.")
+        return
+    proof_status = "✅ تم إرفاق إشعار التحويل" if order.get("payment_proof_url") else "لم يتم إرفاق إشعار تحويل"
+    send_message(
+        to,
+        f"💳 *حالة الدفع لطلبك {order.get('order_number')}*\n\n"
+        f"طريقة الدفع: {order.get('payment_method') or 'غير محددة'}\n"
+        f"حالة الطلب: *{order.get('order_status') or 'جديد'}*\n"
+        f"إشعار التحويل: {proof_status}",
+    )
+
+
+def request_order_cancellation(to, order_number=""):
+    order = customer_order_by_number(to, order_number) if order_number else latest_customer_order(to)
+    if not order:
+        send_message(to, "📦 لا توجد طلبات مسجلة يمكن إلغاؤها حالياً.")
+        return
+    if order.get("order_status") not in {"جديد", "بانتظار مراجعة الدفع"}:
+        send_message(to, "⚠️ لا يمكن إلغاء الطلب بعد بدء تجهيزه أو شحنه. سأتواصل مع الإدارة لمساعدتكِ.")
+        send_message(OWNER_NUMBER, f"📩 طلب إلغاء غير آلي من العميل {to}\nالطلب: {order.get('order_number')}\nالحالة: {order.get('order_status')}")
+        return
+    session_data = user_sessions.get(to, {}) if isinstance(user_sessions.get(to, {}), dict) else {}
+    session_data["cancel_order_number"] = order.get("order_number")
+    user_sessions[to] = session_data
+    user_states[to] = "awaiting_order_cancellation"
+    send_buttons(to, f"هل تريدين إلغاء الطلب {order.get('order_number')}؟", [
+        {"id": "confirm_cancel_order", "title": "✅ نعم، إلغاء الطلب"},
+        {"id": "keep_order", "title": "↩️ إبقاء الطلب"},
+    ])
+
+
+def request_address_update(to):
+    order = latest_customer_order(to)
+    if not order:
+        send_message(to, "📍 لا يوجد طلب مسجل حالياً لتعديل عنوانه. يمكنك إكمال طلب جديد أولاً.")
+        return
+    user_states[to] = "awaiting_address_update"
+    session_data = user_sessions.get(to, {}) if isinstance(user_sessions.get(to, {}), dict) else {}
+    session_data["address_order_number"] = order.get("order_number")
+    user_sessions[to] = session_data
+    send_message(to, "📍 أرسلي العنوان الجديد أو أقرب نقطة للتوصيل، وسأرفعه للإدارة للتحديث 😊")
+
+
+def request_order_edit(to):
+    order = latest_customer_order(to)
+    if not order:
+        send_message(to, "📦 لا يوجد طلب مسجل حالياً لتعديله.")
+        return
+    user_states[to] = "awaiting_order_edit_request"
+    session_data = user_sessions.get(to, {}) if isinstance(user_sessions.get(to, {}), dict) else {}
+    session_data["edit_order_number"] = order.get("order_number")
+    user_sessions[to] = session_data
+    send_message(to, "✏️ اكتبي التعديل المطلوب على الطلب، مثل: إضافة منتج أو حذف منتج أو تغيير الكمية، وسأرسله للإدارة 😊")
+
+
+def request_customer_complaint(to):
+    order = latest_customer_order(to)
+    if not order:
+        user_states[to] = "awaiting_general_complaint"
+        send_message(to, "🙏 أرسلي تفاصيل المشكلة وسأرفعها للإدارة مباشرة، حتى لو لم يوجد طلب مسجل.")
+    else:
+        user_states[to] = "awaiting_customer_complaint"
+        session_data = user_sessions.get(to, {}) if isinstance(user_sessions.get(to, {}), dict) else {}
+        session_data["complaint_order_number"] = order.get("order_number")
+        user_sessions[to] = session_data
+        send_message(to, f"🙏 أرسلي تفاصيل المشكلة في الطلب {order.get('order_number')} وسأتابعها مع الإدارة مباشرة.")
+
+
+def notify_owner_customer_request(sender, request_text, category):
+    send_message(
+        OWNER_NUMBER,
+        f"📩 *طلب متابعة من عميل*\n\n"
+        f"👤 الرقم: {sender}\n"
+        f"📌 النوع: {category}\n"
+        f"💬 الرسالة: {request_text}",
     )
 
 def send_cart_view(to):
@@ -2013,11 +2234,14 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             if new_status not in ORDER_STATUSES:
                 send_message(OWNER_NUMBER, "❌ الحالة غير صحيحة. الحالات المتاحة:\n" + "، ".join(ORDER_STATUSES))
             else:
-                update_order_status(order_num, new_status)
+                updated = update_order_status(order_num, new_status)
                 order = get_order(order_num)
-                if order and order.get("phone_number"):
-                    send_message(order["phone_number"], f"🔔 تحديث طلبك *{order_num}*\nالحالة الحالية: *{new_status}*")
-                send_message(OWNER_NUMBER, f"✅ تم تحديث حالة {order_num} إلى: {new_status}")
+                if not updated or not order:
+                    send_message(OWNER_NUMBER, f"❌ لم أجد الطلب أو تعذر تحديثه: {order_num}")
+                else:
+                    if order.get("phone_number"):
+                        send_message(order["phone_number"], f"🔔 تحديث طلبك *{order_num}*\nالحالة الحالية: *{new_status}*")
+                    send_message(OWNER_NUMBER, f"✅ تم تحديث حالة {order_num} إلى: {new_status}")
         else:
             send_message(OWNER_NUMBER, "❌ الصيغة: حالة [رقم الطلب] [الحالة الجديدة]")
         return True
@@ -2117,6 +2341,12 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     restore_customer_session(sender)
     state = user_states.get(sender, "")
     raw_action = (msg_body or "").strip().lower()
+
+    if state == "awaiting_order_cancellation":
+        if msg_normalized in {"نعم", "ايوه", "ايوا", "موافق", "الغيه", "الغاء"}:
+            raw_action = "confirm_cancel_order"
+        elif msg_normalized in {"لا", "خليه", "ابقى الطلب", "ابقي الطلب", "تراجع"}:
+            raw_action = "keep_order"
 
     # أي رسالة جديدة تعني أن العميل عاد للمحادثة؛ نلغي التذكير السابق.
     if raw_action not in {
@@ -2233,6 +2463,56 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_message(sender, "❌ تفاصيل المنتج غير متاحة حالياً.")
         return
 
+    if raw_action == "order_details":
+        send_customer_order_details(sender)
+        return
+
+    if raw_action == "order_payment_status":
+        send_customer_payment_status(sender)
+        return
+
+    if raw_action == "cancel_order_request":
+        request_order_cancellation(sender)
+        return
+
+    if raw_action == "update_address_request":
+        request_address_update(sender)
+        return
+
+    if raw_action == "edit_order_request":
+        request_order_edit(sender)
+        return
+
+    if raw_action == "report_order_issue":
+        request_customer_complaint(sender)
+        return
+
+    if raw_action == "confirm_cancel_order":
+        session_data = user_sessions.get(sender, {}) if isinstance(user_sessions.get(sender, {}), dict) else {}
+        order_number = session_data.get("cancel_order_number", "")
+        order = customer_order_by_number(sender, order_number)
+        if not order:
+            send_message(sender, "❌ لم أجد الطلب المطلوب إلغاؤه. أرسلي «طلباتي» للتحديث.")
+        elif order.get("order_status") not in {"جديد", "بانتظار مراجعة الدفع"}:
+            send_message(sender, "⚠️ بدأ تجهيز هذا الطلب أو شحنه، لذلك لا يمكن إلغاؤه آلياً.")
+        elif update_order_status(order_number, "ملغي"):
+            send_message(sender, f"✅ تم إلغاء الطلب {order_number} بناءً على طلبكِ.")
+            notify_owner_customer_request(sender, f"إلغاء الطلب {order_number}", "إلغاء طلب")
+        else:
+            send_message(sender, "⚠️ تعذر إلغاء الطلب حالياً، وسأبلغ الإدارة لمراجعته.")
+        user_states.pop(sender, None)
+        user_sessions.pop(sender, None)
+        return
+
+    if raw_action == "keep_order":
+        user_states.pop(sender, None)
+        session_data = user_sessions.get(sender, {})
+        if isinstance(session_data, dict):
+            session_data.pop("cancel_order_number", None)
+            user_sessions[sender] = session_data
+        send_message(sender, "✅ تم إبقاء الطلب كما هو، وسنواصل تجهيزه لكِ بإذن الله.")
+        return
+
     if raw_action == "menu_cart":
         send_cart_view(sender)
         return
@@ -2285,6 +2565,63 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     # === حالات الجلسة ===
+
+    if state == "awaiting_address_update":
+        new_address = msg_body.strip()
+        if len(new_address) < 3:
+            send_message(sender, "📍 أرسلي اسم المنطقة أو أقرب نقطة بشكل أوضح من فضلكِ.")
+            return
+        customer = get_customer(sender) or {}
+        add_customer(sender, customer.get("name"), new_address)
+        sync_customers_to_github()
+        session_data = user_sessions.get(sender, {})
+        if isinstance(session_data, dict):
+            session_data.pop("address_order_number", None)
+            user_sessions[sender] = session_data
+        user_states.pop(sender, None)
+        send_message(sender, f"✅ تم حفظ عنوان التوصيل الجديد:\n📍 {new_address}\nوسأبلغ الإدارة بالتحديث الآن.")
+        notify_owner_customer_request(sender, f"العنوان الجديد: {new_address}", "تغيير عنوان التوصيل")
+        return
+
+    if state == "awaiting_order_edit_request":
+        edit_request = msg_body.strip()
+        if len(edit_request) < 3:
+            send_message(sender, "✏️ اكتبي التعديل المطلوب بالتفصيل، مثل: إضافة منتج أو تغيير الكمية.")
+            return
+        session_data = user_sessions.get(sender, {})
+        order_number = session_data.get("edit_order_number", "") if isinstance(session_data, dict) else ""
+        notify_owner_customer_request(sender, f"الطلب {order_number}: {edit_request}", "تعديل طلب")
+        user_states.pop(sender, None)
+        if isinstance(session_data, dict):
+            session_data.pop("edit_order_number", None)
+            user_sessions[sender] = session_data
+        send_message(sender, "✅ تم استلام طلب التعديل ورفعه للإدارة، وسنرد عليكِ بعد المراجعة.")
+        return
+
+    if state == "awaiting_customer_complaint":
+        complaint = msg_body.strip()
+        if len(complaint) < 3:
+            send_message(sender, "🙏 اكتبي تفاصيل المشكلة حتى نساعدكِ بسرعة.")
+            return
+        session_data = user_sessions.get(sender, {})
+        order_number = session_data.get("complaint_order_number", "") if isinstance(session_data, dict) else ""
+        notify_owner_customer_request(sender, f"الطلب {order_number}: {complaint}", "شكوى أو مشكلة في طلب")
+        user_states.pop(sender, None)
+        if isinstance(session_data, dict):
+            session_data.pop("complaint_order_number", None)
+            user_sessions[sender] = session_data
+        send_message(sender, "🙏 وصلتنا ملاحظتك، وتم رفعها للإدارة لمتابعتها معكِ.")
+        return
+
+    if state == "awaiting_general_complaint":
+        complaint = msg_body.strip()
+        if len(complaint) < 3:
+            send_message(sender, "🙏 اكتبي تفاصيل المشكلة حتى نساعدكِ بسرعة.")
+            return
+        notify_owner_customer_request(sender, complaint, "شكوى عامة")
+        user_states.pop(sender, None)
+        send_message(sender, "🙏 وصلتنا ملاحظتك، وتم رفعها للإدارة لمتابعتها معكِ.")
+        return
 
     if state == "awaiting_name":
         customer_name = msg_body.strip()
@@ -2577,6 +2914,42 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
     if raw_action == "menu_contact" or msg_normalized == "menucontact":
         send_contact_menu(sender)
+        return
+
+    order_number_in_message = extract_order_number(msg_body)
+    if (
+        is_order_detail_inquiry(msg_normalized)
+        or order_number_in_message
+        or (order_number_in_message and any(word in msg_normalized for word in ["تفاصيل", "حاله", "حالة", "تتبع", "وضع"]))
+    ):
+        if order_number_in_message:
+            order = customer_order_by_number(sender, order_number_in_message)
+            if not order:
+                send_message(sender, f"❌ لم أجد طلباً بهذا الرقم: {order_number_in_message}")
+            else:
+                send_customer_order_details(sender, order)
+        else:
+            send_customer_order_details(sender, latest_customer_order(sender))
+        return
+
+    if is_payment_status_inquiry(msg_normalized):
+        send_customer_payment_status(sender)
+        return
+
+    if is_cancel_order_request(msg_normalized):
+        request_order_cancellation(sender, order_number_in_message)
+        return
+
+    if is_address_update_request(msg_normalized):
+        request_address_update(sender)
+        return
+
+    if is_order_edit_request(msg_normalized):
+        request_order_edit(sender)
+        return
+
+    if is_customer_complaint(msg_normalized):
+        request_customer_complaint(sender)
         return
 
     # أسئلة الطلبات تُعرض من قاعدة البيانات مباشرة ولا تُعامل كبحث عن منتج.

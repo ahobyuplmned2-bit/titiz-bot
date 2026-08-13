@@ -4,7 +4,7 @@
 
 from database import (
     get_order, update_order_status, get_customer, add_product,
-    get_all_products, log_action, get_statistics
+    get_all_products, get_orders, log_action, get_statistics
 )
 from payment_system import PaymentManager
 import json
@@ -34,10 +34,22 @@ class AdminCommands:
     @staticmethod
     def handle_orders_command(args):
         """أمر: عرض الطلبات"""
-        message = "📦 *الطلبات الحالية:*\n\n"
-        message += "هذه الميزة قيد التطوير\n"
-        message += "سيتم عرض جميع الطلبات هنا قريباً"
-        return message
+        status = None
+        if args and args[0] in {"جديدة", "الجديدة", "جديد"}:
+            status = "جديد"
+        orders = get_orders(status=status, limit=30)
+        if not orders:
+            return "✅ لا توجد طلبات مطابقة حالياً."
+        title = "الطلبات الجديدة" if status == "جديد" else "آخر الطلبات"
+        lines = [f"📦 *{title}:*", ""]
+        for order in orders:
+            lines.append(
+                f"📋 *{order.get('order_number', 'غير محدد')}* | "
+                f"{order.get('customer_name') or 'بدون اسم'} | "
+                f"{order.get('order_status') or 'جديد'} | "
+                f"{int(float(order.get('total_price', 0) or 0))} ريال"
+            )
+        return "\n".join(lines)
     
     @staticmethod
     def handle_order_details(order_number):
@@ -56,7 +68,9 @@ class AdminCommands:
         
         message += "🛍️ *المنتجات:*\n"
         for product in order.get('products_data', []):
-            message += f"• {product['name']} × {product['quantity']} = {product['price'] * product['quantity']} ريال\n"
+            quantity = int(product.get('quantity', product.get('qty', 1)) or 1)
+            price = float(product.get('price', 0) or 0)
+            message += f"• {product.get('name', 'منتج')} × {quantity} = {int(price * quantity)} ريال\n"
         
         message += f"\n💰 *الإجمالي: {order['total_price']} ريال*"
         
@@ -73,7 +87,9 @@ class AdminCommands:
         if new_status not in valid_statuses:
             return f"❌ حالة غير صحيحة\n\nالحالات المتاحة: {', '.join(valid_statuses)}"
         
-        update_order_status(order_number, new_status)
+        updated = update_order_status(order_number, new_status)
+        if not updated:
+            return f"❌ لم أجد الطلب أو تعذر تحديثه: {order_number}"
         log_action('admin', None, 'update_order_status', f'Order: {order_number}, Status: {new_status}')
         
         return f"✅ تم تحديث حالة الطلب {order_number} إلى: {new_status}"
