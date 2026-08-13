@@ -1663,7 +1663,28 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     if raw_action == "browse_products" or msg_normalized == "browseproducts":
-        send_message(sender, "✍️ اكتبي اسم المنتج الذي تبحثين عنه 😊\n\nمثلاً: قدور، فرامة، أو ثلاجة شاي")
+        send_message(
+            sender,
+            "بالتأكيد! أنا هنا لمساعدتك في العثور على أي منتج تبحث عنه على **Titiz**\n"
+            "يرجى إخباري باسم المنتج أو الفئة التي تهمك، وسأقوم بالبحث فوراً "
+            "وتزويدك بأفضل الخيارات المتاحة",
+        )
+        send_buttons(sender, "أنا جاهز للبحث لك. ما هو المنتج الذي تريده", [
+            {"id": "category_kitchen", "title": "أدوات مطبخ"},
+            {"id": "category_electronics", "title": "إلكترونيات"},
+            {"id": "category_cleaning", "title": "منظفات"},
+        ])
+        return
+
+    if raw_action == "category_kitchen" or msg_normalized == normalize_text("أدوات مطبخ"):
+        send_message(sender, "اكتبي اسم أداة المطبخ أو الفئة التي تبحثين عنها، وسأبحث لكِ عنها فوراً 😊")
+        return
+
+    if raw_action in {"category_electronics", "category_cleaning"} or msg_normalized in {
+        normalize_text("إلكترونيات"),
+        normalize_text("منظفات"),
+    }:
+        send_message(sender, "سيتم توفير المنتجات قريباً 😊")
         return
     if raw_action == "menu_payment" or msg_normalized == "menupayment":
         send_message(sender, "💳 *طرق الدفع المتاحة:*\n\n✅ الدفع عند الاستلام\nنحط الطلب لأقرب نقطة منك وتدفعي وقت الاستلام.\n\n✅ التحويل المسبق\nتدفعي أولاً ثم يتم توصيل الطلب لباب المنزل.\n\n💰 حسابات التحويل:\n🟢 نقطة جيب: 906072\n🟡 الكريمي نقطة حاسب: 1202686\n🏦 إيداع عبر الكريمي: 3122678098")
