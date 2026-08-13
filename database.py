@@ -6,6 +6,7 @@
 import sqlite3
 import os
 import json
+import time
 from datetime import datetime
 from threading import Lock
 
@@ -115,6 +116,14 @@ def init_db():
                 phone_number TEXT PRIMARY KEY,
                 first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # سجل دائم لمعرّفات رسائل واتساب لمنع إعادة معالجة webhook المكرر.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS processed_webhook_messages (
+                message_id TEXT PRIMARY KEY,
+                received_at REAL NOT NULL
             )
         ''')
 
@@ -229,6 +238,28 @@ def add_customer(phone_number, name=None, address=None):
                 conn.commit()
         
         conn.close()
+
+
+def claim_processed_webhook_message(message_id, received_at=None):
+    """تسجيل رسالة واتساب مرة واحدة فقط عبر INSERT ذري آمن."""
+    if not message_id:
+        return True
+    received_at = float(received_at if received_at is not None else time.time())
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM processed_webhook_messages WHERE received_at < ?",
+            (received_at - 86400,),
+        )
+        cursor.execute(
+            "INSERT OR IGNORE INTO processed_webhook_messages (message_id, received_at) VALUES (?, ?)",
+            (str(message_id), received_at),
+        )
+        claimed = cursor.rowcount == 1
+        conn.commit()
+        conn.close()
+        return claimed
 
 def get_customer(phone_number):
     """الحصول على بيانات العميل"""
@@ -738,7 +769,7 @@ def get_all_products():
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        cursor.execute('SELECT * FROM products WHERE available = 1')
+        cursor.execute('SELECT * FROM products WHERE available = 1 ORDER BY id ASC')
         products = [dict(row) for row in cursor.fetchall()]
         conn.close()
         

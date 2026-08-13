@@ -27,7 +27,8 @@ from database import (
     cancel_customer_followup, get_due_customer_followups,
     mark_customer_followup_sent, get_customer_followup,
     record_contact, has_contact, queue_pending_reply,
-    get_pending_replies, mark_pending_reply_sent, update_product_metadata
+    get_pending_replies, mark_pending_reply_sent, update_product_metadata,
+    claim_processed_webhook_message
 )
 from whatsapp_api import WhatsAppAPI, format_product_card
 
@@ -171,6 +172,8 @@ processed_messages = {}
 DEDUP_WINDOW = 30
 product_send_guard = {}
 PRODUCT_SEND_WINDOW = 20
+matching_send_guard = {}
+MATCHING_SEND_WINDOW = 20
 
 def restore_customer_session(sender):
     """استعادة حالة العميل من قاعدة البيانات عند أول رسالة بعد العودة."""
@@ -1172,12 +1175,28 @@ def send_product_card(to, product):
     schedule_product_followup(to, product.get("name", ""))
 
 
-def send_matching_products_carousel(to, products):
+def send_matching_products_carousel(to, products, query_key=""):
     """إرسال كل النتائج المطابقة في كاروسيل واحد دون قائمة أرقام."""
+    guard_key = (to, normalize_text(query_key or ""))
+    now = time.time()
+    if query_key and now - matching_send_guard.get(guard_key, 0) < MATCHING_SEND_WINDOW:
+        print(f"[تجاهل تكرار نتائج البحث] {guard_key}")
+        return True
+
+    unique_products = []
+    seen_product_keys = set()
+    for product in products:
+        product = canonicalize_product(product)
+        product_key = product.get("id") or normalize_text(product.get("name", ""))
+        if product_key in seen_product_keys:
+            continue
+        seen_product_keys.add(product_key)
+        unique_products.append(product)
+
     cards = []
     scheduled_names = []
-    for product in products[:10]:
-        product = canonicalize_product(product)
+    seen_card_keys = set()
+    for product in unique_products[:10]:
         raw_urls = product.get("image_urls", "")
         if isinstance(raw_urls, str):
             try:
@@ -1192,6 +1211,10 @@ def send_matching_products_carousel(to, products):
         scheduled_names.append(product.get("name", ""))
         body = format_product_card(product)
         for url in valid_urls:
+            card_key = (product.get("id") or product.get("name", ""), url)
+            if card_key in seen_card_keys:
+                continue
+            seen_card_keys.add(card_key)
             buttons = [{"id": f"det_{product['id']}", "title": "📋 التفاصيل"}]
             if not product_variants(product):
                 buttons.insert(0, {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"})
@@ -1202,14 +1225,18 @@ def send_matching_products_carousel(to, products):
             })
 
     if len(cards) >= 2 and send_carousel(to, "🔍 هذه كل المنتجات المطابقة، اسحبي للعرض:", cards[:10]):
+        if query_key:
+            matching_send_guard[guard_key] = now
         for name in scheduled_names[:1]:
             schedule_product_followup(to, name)
         return True
 
     # بديل آمن إذا لم تتوفر روابط صور عامة كافية للكاروسيل.
-    for product in products[:10]:
+    for product in unique_products[:10]:
         send_product_card(to, canonicalize_product(product))
-    return bool(products)
+    if query_key and unique_products:
+        matching_send_guard[guard_key] = now
+    return bool(unique_products)
 
 def send_list(to, text, button_text, sections):
     return whatsapp.send_list(to, text, button_text, sections)
@@ -2291,7 +2318,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_product_card(sender, found)
         return
     elif len(matching) > 1:
-        send_matching_products_carousel(sender, matching)
+        send_matching_products_carousel(sender, matching, msg_normalized)
         return
 
     # === طلب منتج غير متوفر من خلال كلمة أو وصف ===
@@ -2348,7 +2375,7 @@ def webhook():
 
         # منع التكرار
         now_ts = time.time()
-        if message_id in processed_messages:
+        if message_id in processed_messages or not claim_processed_webhook_message(message_id, now_ts):
             return jsonify({"status": "ok"}), 200
         processed_messages[message_id] = now_ts
         old_keys = [k for k, v in processed_messages.items() if now_ts - v > DEDUP_WINDOW]
