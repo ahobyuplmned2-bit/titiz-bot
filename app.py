@@ -175,6 +175,8 @@ product_send_guard = {}
 PRODUCT_SEND_WINDOW = 20
 matching_send_guard = {}
 MATCHING_SEND_WINDOW = 20
+variant_button_context = {}
+VARIANT_CONTEXT_WINDOW = 900
 
 def restore_customer_session(sender):
     """استعادة حالة العميل من قاعدة البيانات عند أول رسالة بعد العودة."""
@@ -1066,6 +1068,30 @@ def product_variants(product):
     return raw_variants if isinstance(raw_variants, list) else []
 
 
+def remember_variant_context(to, product):
+    """حفظ آخر منتج متعدد الخيارات لدعم الأجهزة التي تعيد عنوان الزر بدلاً من المعرف."""
+    if not isinstance(product, dict) or not product_variants(product):
+        return
+    try:
+        product_id = int(product.get("id"))
+    except (TypeError, ValueError):
+        return
+    variant_button_context[to] = {
+        "product_id": product_id,
+        "expires_at": time.time() + VARIANT_CONTEXT_WINDOW,
+    }
+
+
+def get_variant_context_product(to):
+    """استعادة المنتج المرتبط بزر اختيار الحجم خلال مدة قصيرة وآمنة."""
+    context = variant_button_context.get(to) or {}
+    if context.get("expires_at", 0) < time.time():
+        variant_button_context.pop(to, None)
+        return None
+    product = get_product(context.get("product_id"))
+    return canonicalize_product(product) if product else None
+
+
 def send_variant_list(to, product):
     """عرض أحجام المنتج وأسعارها في قائمة واتساب قابلة للاختيار."""
     rows = []
@@ -1139,6 +1165,8 @@ def send_product_card(to, product):
     if not valid_variants and base_price is None:
         send_message(to, "⚠️ هذا المنتج غير متاح حالياً لأن سعره غير محدد.")
         return False
+    if valid_variants:
+        remember_variant_context(to, product)
     raw_image_urls = product.get("image_urls", "")
     if isinstance(raw_image_urls, str):
         try:
@@ -1206,6 +1234,13 @@ def send_matching_products_carousel(to, products, query_key=""):
             continue
         seen_product_keys.add(product_key)
         unique_products.append(product)
+
+    variant_products = [
+        product for product in unique_products
+        if any(parse_product_price(v.get("price")) is not None for v in product_variants(product))
+    ]
+    if len(variant_products) == 1:
+        remember_variant_context(to, variant_products[0])
 
     cards = []
     scheduled_names = []
@@ -2013,12 +2048,22 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_message(sender, PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE)
         return
 
+    # بعض نسخ WhatsApp تعيد عنوان الزر بدلاً من id؛ افتحي آخر قائمة أحجام محفوظة.
+    if raw_action in {"اختيار الحجم", "اختيار الحجم والسعر", "اختيار المقاس"}:
+        product = get_variant_context_product(sender)
+        if product and any(parse_product_price(v.get("price")) is not None for v in product_variants(product)):
+            send_variant_list(sender, product)
+        else:
+            send_message(sender, "⚠️ افتحي بطاقة المنتج مرة أخرى ثم اضغطي «اختيار الحجم» لعرض الخيارات.")
+        return
+
     # فتح قائمة أحجام المنتج من بطاقة الكاروسيل.
     if raw_action.startswith("variants_"):
         try:
             product = get_product(int(raw_action.split("_", 1)[1]))
         except (ValueError, IndexError):
             product = None
+        product = canonicalize_product(product) if product else None
         if product and any(parse_product_price(v.get("price")) is not None for v in product_variants(product)):
             send_variant_list(sender, product)
         else:
@@ -2030,6 +2075,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         try:
             _, product_id_text, variant_index_text = raw_action.split("_", 2)
             product = get_product(int(product_id_text))
+            product = canonicalize_product(product) if product else None
             variant_index = int(variant_index_text)
             variants = product_variants(product or {})
             selected = variants[variant_index]
@@ -2565,9 +2611,11 @@ def webhook():
         elif message.get("type") == "interactive":
             interactive = message.get("interactive", {})
             if interactive.get("type") == "button_reply":
-                msg_body = interactive.get("button_reply", {}).get("id", "")
+                button_reply = interactive.get("button_reply", {})
+                msg_body = button_reply.get("id") or button_reply.get("title", "")
             elif interactive.get("type") == "list_reply":
-                msg_body = interactive.get("list_reply", {}).get("id", "")
+                list_reply = interactive.get("list_reply", {})
+                msg_body = list_reply.get("id") or list_reply.get("title", "")
         elif message.get("type") == "image":
             msg_body = message.get("image", {}).get("caption", "").strip()
         elif message.get("type") == "audio":
