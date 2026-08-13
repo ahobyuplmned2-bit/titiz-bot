@@ -1166,6 +1166,45 @@ def send_product_card(to, product):
     ])
     schedule_product_followup(to, product.get("name", ""))
 
+
+def send_matching_products_carousel(to, products):
+    """إرسال كل النتائج المطابقة في كاروسيل واحد دون قائمة أرقام."""
+    cards = []
+    scheduled_names = []
+    for product in products[:10]:
+        raw_urls = product.get("image_urls", "")
+        if isinstance(raw_urls, str):
+            try:
+                image_urls = json.loads(raw_urls) if raw_urls.startswith("[") else []
+            except json.JSONDecodeError:
+                image_urls = []
+        else:
+            image_urls = raw_urls or []
+        valid_urls = [url for url in image_urls if isinstance(url, str) and url.startswith("http")]
+        if not valid_urls:
+            continue
+        scheduled_names.append(product.get("name", ""))
+        body = format_product_card(product)
+        for url in valid_urls:
+            buttons = [{"id": f"det_{product['id']}", "title": "📋 التفاصيل"}]
+            if not product_variants(product):
+                buttons.insert(0, {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"})
+            cards.append({
+                "image_url": url,
+                "body": body,
+                "buttons": buttons,
+            })
+
+    if len(cards) >= 2 and send_carousel(to, "🔍 هذه كل المنتجات المطابقة، اسحبي للعرض:", cards[:10]):
+        for name in scheduled_names[:1]:
+            schedule_product_followup(to, name)
+        return True
+
+    # بديل آمن إذا لم تتوفر روابط صور عامة كافية للكاروسيل.
+    for product in products[:10]:
+        send_product_card(to, product)
+    return bool(products)
+
 def send_list(to, text, button_text, sections):
     return whatsapp.send_list(to, text, button_text, sections)
 
@@ -2246,9 +2285,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_product_card(sender, found)
         return
     elif len(matching) > 1:
-        send_message(sender, "🔍 وجدنا لكِ هذه المنتجات، اختاري الزر تحت المنتج المناسب:")
-        for product in matching[:10]:
-            send_product_card(sender, product)
+        send_matching_products_carousel(sender, matching)
         return
 
     # === طلب منتج غير متوفر من خلال كلمة أو وصف ===
