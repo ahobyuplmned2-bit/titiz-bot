@@ -211,5 +211,27 @@
     "image_urls": [
       "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/al-dar-pots/al-dar-pots-10pcs-new.jpg"
     ]
+  },
+  "سلة صحون كبيرة استيل 4 رفوف": {
+    "name": "سلة صحون كبيرة استيل 4 رفوف",
+    "price": "10500",
+    "description": "سلة صحون كبيرة من الاستيل مكونة من 4 رفوف، مناسبة لترتيب الصحون والأكواب وأدوات المطبخ، بتصميم عملي وألوان متعددة.",
+    "keywords": "سلة صحون,سلة مواعين,سلة أطباق,سلة اطباق,سلة صحون كبيرة,سلة مواعين كبيرة,سلة استيل,سلة ستيل,سلة صحون استيل,سلة صحون ستيل,رف صحون,رفوف صحون,رفوف مواعين,منظم صحون,منظم مواعين,حامل صحون,خزانة صحون,سلة مطبخ,منظم مطبخ,4 رفوف,اربعة رفوف,أربع رفوف,سلة 4 رفوف,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/dish-rack/large-stainless-dish-rack-4-shelves.jpg"
+    ],
+    "variants": ""
+  },
+  "مقشرة بطاط أصلية من المائدة": {
+    "name": "مقشرة بطاط أصلية من المائدة",
+    "price": "800",
+    "description": "مقشرة بطاط أصلية من المائدة، مناسبة لتقشير البطاط والخضروات بسهولة، بمقبض عملي وشفرة متينة.",
+    "keywords": "مقشرة بطاط,مقشرة بطاطس,مقشرة بطاطا,مقشرة خضروات,مقشرة خضار,مقشرة المائدة,مقشرة بطاط اصلية,مقشرة بطاط أصلية,مقشرة اصلية,مقشرة أصلية,قشارة بطاط,قشارة بطاطس,قشارة خضار,قشارة,مقشر بطاط,مقشر خضروات,مقشرة جولدن,المائدة جولدن,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/potato-peeler/almaeda-original-potato-peeler.jpg"
+    ],
+    "variants": ""
   }
 }
