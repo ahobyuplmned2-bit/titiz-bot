@@ -1,4 +1,94 @@
 {
+  "ملف استيل كبير": {
+    "name": "ملف استيل كبير",
+    "price": "1000",
+    "description": "ملف استيل كبير للتنظيف وجمع الأوساخ، بمقبض عملي ومناسب للاستخدام المنزلي.",
+    "keywords": "ملف,ملف استيل,ملف كبير,جاروف,جاروف تنظيف,مجرفة,مجرفة نفايات,مغرفة زبالة,مغرفة نفايات,أداة تنظيف,أدوات تنظيف,مستلزمات المنزل,تنظيف البيت",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/dustpan/steel-dustpan.jpg"
+    ]
+  },
+  "صحون كيك تيفال 3 قطع": {
+    "name": "صحون كيك تيفال 3 قطع",
+    "price": "3500",
+    "description": "طقم صحون وقوالب كيك تيفال مكون من 3 قطع بأشكال مختلفة، مناسب للخبز وتحضير الحلويات.",
+    "keywords": "صحون كيك,صواني كيك,قوالب كيك,طقم كيك,تيفال,صحون تيفال,صواني تيفال,قالب كيك,قوالب حلويات,صواني فرن,3 قطع,ثلاث قطع,أدوات حلويات,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/cake-pans/tefal-cake-pans-3pcs.jpg"
+    ]
+  },
+  "طقم قدور هندي 5 قطع": {
+    "name": "طقم قدور هندي 5 قطع",
+    "price": "10500",
+    "description": "طقم قدور هندي من المعدن بجودة عالية، مكون من 5 قطع للاستخدام اليومي في المطبخ.",
+    "keywords": "قدور,طقم قدور,قدور هندي,طقم قدور هندي,قدور هندية,قدور ستيل,قدور استيل,حلل,طقم حلل,طنجرة,طناجر,5 قطع,خمس قطع,قدور المائدة,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/indian-pots/indian-pots-5pcs.jpg"
+    ]
+  },
+  "سلك مواعين استيل أصلي 3 حبات": {
+    "name": "سلك مواعين استيل أصلي 3 حبات",
+    "price": "300",
+    "description": "سلك مواعين استيل أصلي للتنظيف وإزالة الدهون من الأواني، العبوة 3 حبات.",
+    "keywords": "سلك مواعين,سلك مواعين استيل,سلك صحون,سلك جلي,ليفة مواعين,ليفة استيل,سلك تنظيف,سلك دهون,سلك أصلي,سلك الاصلي,3 حبات,ثلاث حبات,أدوات تنظيف,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/scrubbers/stainless-scrubber-3pcs.jpg"
+    ]
+  },
+  "سلك مواعين استيل أصلي حبة واحدة": {
+    "name": "سلك مواعين استيل أصلي حبة واحدة",
+    "price": "300",
+    "description": "سلك مواعين استيل أصلي للتنظيف وإزالة الدهون من الأواني، حبة واحدة وزن 50 جراماً.",
+    "keywords": "سلك مواعين,سلك مواعين استيل,سلك صحون,سلك جلي,ليفة مواعين,ليفة استيل,سلك تنظيف,سلك دهون,سلك أصلي,سلك الاصلي,حبة واحدة,حبه واحده,50 جرام,أدوات تنظيف,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/scrubbers/stainless-scrubber-single.jpg"
+    ]
+  },
+  "خلاط سيلفر كريست 2500 واط": {
+    "name": "خلاط سيلفر كريست 2500 واط",
+    "price": "7500",
+    "description": "خلاط سيلفر كريست كهربائي بقدرة 2500 واط، مناسب لخلط العصائر والمكونات وطحنها.",
+    "keywords": "خلاط,خلاط كهربائي,خلاط سيلفر كريست,سيلفر كريست,Silver Crest,خلاط 2500 واط,خلاط 2500W,خلاط عصير,خلاط فواكه,خلاط مطبخ,مطحنة,طاحونة,خلاط قوي,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/silver-crest-blender/silver-crest-blender-2500w.png"
+    ]
+  },
+  "ملاعق خشب 3 قطع": {
+    "name": "ملاعق خشب 3 قطع",
+    "price": "500",
+    "description": "طقم ملاعق وأدوات مطبخ خشبية من الخيزران، مكون من 3 قطع، مناسب للطبخ والتحريك.",
+    "keywords": "ملاعق خشب,ملاعق خشبية,ملاعق مطبخ,أدوات خشبية,طقم ملاعق خشب,ملاعق بامبو,ملاعق خيزران,أدوات طبخ,3 قطع,ثلاث قطع,مستلزمات المطبخ,أدوات المائدة",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/wooden-spoons/wooden-spoons-3pcs.png"
+    ]
+  },
+  "مفك علب أصلي ضمان سنة": {
+    "name": "مفك علب أصلي ضمان سنة",
+    "price": "1000",
+    "description": "مفك علب أصلي 3 في 1 لفتح العلب والزجاجات، مع ضمان سنة.",
+    "keywords": "مفك علب,فتاحة علب,فتاحة قوارير,فتاحة زجاجات,مفك مطبخ,مفك علب أصلي,فتاحة علب أصلية,3 في 1,ضمان سنة,ضمان عام,أداة مطبخ,أدوات المطبخ",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/can-opener/original-can-opener.jpg"
+    ]
+  },
+  "طقم قدور الدار 10 قطع": {
+    "name": "طقم قدور الدار 10 قطع",
+    "price": "6500",
+    "description": "طقم قدور الدار مكون من 10 قطع، مناسب للاستخدام اليومي وتحضير مختلف الوجبات.",
+    "keywords": "طقم قدور,قدور الدار,طقم قدور الدار,قدور,حلل,طقم حلل,قدور ألمنيوم,قدور المطبخ,10 قطع,عشر قطع,أدوات مطبخ,مستلزمات المطبخ,الدار",
+    "image_id": "",
+    "image_urls": [
+      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/al-dar-pots/al-dar-pots-10pcs.png"
+    ]
+  },
   "كتلي شاي ستيل أبو صفارة": {
     "name": "كتلي شاي ستيل أبو صفارة",
     "price": "2700",
