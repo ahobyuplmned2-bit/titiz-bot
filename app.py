@@ -809,6 +809,48 @@ def download_whatsapp_audio(audio_data):
     )
     return audio_response.content, mime_type
 
+
+def download_whatsapp_image(image_data):
+    """تنزيل صورة العميل من WhatsApp Cloud API وتحويلها إلى بيانات قابلة للتحليل."""
+    media_id = (image_data or {}).get("id", "")
+    media_url = (image_data or {}).get("url", "")
+    if not media_id and not media_url:
+        raise ValueError("لم يصل معرف صورة المنتج من واتساب")
+    if not ACCESS_TOKEN:
+        raise ValueError("ACCESS_TOKEN غير مضبوط")
+
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+    if media_id:
+        media_response = _request_with_429_retry(
+            requests.get,
+            "جلب بيانات صورة المنتج من واتساب",
+            f"https://graph.facebook.com/v26.0/{media_id}",
+            headers=headers,
+            params={"phone_number_id": PHONE_NUMBER_ID},
+            timeout=15,
+        )
+        media_response.raise_for_status()
+        media_url = media_response.json().get("url", "")
+    if not media_url:
+        raise ValueError("لم يتم الحصول على رابط صورة المنتج")
+
+    image_response = _request_with_429_retry(
+        requests.get,
+        "تنزيل صورة المنتج من واتساب",
+        media_url,
+        headers=headers,
+        timeout=30,
+    )
+    image_response.raise_for_status()
+    if len(image_response.content) > 16 * 1024 * 1024:
+        raise ValueError("صورة المنتج أكبر من الحد المدعوم")
+    mime_type = image_response.headers.get("Content-Type") or image_data.get(
+        "mime_type", "image/jpeg"
+    )
+    if not mime_type.startswith("image/"):
+        mime_type = "image/jpeg"
+    return image_response.content, mime_type
+
 def transcribe_voice_message(message):
     """تحويل الرسالة الصوتية إلى نص عربي باستخدام خدمة تفريغ الصوت."""
     if not VOICE_TRANSCRIPTION_API_KEY:
@@ -894,6 +936,102 @@ def generate_smart_reply(sender, user_text):
     result = response.json()
     return (result.get("choices", [{}])[0].get("message", {}).get("content") or "").strip() or None
 
+
+def analyze_product_image(sender, message, caption=""):
+    """تحليل صورة العميل ومطابقتها مع المنتجات دون اعتبار إثبات الدفع منتجاً."""
+    if not SMART_AI_API_KEY:
+        return None
+    image_bytes, mime_type = download_whatsapp_image(message.get("image", {}))
+    image_data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
+    products = get_all_products()[:60]
+    product_context = "\n".join(
+        f"ID={p.get('id')}; الاسم={p.get('name', '')}; الكلمات={p.get('keywords', '')}; "
+        f"السعر={p.get('price', 0)} ريال; الوصف={p.get('description', '')}"
+        for p in products
+    ) or "لا توجد منتجات محفوظة حالياً."
+    user_text = (
+        "حلل صورة العميل. إذا كانت الصورة إيصال تحويل أو كشفاً مالياً فاجعل "
+        "is_payment_proof=true ولا تطابقها مع منتج. إذا كانت صورة منتج، طابقها فقط "
+        "مع منتج من القائمة عندما تكون المطابقة واضحة، ولا تخترع اسماً أو سعراً. "
+        f"كابشن العميل إن وجد: {caption or 'لا يوجد'}\n\nالمنتجات المتاحة:\n{product_context}"
+    )
+    payload = {
+        "model": SMART_AI_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "أنت محللة صور لمتجر Titiz للأدوات المنزلية. أجيبي بنتيجة JSON فقط. "
+                    "المطابقة الصحيحة تحتاج تشابهاً بصرياً واضحاً أو كابشن مفيداً. "
+                    "عند عدم التأكد اجعلي matched_product_id=null وconfidence=0، "
+                    "واكتبي رداً عربياً قصيراً يطلب اسم المنتج أو صورة أوضح."
+                ),
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": user_text},
+                    {"type": "image_url", "image_url": {"url": image_data_url, "detail": "auto"}},
+                ],
+            },
+        ],
+        "temperature": 0.1,
+        "max_completion_tokens": 350,
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "product_image_analysis",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "is_product_like": {"type": "boolean"},
+                        "is_payment_proof": {"type": "boolean"},
+                        "matched_product_id": {"type": ["integer", "null"]},
+                        "matched_product_name": {"type": "string"},
+                        "confidence": {"type": "number"},
+                        "reply": {"type": "string"},
+                    },
+                    "required": [
+                        "is_product_like",
+                        "is_payment_proof",
+                        "matched_product_id",
+                        "matched_product_name",
+                        "confidence",
+                        "reply",
+                    ],
+                    "additionalProperties": False,
+                },
+            },
+        },
+    }
+    response = _request_with_429_retry(
+        requests.post,
+        "تحليل صورة المنتج",
+        f"{SMART_AI_API_BASE}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {SMART_AI_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=90,
+    )
+    response.raise_for_status()
+    content = response.json().get("choices", [{}])[0].get("message", {}).get("content") or "{}"
+    result = json.loads(content)
+    if result.get("is_payment_proof"):
+        return {
+            "kind": "payment_proof",
+            "reply": "📄 هذه الصورة تبدو كإشعار تحويل. إذا كنتِ تريدين إكمال الدفع، أرسليها بعد اختيار التحويل المسبق من الطلب 😊",
+        }
+    matched_id = result.get("matched_product_id")
+    confidence = float(result.get("confidence") or 0)
+    if matched_id is not None and confidence >= 0.75:
+        product = get_product(int(matched_id))
+        if product:
+            return {"kind": "product", "product": product}
+    return {"kind": "unknown", "reply": result.get("reply") or "🔍 لم أتمكن من تحديد المنتج بدقة. أرسلي صورة أوضح أو اكتبي اسم المنتج من فضلكِ 😊"}
+
 def deliver_pending_replies(to):
     """إرسال ردود الإدارة المؤجلة بعد أن يبدأ العميل محادثته."""
     if not to or to == OWNER_NUMBER:
@@ -945,6 +1083,23 @@ def notify_owner(sender, msg_body):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     notification = f"📩 *رسالة جديدة*\n\n👤 الرقم: {sender}\n💬 الرسالة: {msg_body}\n🕐 الوقت: {now}"
     send_message(OWNER_NUMBER, notification)
+
+
+def notify_owner_unavailable_product(sender, request_text, source="text", image_id=""):
+    """إبلاغ الإدارة بطلب منتج غير موجود حتى يمكن توفيره لاحقاً."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    source_label = "صورة" if source == "image" else "كلمة"
+    notification = (
+        "📦 *طلب منتج غير متوفر*\n\n"
+        f"👤 رقم العميل: {sender}\n"
+        f"🔎 المصدر: {source_label}\n"
+        f"📝 طلب العميل: {request_text or 'صورة منتج غير واضحة'}\n"
+        f"🕐 الوقت: {now}\n\n"
+        "يرجى مراجعة الطلب ومحاولة توفير المنتج."
+    )
+    send_message(OWNER_NUMBER, notification)
+    if image_id:
+        send_image_by_id(OWNER_NUMBER, image_id, "🖼️ صورة المنتج المطلوب غير المتوفر")
 
 def notify_owner_new_order(order_number, phone, name, address, items, total, payment_method):
     items_text = ""
@@ -1745,6 +1900,29 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_message(sender, "📸 أرسلي صورة إشعار التحويل من فضلكِ 😊")
             return
 
+    # === فهم صورة المنتج خارج مسار إثبات التحويل ===
+    if message.get("type") == "image":
+        image_id = message.get("image", {}).get("id", "")
+        caption = message.get("image", {}).get("caption", "").strip()
+        try:
+            image_result = analyze_product_image(sender, message, caption)
+        except Exception as exc:
+            print(f"[الصورة] تعذر تحليل صورة المنتج: {exc}")
+            image_result = None
+        if image_result and image_result.get("kind") == "product":
+            send_product_card(sender, image_result["product"])
+            return
+        if image_result and image_result.get("kind") == "payment_proof":
+            send_message(sender, image_result["reply"])
+            return
+        notify_owner_unavailable_product(sender, caption, source="image", image_id=image_id)
+        send_message(
+            sender,
+            "📦 هذا المنتج غير متوفر حالياً، لكن سيتم توفيره قريباً بإذن الله 😊\n"
+            "شكراً لاقتراحك، وسنحاول توفيره لكم بأقرب وقت 🌟",
+        )
+        return
+
     if state == "product_context":
         context = user_sessions.get(sender, {})
         last_product = context.get("last_product") if isinstance(context, dict) else None
@@ -1953,7 +2131,17 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_product_card(sender, product)
         return
 
-    # === الرد الذكي للاستفسارات التي لم تطابق كلمة مفتاحية أو منتجاً ===
+    # === طلب منتج غير متوفر من خلال كلمة أو وصف ===
+    if msg_normalized and not is_low_information_query(msg_normalized):
+        notify_owner_unavailable_product(sender, msg_body, source="text")
+        send_message(
+            sender,
+            "📦 هذا المنتج غير متوفر حالياً، لكن سيتم توفيره قريباً بإذن الله 😊\n"
+            "أرسلنا طلبك للإدارة لتعمل على توفيره 🌟",
+        )
+        return
+
+    # === الرد الذكي الاحتياطي للاستفسارات القصيرة غير المكتملة ===
     try:
         smart_reply = generate_smart_reply(sender, msg_body)
     except Exception as exc:
