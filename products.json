@@ -192,14 +192,21 @@
     "price": "2000",
     "description": "فرامة الضغطة الذكية من المائدة بشفرات قوية، سهلة الاستخدام والتنظيف، ومناسبة لتقطيع الخضروات والمكونات بسرعة.",
     "keywords": "فرامة,فرامة الضغطة,فرامة الضغطة الذكية,فرامة المائدة,فرامة خضروات,فرامة خضار,قطاعة خضروات,قطاعة خضار,فرامة يدوية,فرامة كبيرة,فرامة وسط,فرامة صغيرة,فرامة كبير,فرامة صغير,فرامة MD-5266,MD-5266,MD-5076,MD-5066,3 شفرات,5 شفرات,فرم الخضروات,تقطيع الخضار,تقطيع البصل,فرامة مطبخ,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ",
-    "variants": [
-      {"name": "الكبير MD-5266", "price": "3000"},
-      {"name": "الوسط MD-5076", "price": "2500"},
-      {"name": "الصغير MD-5066", "price": "2000"}
-    ],
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/pressure-chopper/pressure-chopper-variants.png"
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/pressure-chopper/pressure-chopper-variants.png\"]",
+    "variants": [
+      {
+        "name": "الكبير MD-5266",
+        "price": "3000"
+      },
+      {
+        "name": "الوسط MD-5076",
+        "price": "2500"
+      },
+      {
+        "name": "الصغير MD-5066",
+        "price": "2000"
+      }
     ]
   },
   "طقم قدور الدار 10 قطع": {
@@ -208,9 +215,8 @@
     "description": "طقم قدور الدار الأصلي مكون من 10 قطع، من الألمنيوم الخام، مناسب للطبخ اليومي وتحضير مختلف الوجبات.",
     "keywords": "طقم قدور,قدور الدار,طقم قدور الدار,قدور,حلل,طقم حلل,قدور ألمنيوم,قدور المنيوم,قدور المطبخ,10 قطع,عشر قطع,طقم قدور 10 قطع,قدور الدار 10,الدار,أدوات مطبخ,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/al-dar-pots/al-dar-pots-10pcs-new.jpg"
-    ]
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/al-dar-pots/al-dar-pots-10pcs-new.jpg\"]",
+    "variants": ""
   },
   "سلة صحون كبيرة استيل 4 رفوف": {
     "name": "سلة صحون كبيرة استيل 4 رفوف",
@@ -218,9 +224,7 @@
     "description": "سلة صحون كبيرة من الاستيل مكونة من 4 رفوف، مناسبة لترتيب الصحون والأكواب وأدوات المطبخ، بتصميم عملي وألوان متعددة.",
     "keywords": "سلة,سلال,سلة صحون,سلال صحون,سلة مواعين,سلال مواعين,سلة أطباق,سلال أطباق,سلة اطباق,سلال اطباق,سلة صحون كبيرة,سلال صحون كبيرة,سلة مواعين كبيرة,سلال مواعين كبيرة,سلة استيل,سلال استيل,سلة ستيل,سلال ستيل,سلة صحون استيل,سلال صحون استيل,رف صحون,رفوف صحون,رفوف مواعين,منظم صحون,منظم مواعين,حامل صحون,خزانة صحون,سلة مطبخ,سلال مطبخ,منظم مطبخ,4 رفوف,اربعة رفوف,أربع رفوف,سلة 4 رفوف,أدوات مطبخ,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/dish-rack/large-stainless-dish-rack-4-shelves.jpg"
-    ],
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/dish-rack/large-stainless-dish-rack-4-shelves.jpg\"]",
     "variants": ""
   },
   "مقشرة بطاط أصلية من المائدة": {
@@ -229,9 +233,7 @@
     "description": "مقشرة بطاط أصلية من المائدة، مناسبة لتقشير البطاط والخضروات بسهولة، بمقبض عملي وشفرة متينة.",
     "keywords": "مقرشة,مقرشه,مقشرة,مقشره,مقرشة بطاط,مقرشه بطاط,مقشرة بطاط,مقشرة بطاطس,مقشرة بطاطا,مقشرة خضروات,مقشرة خضار,مقشرة المائدة,مقشرة بطاط اصلية,مقشرة بطاط أصلية,مقشرة اصلية,مقشرة أصلية,قشارة بطاط,قشارة بطاطس,قشارة خضار,قشارة,مقشر بطاط,مقشر خضروات,مقشرة جولدن,المائدة جولدن,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/potato-peeler/almaeda-original-potato-peeler.jpg"
-    ],
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/potato-peeler/almaeda-original-potato-peeler.jpg\"]",
     "variants": ""
   },
   "مسدس غاز ولاعة غاز أصلية من المائدة": {
@@ -240,9 +242,7 @@
     "description": "ولاعة غاز إلكترونية أصلية من المائدة، بتصميم مسدس عملي لإشعال مواقد وعيون الغاز والفرن بسهولة.",
     "keywords": "مسدس غاز,مسدس الغاز,ولاعة غاز,ولاعة الغاز,ولاعة مطبخ,ولاعة للمطبخ,قداحة غاز,قداحة مطبخ,ولاعة إلكترونية,ولاعة الكترونية,ولاعة إشعال,ولاعة اشعال,إشعال الغاز,اشعال الغاز,ولاعة مواقد,ولاعة فرن,ولاعة عيون الغاز,ولاعة بوتاجاز,ولاعة أصلية,ولاعة اصلية,ولاعة المائدة,مسدس ولاعة,ولاعة طويلة,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/gas-lighter/almaeda-electronic-gas-lighter.png"
-    ],
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/gas-lighter/almaeda-electronic-gas-lighter.png\"]",
     "variants": ""
   },
   "ثلاجة شاي أصلية من المائدة 0.7 لتر": {
@@ -251,9 +251,7 @@
     "description": "ثلاجة شاي أصلية من المائدة بسعة 0.7 لتر، حافظة للحرارة ومناسبة للشاي والمشروبات الساخنة، ومتوفرة بألوان متعددة.",
     "keywords": "ثلاجة شاي,ثلاجة شاهي,ثلاجة,ثلاجة مشروبات,ترمس شاي,ترمس شاهي,براد شاي,براد شاهي,جك شاي,حافظة شاي,حافظ حرارة,حافظة حرارية,ثلاجة شاي المائدة,ثلاجة المائدة,المائدة,ثلاجة أصلية,ثلاجة اصلية,ثلاجة ألوان,ثلاجة الوان,0.7 لتر,0.7L,700 مل,700 ملي,ضمان,ثلاجة ضمان,طقم ثلاجات شاي,أدوات المائدة,مستلزمات المطبخ",
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-flask/almaeda-tea-flask-07l.jpg"
-    ],
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-flask/almaeda-tea-flask-07l.jpg\"]",
     "variants": ""
   },
   "سحاب بلاط تركي": {
@@ -261,13 +259,17 @@
     "price": "1000",
     "description": "سحاب بلاط تركي عملي لسحب الماء وتنظيف الأرضيات والبلاط، متوفر بحجم كبير ووسط وبألوان متعددة.",
     "keywords": "سحاب بلاط,سحاب بلاط تركي,سحاب تركي,سحاب ماء,ساحب ماء,مساحات بلاط,مساحة بلاط,مساحه بلاط,ممسحة بلاط,ممسحه بلاط,ممسحة أرضيات,ممسحه ارضيات,ماسحة أرضيات,سحب الماء,تنظيف البلاط,تنظيف الأرضيات,ممسحة ماء,ممسحة تركية,سحاب كبير,سحاب وسط,سحاب بلاط كبير,سحاب بلاط وسط,مقاس 55,55 سم,أدوات تنظيف,مستلزمات المنزل",
-    "variants": [
-      {"name": "كبير", "price": "1500"},
-      {"name": "وسط", "price": "1000"}
-    ],
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tile-squeegee/turkish-tile-squeegee.jpg"
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tile-squeegee/turkish-tile-squeegee.jpg\"]",
+    "variants": [
+      {
+        "name": "كبير",
+        "price": "1500"
+      },
+      {
+        "name": "وسط",
+        "price": "1000"
+      }
     ]
   },
   "ثلاجات شاي التاج الملكي بضمان من أي تبريد": {
@@ -275,15 +277,25 @@
     "price": "2500",
     "description": "ثلاجات شاي التاج الملكي الأصلية بضمان من أي تبريد، حافظة للحرارة ومتوفرة بأربع سعات مناسبة للشاي والمشروبات الساخنة.",
     "keywords": "ثلاجات شاي,ثلاجة شاي,ثلاجات شاهي,ثلاجة شاهي,ثلاجات التاج,ثلاجة التاج الملكي,ثلاجات التاج الملكي,التاج الملكي,ترمس شاي,ترمس شاهي,براد شاي,حافظة شاي,حافظ حرارة,حافظة حرارية,ثلاجة أصلية,ثلاجات أصلية,ثلاجة اصلية,ثلاجات اصلية,ضمان من أي تبريد,ضمان من اي تبريد,أي تبريد,اي تبريد,ثلاجات ضمان,ثلاجات شاي سوداء,ثلاجات ألوان,1.0 لتر,1 لتر,1.3 لتر,1.6 لتر,1.9 لتر,لتر وثلاثة,لتر وستة,لتر وتسعة,أدوات المائدة,مستلزمات المطبخ",
-    "variants": [
-      {"name": "1.0 لتر", "price": "2500"},
-      {"name": "1.3 لتر", "price": "3000"},
-      {"name": "1.6 لتر", "price": "3500"},
-      {"name": "1.9 لتر", "price": "4000"}
-    ],
     "image_id": "",
-    "image_urls": [
-      "https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/crown-tea-flasks/crown-royal-tea-flasks.jpg"
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/crown-tea-flasks/crown-royal-tea-flasks.jpg\"]",
+    "variants": [
+      {
+        "name": "1.0 لتر",
+        "price": "2500"
+      },
+      {
+        "name": "1.3 لتر",
+        "price": "3000"
+      },
+      {
+        "name": "1.6 لتر",
+        "price": "3500"
+      },
+      {
+        "name": "1.9 لتر",
+        "price": "4000"
+      }
     ]
   }
 }
