@@ -1910,11 +1910,26 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     # === البحث في المنتجات (قاعدة البيانات) ===
+    products = get_all_products()
     if is_low_information_query(msg_normalized):
-        send_welcome(sender)
+        exact_product = next(
+            (
+                p for p in products
+                if msg_normalized == normalize_text(p.get("name", ""))
+                or msg_normalized in {
+                    normalize_text(k.strip())
+                    for k in (p.get("keywords", "") or "").split(",")
+                    if k.strip()
+                }
+            ),
+            None,
+        )
+        if exact_product:
+            send_product_card(sender, exact_product)
+        else:
+            send_welcome(sender)
         return
 
-    products = get_all_products()
     matching = []
     for p in products:
         p_name = normalize_text(p['name'])
