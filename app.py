@@ -28,6 +28,7 @@ from database import (
     mark_customer_followup_sent, get_customer_followup,
     record_contact, has_contact, queue_pending_reply,
     get_pending_replies, mark_pending_reply_sent, update_product_metadata,
+    update_product_fields,
     claim_processed_webhook_message
 )
 from whatsapp_api import WhatsAppAPI, format_product_card
@@ -495,8 +496,8 @@ def load_custom_responses():
     except:
         pass
 
-def sync_products_to_github():
-    """دمج المنتجات المحلية مع نسخة GitHub ثم حفظها دون مسح المنتجات السابقة."""
+def sync_products_to_github(remove_names=None):
+    """دمج المنتجات المحلية مع GitHub، مع حذف مفاتيح قديمة عند التعديل أو الحذف."""
     try:
         if not GITHUB_TOKEN:
             print("[GitHub] GITHUB_TOKEN غير موجود؛ تم إلغاء الحفظ الآمن.")
@@ -504,6 +505,12 @@ def sync_products_to_github():
 
         remote_data, sha = github_load("products.json")
         products_dict = remote_data if isinstance(remote_data, dict) else {}
+        if remove_names:
+            remove_normalized = {normalize_text(name) for name in remove_names if name}
+            for key in list(products_dict):
+                remote_name = products_dict.get(key, {}).get("name", key)
+                if normalize_text(str(key)) in remove_normalized or normalize_text(str(remote_name)) in remove_normalized:
+                    del products_dict[key]
         products = get_all_products()
         for p in products:
             raw_variants = p.get("variants", "")
@@ -1456,6 +1463,30 @@ def send_contact_menu(to):
     }])
 
 
+def find_admin_product(product_query):
+    """العثور على منتج للإدارة بعد توحيد الهمزات والاختلافات الإملائية."""
+    query = normalize_text(product_query)
+    if not query:
+        return None, []
+    products = get_all_products()
+    exact = [p for p in products if query == normalize_text(p.get("name", ""))]
+    if len(exact) == 1:
+        return exact[0], exact
+    matches = [
+        p for p in products
+        if query in normalize_text(p.get("name", ""))
+        or normalize_text(p.get("name", "")) in query
+    ]
+    return (matches[0] if len(matches) == 1 else None), matches
+
+
+def admin_product_match_error(product_query, matches):
+    if not matches:
+        return f"❌ لم أجد المنتج: {product_query}\nاكتبي جزءاً أوضح من الاسم بدون همزات أو معها."
+    names = "\n".join(f"• {p.get('name', '')}" for p in matches[:8])
+    return f"⚠️ وجدت أكثر من منتج مطابق، اكتبي اسماً أطول:\n{names}"
+
+
 # ╔══════════════════════════════════════════════════════════════╗
 # ║                 معالجة أوامر المالك                          ║
 # ╚══════════════════════════════════════════════════════════════╝
@@ -1575,39 +1606,123 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             send_message(OWNER_NUMBER, "❌ الصيغة: اضف [اسم] | [سعر] | [وصف] | [كلمات مفتاحية]")
         return True
 
+    # === تعديل منتج كامل ===
+    if msg_normalized.startswith("عدل منتج") or msg_normalized.startswith("عدل المنتج"):
+        edit_text = re.sub(r"^\s*عدل\s+(?:ال)?منتج\s*", "", msg_body, count=1).strip()
+        parts = [part.strip() for part in edit_text.split("|")]
+        if len(parts) >= 4:
+            old_name, new_name, price_value, description = parts[:4]
+            price_match = re.search(r"\d+(?:\.\d+)?", price_value)
+            product, matches = find_admin_product(old_name)
+            if not product:
+                send_message(OWNER_NUMBER, admin_product_match_error(old_name, matches))
+            elif not price_match:
+                send_message(OWNER_NUMBER, "❌ السعر يجب أن يكون رقماً، مثال: 1500")
+            else:
+                new_price = float(price_match.group(0))
+                updated = update_product_fields(
+                    product["id"], name=new_name, price=new_price, description=description
+                )
+                if updated == "duplicate":
+                    send_message(OWNER_NUMBER, f"❌ الاسم الجديد موجود بالفعل: {new_name}")
+                elif updated:
+                    saved = sync_products_to_github(remove_names=[product["name"]])
+                    status = "✅ وحُفظ على GitHub" if saved else "⚠️ تم محلياً، لكن تعذّر الحفظ على GitHub"
+                    send_message(
+                        OWNER_NUMBER,
+                        f"✅ تم تعديل المنتج {product['name']} بالكامل\n"
+                        f"📦 الاسم الجديد: {new_name}\n💰 السعر: {int(new_price)} ريال\n"
+                        f"📝 الوصف: {description}\n{status}",
+                    )
+            return True
+        send_message(
+            OWNER_NUMBER,
+            "❌ الصيغة الصحيحة:\nعدل منتج | الاسم القديم | الاسم الجديد | السعر | الوصف",
+        )
+        return True
+
+    # === تعديل الاسم ===
+    if msg_normalized.startswith("عدل اسم "):
+        edit_text = re.sub(r"^\s*عدل\s+اسم\s*", "", msg_body, count=1).strip()
+        parts = [part.strip() for part in edit_text.split("|", 1)]
+        if len(parts) == 2 and all(parts):
+            old_name, new_name = parts
+            product, matches = find_admin_product(old_name)
+            if not product:
+                send_message(OWNER_NUMBER, admin_product_match_error(old_name, matches))
+            else:
+                updated = update_product_fields(product["id"], name=new_name)
+                if updated == "duplicate":
+                    send_message(OWNER_NUMBER, f"❌ الاسم الجديد موجود بالفعل: {new_name}")
+                else:
+                    saved = sync_products_to_github(remove_names=[product["name"]])
+                    status = "وحُفظ على GitHub ✅" if saved else "تم محلياً فقط ⚠️"
+                    send_message(OWNER_NUMBER, f"✅ تم تغيير اسم المنتج إلى: {new_name}\n{status}")
+        else:
+            send_message(OWNER_NUMBER, "❌ الصيغة: عدل اسم | الاسم القديم | الاسم الجديد")
+        return True
+
+    # === تعديل الوصف ===
+    if msg_normalized.startswith("عدل وصف "):
+        edit_text = re.sub(r"^\s*عدل\s+وصف\s*", "", msg_body, count=1).strip()
+        parts = [part.strip() for part in edit_text.split("|", 1)]
+        if len(parts) == 2 and all(parts):
+            product_name, description = parts
+            product, matches = find_admin_product(product_name)
+            if not product:
+                send_message(OWNER_NUMBER, admin_product_match_error(product_name, matches))
+            else:
+                updated = update_product_fields(product["id"], description=description)
+                if updated:
+                    saved = sync_products_to_github()
+                    status = "وحُفظ على GitHub ✅" if saved else "تم محلياً فقط ⚠️"
+                    send_message(OWNER_NUMBER, f"✅ تم تعديل وصف {product['name']}\n{status}")
+        else:
+            send_message(OWNER_NUMBER, "❌ الصيغة: عدل وصف | اسم المنتج | الوصف الجديد")
+        return True
+
     # === تعديل سعر ===
     if msg_normalized.startswith("عدل سعر "):
-        text = msg_body[9:].strip()
+        raw_edit = re.sub(r"^\s*عدل\s+سعر\s*", "", msg_body, count=1).strip()
+        if "|" in raw_edit:
+            product_name, price_value = [part.strip() for part in raw_edit.split("|", 1)]
+            text = f"{product_name} {price_value}"
+        else:
+            text = raw_edit
+            product_name = ""
+            price_value = ""
         price_match = re.search(r'\b(\d+)\b', text)
         if price_match:
-            product_name = text[:price_match.start()].strip()
+            product_name = product_name or text[:price_match.start()].strip()
             new_price = float(price_match.group(1))
-            from database import db_lock, DB_PATH
-            import sqlite3 as _sqlite3
-            with db_lock:
-                conn = _sqlite3.connect(DB_PATH)
-                conn.execute("UPDATE products SET price=? WHERE name LIKE ?", (new_price, f"%{product_name}%"))
-                conn.commit()
-                conn.close()
-            sync_products_to_github()
-            send_message(OWNER_NUMBER, f"✅ تم تعديل سعر {product_name} إلى {int(new_price)} ريال")
+            product, matches = find_admin_product(product_name)
+            if not product:
+                send_message(OWNER_NUMBER, admin_product_match_error(product_name, matches))
+            elif update_product_fields(product["id"], price=new_price):
+                saved = sync_products_to_github()
+                status = "وحُفظ على GitHub ✅" if saved else "تم محلياً فقط ⚠️"
+                send_message(OWNER_NUMBER, f"✅ تم تعديل سعر {product['name']} إلى {int(new_price)} ريال\n{status}")
         else:
-            send_message(OWNER_NUMBER, "❌ الصيغة: عدل سعر [اسم المنتج] [السعر الجديد]")
+            send_message(OWNER_NUMBER, "❌ الصيغة: عدل سعر | اسم المنتج | السعر الجديد")
         return True
 
     # === حذف منتج ===
     if msg_normalized.startswith("حذف ") and not msg_normalized.startswith("حذف رد"):
         product_name = msg_body[4:].strip()
+        product, matches = find_admin_product(product_name)
+        if not product:
+            send_message(OWNER_NUMBER, admin_product_match_error(product_name, matches))
+            return True
         from database import db_lock, DB_PATH
         import sqlite3 as _sqlite3
         with db_lock:
             conn = _sqlite3.connect(DB_PATH)
-            cursor = conn.execute("DELETE FROM products WHERE name LIKE ?", (f"%{product_name}%",))
+            cursor = conn.execute("DELETE FROM products WHERE id = ?", (product["id"],))
             deleted = cursor.rowcount
             conn.commit()
             conn.close()
         if deleted:
-            sync_products_to_github()
+            sync_products_to_github(remove_names=[product["name"]])
             send_message(OWNER_NUMBER, f"✅ تم حذف المنتج: {product_name}")
         else:
             send_message(OWNER_NUMBER, f"❌ المنتج '{product_name}' غير موجود")
@@ -1787,7 +1902,10 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
         help_text += "📦 *المنتجات:*\n"
         help_text += "• اضف [اسم] | [سعر] | [وصف] | [كلمات]\n"
         help_text += "• حذف [اسم المنتج]\n"
-        help_text += "• عدل سعر [اسم] [السعر]\n"
+        help_text += "• عدل منتج | القديم | الجديد | السعر | الوصف\n"
+        help_text += "• عدل اسم | القديم | الجديد\n"
+        help_text += "• عدل وصف | اسم المنتج | الوصف\n"
+        help_text += "• عدل سعر | اسم المنتج | السعر\n"
         help_text += "• مخزن\n\n"
         help_text += "💬 *الردود:*\n"
         help_text += "• اضف رد [الكلمة] | [الرد]\n"

@@ -749,6 +749,51 @@ def update_product_metadata(name, price, description="", image_id="", keywords="
         conn.close()
         return updated
 
+
+def update_product_fields(product_id, name=None, price=None, description=None):
+    """تعديل الحقول الإدارية الأساسية مع الحفاظ على الصور والكلمات والخيارات."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        current = cursor.execute(
+            "SELECT name FROM products WHERE id = ?", (int(product_id),)
+        ).fetchone()
+        if not current:
+            conn.close()
+            return None
+        if name and cursor.execute(
+            "SELECT id FROM products WHERE name = ? AND id != ?", (name, int(product_id))
+        ).fetchone():
+            conn.close()
+            return "duplicate"
+
+        assignments = []
+        values = []
+        if name is not None:
+            assignments.append("name = ?")
+            values.append(name)
+        if price is not None:
+            assignments.append("price = ?")
+            values.append(float(price))
+        if description is not None:
+            assignments.append("description = ?")
+            values.append(description)
+        if not assignments:
+            conn.close()
+            return dict(id=int(product_id), name=current[0])
+        assignments.append("updated_at = CURRENT_TIMESTAMP")
+        values.append(int(product_id))
+        cursor.execute(
+            f"UPDATE products SET {', '.join(assignments)} WHERE id = ?", values
+        )
+        conn.commit()
+        updated = cursor.execute(
+            "SELECT * FROM products WHERE id = ?", (int(product_id),)
+        ).fetchone()
+        columns = [column[1] for column in cursor.execute("PRAGMA table_info(products)").fetchall()]
+        conn.close()
+        return dict(zip(columns, updated)) if updated else None
+
 def get_product(product_id):
     """الحصول على بيانات المنتج"""
     with db_lock:
