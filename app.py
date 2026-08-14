@@ -3813,14 +3813,30 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     if route_semantic_intent(sender, msg_body, semantic_result, products):
         return
 
-    # === طلب منتج غير متوفر من خلال كلمة أو وصف ===
+    # === الاستعلام غير المطابق: لا نعلن عدم التوفر من أول رسالة ===
     if msg_normalized and not is_low_information_query(msg_normalized):
-        notify_owner_unavailable_product(sender, msg_body, source="text")
-        send_message(
-            sender,
-            "📦 هذا المنتج غير متوفر حالياً، لكن سيتم توفيره قريباً بإذن الله 😊\n"
-            "أرسلنا طلبك للإدارة لتعمل على توفيره 🌟",
-        )
+        session_data = user_sessions.get(sender, {})
+        if not isinstance(session_data, dict):
+            session_data = {}
+        previous_query = normalize_text(session_data.get("pending_product_query", ""))
+        clarification_count = int(session_data.get("product_clarification_count", 0) or 0)
+        session_data["pending_product_query"] = msg_body.strip()
+        session_data["product_clarification_count"] = clarification_count + 1
+        user_sessions[sender] = session_data
+
+        # إذا أكد العميل نفس الطلب بعد سؤال توضيحي، نبلغ الإدارة فقط دون ادعاء عدم التوفر للعميل.
+        if previous_query == msg_normalized and clarification_count >= 1:
+            notify_owner_unavailable_product(sender, msg_body, source="text")
+            send_message(
+                sender,
+                "وصلني طلبك يا غالية 😊 سأرفعه للمراجعة وأتأكد لكِ من أقرب بديل أو من إمكانية توفيره."
+            )
+        else:
+            send_message(
+                sender,
+                "أبشري يا غالية 😊 حتى أساعدك بدقة، هل تقصدين منتجاً محدداً أم تصفين استخدامه؟ "
+                "اكتبي اسمه بطريقة أخرى أو أرسلي صورة له، وسأبحث لكِ عن الأنسب."
+            )
         return
 
     # === الرد الذكي الاحتياطي للاستفسارات القصيرة غير المكتملة ===
