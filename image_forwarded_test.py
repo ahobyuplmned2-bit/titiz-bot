@@ -25,6 +25,16 @@ assert app.resolve_image_product_match(
     products,
 )["id"] == 42
 
+assert app.resolve_image_product_match(
+    {
+        "matched_product_id": None,
+        "matched_product_name": "عصارة الدار بلاستيك مدورة",
+        "confidence": 0.38,
+        "reply": "",
+    },
+    products,
+)["id"] == 42
+
 uncertain = []
 unavailable = []
 sent = []

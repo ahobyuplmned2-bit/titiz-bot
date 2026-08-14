@@ -1149,14 +1149,13 @@ def resolve_image_product_match(result, products):
             if product:
                 return product
 
-    candidate_text = normalize_text(
-        " ".join(
-            str(result.get(key) or "")
-            for key in ("matched_product_name", "reply")
-        )
-    )
+    candidate_text = normalize_text(str(result.get("matched_product_name") or ""))
+    if not candidate_text:
+        candidate_text = normalize_text(str(result.get("reply") or ""))
     if not candidate_text:
         return None
+    candidate_tokens = {token for token in candidate_text.split() if len(token) >= 3}
+    scored_products = []
     for product in products:
         aliases = [product.get("name", "")]
         aliases.extend((product.get("keywords", "") or "").split(","))
@@ -1164,6 +1163,18 @@ def resolve_image_product_match(result, products):
             alias_normalized = normalize_text(alias)
             if len(alias_normalized) >= 4 and alias_normalized in candidate_text:
                 return product
+            alias_tokens = {token for token in alias_normalized.split() if len(token) >= 3}
+            if alias_tokens and candidate_tokens:
+                overlap = len(alias_tokens & candidate_tokens) / min(len(alias_tokens), len(candidate_tokens))
+                if overlap >= 0.5:
+                    scored_products.append((overlap, product))
+                    break
+    scored_products.sort(key=lambda item: item[0], reverse=True)
+    if scored_products:
+        best_score, best_product = scored_products[0]
+        second_score = scored_products[1][0] if len(scored_products) > 1 else 0
+        if best_score >= 0.75 or best_score - second_score >= 0.2:
+            return best_product
     return None
 
 
