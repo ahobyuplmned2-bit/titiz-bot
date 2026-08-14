@@ -45,5 +45,37 @@ app.handle_customer_message(
 
 assert uncertain
 assert unavailable == []
-assert any("لم أعتبرها غير متوفرة" in text for _, text in sent)
+assert sent == []
+
+sent_cards = []
+cart_additions = []
+button_messages = []
+app.analyze_product_image = lambda *args, **kwargs: {"kind": "product", "product": products[0]}
+real_send_product_card = app.send_product_card
+app.send_product_card = lambda recipient, product: (
+    sent_cards.append((recipient, product)),
+    real_send_product_card(recipient, product),
+)[1]
+app.add_to_cart = lambda recipient, product_id, quantity: cart_additions.append(
+    (recipient, product_id, quantity)
+) or True
+app.send_buttons = lambda recipient, text, buttons: button_messages.append((recipient, text, buttons))
+
+app.handle_customer_message(
+    "967700000000",
+    "",
+    "",
+    {"type": "image", "image": {"id": "media-456", "caption": ""}},
+)
+assert sent_cards
+assert app.user_states["967700000000"] == "product_context"
+
+app.handle_customer_message(
+    "967700000000",
+    "أشتي هاذا",
+    app.normalize_text("أشتي هاذا"),
+    {"type": "text"},
+)
+assert cart_additions == [("967700000000", 42, 1)]
+assert any(button["id"] == "checkout" for button in button_messages[-1][2])
 print("image_forwarded_test: OK")

@@ -281,6 +281,26 @@ def product_search_terms(msg_normalized):
     return list(dict.fromkeys(term for term in terms if term))
 
 
+PRODUCT_PURCHASE_KEYWORDS = [
+    "اشتي هذا", "اشتي هاذا", "اشتي هذه", "اشتي هاذي", "أشتي هذا", "أشتي هاذا",
+    "اريد هذا", "اريد هاذا", "اريد هذه", "اريد هاذي", "أريد هذا", "أريد هاذا",
+    "ابغى هذا", "ابغا هذا", "ابغى هاذا", "ابغا هاذا", "هذا اريده", "هاذا اريده",
+    "هذا لي", "هاذا لي", "احجز هذا", "احجزه", "احجزيه", "اطلبه", "اطلبيه",
+    "خليه لي", "خليها لي", "اضفه للسله", "اضيفه للسله", "أضفه للسلة",
+    "حطه بالسله", "حطيه بالسله", "ضيفه للسله", "اشتريه", "باخذه", "باخذ هذا",
+    "هذا المنتج اريده", "هذا المنتج اشتيه", "اريد المنتج هذا", "اشتي المنتج هذا",
+]
+_NORMALIZED_PRODUCT_PURCHASE_KEYWORDS = {normalize_text(k) for k in PRODUCT_PURCHASE_KEYWORDS}
+
+
+def is_product_purchase_request(msg_normalized):
+    if not msg_normalized:
+        return False
+    return msg_normalized in _NORMALIZED_PRODUCT_PURCHASE_KEYWORDS or any(
+        keyword in msg_normalized for keyword in _NORMALIZED_PRODUCT_PURCHASE_KEYWORDS if len(keyword) >= 5
+    )
+
+
 # ╔══════════════════════════════════════════════════════════════╗
 # ║         نظام الردود الموحد (Unified Response System)        ║
 # ╚══════════════════════════════════════════════════════════════╝
@@ -1392,6 +1412,8 @@ def send_product_card(to, product):
     if not valid_variants and base_price is None:
         send_message(to, "⚠️ هذا المنتج غير متاح حالياً لأن سعره غير محدد.")
         return False
+    user_states[to] = "product_context"
+    user_sessions[to] = {"last_product": product}
     if valid_variants:
         remember_variant_context(to, product)
     raw_image_urls = product.get("image_urls", "")
@@ -2929,21 +2951,20 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_message(sender, image_result["reply"])
             return
         notify_owner_uncertain_product_image(sender, image_id=image_id, caption=caption)
-        send_message(
-            sender,
-            "📸 وصلت صورة المنتج يا غالية 😊\n"
-            "سأراجعها مع الكتالوج للتأكد من المنتج والسعر، ولم أعتبرها غير متوفرة.\n"
-            "إذا تعرفين اسم المنتج اكتبيه لي أيضاً لتظهر لكِ النتيجة بسرعة 🛍️",
-        )
         return
 
     if state == "product_context":
         context = user_sessions.get(sender, {})
         last_product = context.get("last_product") if isinstance(context, dict) else None
         if last_product:
-            if raw_action in {"add", "اضف", "أضف", "إضافة", "طلب", "شراء"}:
+            if raw_action in {"add", "اضف", "أضف", "إضافة", "طلب", "شراء"} or is_product_purchase_request(msg_normalized):
                 if add_to_cart(sender, last_product["id"], 1):
                     send_message(sender, f"✅ تم إضافة *{last_product['name']}* إلى السلة")
+                    send_buttons(sender, "ماذا تريدين الآن؟", [
+                        {"id": "menu_cart", "title": "🛒 عرض السلة"},
+                        {"id": "checkout", "title": "✅ إكمال الطلب"},
+                        {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
+                    ])
                 else:
                     send_message(sender, "⚠️ لا يمكن إضافة المنتج لأن سعره غير محدد حالياً.")
                 return
