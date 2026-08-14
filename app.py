@@ -1218,6 +1218,119 @@ def transcribe_voice_message(message):
     finally:
         voice_processing_lock.release()
 
+def build_conversation_context(sender, limit=10):
+    """بناء ذاكرة مختصرة من آخر رسائل العميل وردود البوت."""
+    try:
+        events = list(reversed(get_message_events(limit=limit, phone_number=sender)))
+    except Exception as exc:
+        print(f"[الذاكرة] تعذر قراءة سياق العميل: {exc}")
+        return "لا يوجد سياق سابق متاح."
+    lines = []
+    for event in events:
+        direction = "العميل" if event.get("direction") == "inbound" else "البوت"
+        content = event.get("body") or event.get("caption") or event.get("response_text") or "[وسائط]"
+        content = str(content).strip().replace("\n", " ")
+        if content:
+            lines.append(f"{direction}: {content[:500]}")
+    return "\n".join(lines[-limit:]) or "لا يوجد سياق سابق متاح."
+
+
+def _parse_json_object(text):
+    """استخراج JSON من رد النموذج حتى لو وضعه داخل code fence."""
+    if not text:
+        return None
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", str(text).strip(), flags=re.IGNORECASE)
+    try:
+        parsed = json.loads(cleaned)
+        return parsed if isinstance(parsed, dict) else None
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
+        if not match:
+            return None
+        try:
+            parsed = json.loads(match.group(0))
+            return parsed if isinstance(parsed, dict) else None
+        except json.JSONDecodeError:
+            return None
+
+
+def interpret_customer_message(sender, user_text):
+    """فهم الرسالة وسياقها عبر LLM وإرجاع نية قابلة للتنفيذ، لا رد حر فقط."""
+    if not SMART_AI_API_KEY or not user_text:
+        return None
+    products = get_all_products()[:60]
+    product_context = "\n".join(
+        f"- {p.get('name', '')} | كلمات: {p.get('keywords', '')} | وصف: {p.get('description', '')[:240]}"
+        for p in products
+    ) or "لا توجد منتجات محملة حالياً."
+    context = build_conversation_context(sender)
+    system_prompt = (
+        "أنت طبقة فهم الرسائل لموظفة Titiz الذكية. افهم العربية واللهجة اليمنية والأخطاء الإملائية، "
+        "ولا تكتفِ بمطابقة الكلمات حرفياً. أعد JSON فقط بلا Markdown بهذه المفاتيح: "
+        "intent, confidence, search_query, reply. "
+        "intent يجب أن يكون واحداً من: product_search, product_purchase, price_inquiry, orders, "
+        "cart, payment, offers, discount, complaint, greeting, clarification, general. "
+        "إذا كان الكلام عن منتج أو وصفه، صحح المعنى في search_query باستخدام اسم أو كلمات الكتالوج. "
+        "إذا كان المنتج أو السعر غير موجود في البيانات فلا تخترع سعراً. reply يكون فارغاً عندما يحتاج "
+        "المسار بطاقة منتج أو سلة، ويكون رداً عربياً قصيراً فقط للنوايا العامة. "
+        "استخدم السياق لفهم كلمات مثل هذا وهاذا وأريده والطلب السابق.\n\n"
+        f"السياق السابق:\n{context}\n\n"
+        f"الكتالوج المتاح:\n{product_context}"
+    )
+    payload = {
+        "model": SMART_AI_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_text},
+        ],
+        "temperature": 0.1,
+        "max_tokens": 300,
+    }
+    event_id = active_message_events.get(sender)
+    try:
+        response = _request_with_429_retry(
+            requests.post,
+            "فهم رسالة العميل",
+            f"{SMART_AI_API_BASE}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {SMART_AI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=30,
+            retries=1,
+            retry_base=0.2,
+        )
+        response.raise_for_status()
+        raw_result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        result = _parse_json_object(raw_result)
+        if not result:
+            if event_id:
+                update_message_event(event_id, ai_model=SMART_AI_MODEL, ai_status="invalid_json", ai_result=raw_result)
+            return None
+        intent = str(result.get("intent") or "general").strip()
+        try:
+            confidence = float(result.get("confidence") or 0.5)
+        except (TypeError, ValueError):
+            confidence = 0.5
+        result["intent"] = intent
+        result["confidence"] = max(0.0, min(confidence, 1.0))
+        if event_id:
+            update_message_event(
+                event_id,
+                intent=intent,
+                intent_confidence=result["confidence"],
+                ai_model=SMART_AI_MODEL,
+                ai_status="success",
+                ai_result=json.dumps(result, ensure_ascii=False),
+            )
+        return result
+    except Exception as exc:
+        if event_id:
+            update_message_event(event_id, ai_model=SMART_AI_MODEL, ai_status="error", ai_result=str(exc))
+        raise
+
+
 def generate_smart_reply(sender, user_text):
     """إنشاء رد عربي ذكي للاستفسارات التي لا يغطيها الرد المبرمج."""
     if not SMART_AI_API_KEY or not user_text:
@@ -1228,6 +1341,7 @@ def generate_smart_reply(sender, user_text):
         for p in products
     ) or "لا توجد منتجات محملة حالياً."
     state = user_states.get(sender, "")
+    conversation_context = build_conversation_context(sender)
     system_prompt = (
         "أنت موظفة Titiz الذكية لمتجر أدوات منزلية في إب، اليمن. "
         "أجيبي بالعربية وبأسلوب يمني لطيف وواضح، مع إيموجي قليلة ومناسبة. "
@@ -1237,6 +1351,7 @@ def generate_smart_reply(sender, user_text):
         "وإذا أراد العميل الشراء فاطلبي منه كتابة اسم المنتج أو استخدام السلة. "
         "لا تطلبي بيانات حساسة، ولا تدّعي تنفيذ طلب أو دفع لم ينفذه النظام.\n\n"
         f"حالة المحادثة الحالية: {state or 'لا توجد حالة خاصة'}\n"
+        f"سياق آخر الرسائل:\n{conversation_context}\n"
         f"المنتجات المتاحة:\n{product_context}"
     )
     payload = {
@@ -1258,6 +1373,8 @@ def generate_smart_reply(sender, user_text):
         },
         json=payload,
         timeout=45,
+        retries=1,
+        retry_base=0.2,
     )
     response.raise_for_status()
     result = response.json()
@@ -3605,6 +3722,55 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     elif len(matching) > 1:
         send_matching_products_carousel(sender, matching, msg_normalized)
         return
+
+    # === فهم دلالي عبر LLM للعبارات الجديدة أو الأخطاء غير الموجودة حرفياً ===
+    semantic_result = None
+    try:
+        semantic_result = interpret_customer_message(sender, msg_body)
+    except Exception as exc:
+        print(f"[الذكاء] تعذر فهم رسالة العميل دلالياً: {exc}")
+    if semantic_result:
+        semantic_intent = semantic_result.get("intent")
+        semantic_query = semantic_result.get("search_query") or msg_body
+        semantic_reply = (semantic_result.get("reply") or "").strip()
+        semantic_matching = []
+        if semantic_intent in {"product_search", "product_purchase"}:
+            semantic_matching = match_products_from_text(semantic_query, products)
+            if len(semantic_matching) == 1:
+                found_product = semantic_matching[0]
+                user_sessions[sender] = {
+                    **(user_sessions.get(sender, {}) if isinstance(user_sessions.get(sender, {}), dict) else {}),
+                    "last_product_id": found_product.get("id"),
+                }
+                if semantic_intent == "product_purchase" and not product_variants(found_product):
+                    added = add_to_cart(sender, int(found_product.get("id")))
+                    if added:
+                        send_message(sender, f"✅ تم إضافة {found_product.get('name', 'المنتج')} إلى السلة.")
+                        send_cart_view(sender)
+                        return
+                send_product_card(sender, found_product)
+                return
+            if len(semantic_matching) > 1:
+                send_matching_products_carousel(sender, semantic_matching, semantic_query)
+                return
+        elif semantic_intent == "orders":
+            send_customer_orders(sender)
+            return
+        elif semantic_intent == "price_inquiry":
+            send_price_inquiry_response(sender)
+            return
+        elif semantic_intent == "offers":
+            send_offers_response(sender)
+            return
+        elif semantic_intent == "cart":
+            send_cart_view(sender)
+            return
+        elif semantic_intent == "greeting":
+            send_welcome(sender)
+            return
+        elif semantic_reply and semantic_intent in {"general", "clarification", "complaint", "discount", "payment"}:
+            send_message(sender, semantic_reply)
+            return
 
     # === طلب منتج غير متوفر من خلال كلمة أو وصف ===
     if msg_normalized and not is_low_information_query(msg_normalized):
