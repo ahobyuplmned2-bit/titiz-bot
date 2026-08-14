@@ -1107,6 +1107,59 @@ def generate_smart_reply(sender, user_text):
     return (result.get("choices", [{}])[0].get("message", {}).get("content") or "").strip() or None
 
 
+IMAGE_MATCH_MIN_CONFIDENCE = 0.60
+
+
+def resolve_image_product_match(result, products):
+    """مطابقة نتيجة النموذج مع الكتالوج حتى عند غياب المعرف أو انخفاض الثقة قليلاً."""
+    if not result:
+        return None
+    matched_id = result.get("matched_product_id")
+    confidence = float(result.get("confidence") or 0)
+    if matched_id is not None and confidence >= IMAGE_MATCH_MIN_CONFIDENCE:
+        try:
+            matched_id = int(matched_id)
+        except (TypeError, ValueError):
+            matched_id = None
+        if matched_id is not None:
+            product = next((p for p in products if int(p.get("id") or -1) == matched_id), None)
+            if product:
+                return product
+            product = get_product(matched_id)
+            if product:
+                return product
+
+    candidate_text = normalize_text(
+        " ".join(
+            str(result.get(key) or "")
+            for key in ("matched_product_name", "reply")
+        )
+    )
+    if not candidate_text:
+        return None
+    for product in products:
+        aliases = [product.get("name", "")]
+        aliases.extend((product.get("keywords", "") or "").split(","))
+        for alias in aliases:
+            alias_normalized = normalize_text(alias)
+            if len(alias_normalized) >= 4 and alias_normalized in candidate_text:
+                return product
+    return None
+
+
+def notify_owner_uncertain_product_image(sender, image_id="", caption=""):
+    """تنبيه الإدارة بصورة تحتاج مطابقة دون وصفها خطأً بأنها غير متوفرة."""
+    send_message(
+        OWNER_NUMBER,
+        "📸 صورة منتج تحتاج مطابقة يدوية\n"
+        f"👤 العميل: {sender}\n"
+        f"📝 الكابشن: {caption or 'لا يوجد'}\n"
+        "لم يتم اعتبار المنتج غير متوفر تلقائياً.",
+    )
+    if image_id:
+        send_image_by_id(OWNER_NUMBER, image_id, "صورة منتج تحتاج مطابقة")
+
+
 def analyze_product_image(sender, message, caption=""):
     """تحليل صورة العميل ومطابقتها مع المنتجات دون اعتبار إثبات الدفع منتجاً."""
     if not SMART_AI_API_KEY:
@@ -1119,11 +1172,19 @@ def analyze_product_image(sender, message, caption=""):
         f"السعر={p.get('price', 0)} ريال; الوصف={p.get('description', '')}"
         for p in products
     ) or "لا توجد منتجات محفوظة حالياً."
+    forwarded = bool((message.get("context") or {}).get("forwarded"))
+    forwarded_hint = (
+        "هذه الصورة محوّلة من قناة أو محادثة أخرى؛ اعتبريها صورة منتج مرجعية، "
+        "واستخدمي الاسم أو الشكل أو العلامة الظاهرة لمطابقتها مع الكتالوج.\n"
+        if forwarded
+        else ""
+    )
     user_text = (
         "حلل صورة العميل. إذا كانت الصورة إيصال تحويل أو كشفاً مالياً فاجعل "
         "is_payment_proof=true ولا تطابقها مع منتج. إذا كانت صورة منتج، طابقها فقط "
-        "مع منتج من القائمة عندما تكون المطابقة واضحة، ولا تخترع اسماً أو سعراً. "
-        f"كابشن العميل إن وجد: {caption or 'لا يوجد'}\n\nالمنتجات المتاحة:\n{product_context}"
+        "مع منتج من القائمة، ويمكن قبول مطابقة معقولة إذا كان الشكل أو الاسم أو العلامة "
+        "متوافقاً. لا تخترع اسماً أو سعراً. "
+        f"{forwarded_hint}كابشن العميل إن وجد: {caption or 'لا يوجد'}\n\nالمنتجات المتاحة:\n{product_context}"
     )
     payload = {
         "model": SMART_AI_MODEL,
@@ -1132,8 +1193,9 @@ def analyze_product_image(sender, message, caption=""):
                 "role": "system",
                 "content": (
                     "أنت محللة صور لمتجر Titiz للأدوات المنزلية. أجيبي بنتيجة JSON فقط. "
-                    "المطابقة الصحيحة تحتاج تشابهاً بصرياً واضحاً أو كابشن مفيداً. "
-                    "عند عدم التأكد اجعلي matched_product_id=null وconfidence=0، "
+                    "قارني الصورة مع أسماء وكلمات المنتجات في الكتالوج، ولا تشترطي كابشن؛ "
+                    "الصورة المحوّلة من القناة قد تصل بدون كابشن. "
+                    "عند عدم التأكد الشديد اجعلي matched_product_id=null وconfidence=0، "
                     "واكتبي رداً عربياً قصيراً يطلب اسم المنتج أو صورة أوضح."
                 ),
             },
@@ -1194,12 +1256,9 @@ def analyze_product_image(sender, message, caption=""):
             "kind": "payment_proof",
             "reply": "📄 هذه الصورة تبدو كإشعار تحويل. إذا كنتِ تريدين إكمال الدفع، أرسليها بعد اختيار التحويل المسبق من الطلب 😊",
         }
-    matched_id = result.get("matched_product_id")
-    confidence = float(result.get("confidence") or 0)
-    if matched_id is not None and confidence >= 0.75:
-        product = get_product(int(matched_id))
-        if product:
-            return {"kind": "product", "product": product}
+    product = resolve_image_product_match(result, products)
+    if product:
+        return {"kind": "product", "product": product}
     return {"kind": "unknown", "reply": result.get("reply") or "🔍 لم أتمكن من تحديد المنتج بدقة. أرسلي صورة أوضح أو اكتبي اسم المنتج من فضلكِ 😊"}
 
 def deliver_pending_replies(to):
@@ -2869,11 +2928,12 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if image_result and image_result.get("kind") == "payment_proof":
             send_message(sender, image_result["reply"])
             return
-        notify_owner_unavailable_product(sender, caption, source="image", image_id=image_id)
+        notify_owner_uncertain_product_image(sender, image_id=image_id, caption=caption)
         send_message(
             sender,
-            "📦 هذا المنتج غير متوفر حالياً، لكن سيتم توفيره قريباً بإذن الله 😊\n"
-            "شكراً لاقتراحك، وسنحاول توفيره لكم بأقرب وقت 🌟",
+            "📸 وصلت صورة المنتج يا غالية 😊\n"
+            "سأراجعها مع الكتالوج للتأكد من المنتج والسعر، ولم أعتبرها غير متوفرة.\n"
+            "إذا تعرفين اسم المنتج اكتبيه لي أيضاً لتظهر لكِ النتيجة بسرعة 🛍️",
         )
         return
 
