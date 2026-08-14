@@ -60,6 +60,8 @@ assert sent == []
 tea_products = [
     {"id": 51, "name": "ثلاجة شاي المائدة", "keywords": "ثلاجة,ثلاجات,شاي"},
     {"id": 52, "name": "ثلاجات شاي التاج الملكي", "keywords": "ثلاجة,ثلاجات,شاي,التاج"},
+    {"id": 53, "name": "مقشرة بطاط", "keywords": "مقشرة,بطاط"},
+    {"id": 54, "name": "عصارة الدار", "keywords": "عصارة,عصارات"},
 ]
 assert {item["id"] for item in app.products_related_to_image(tea_products[0], tea_products)} == {51, 52}
 

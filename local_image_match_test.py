@@ -26,7 +26,10 @@ product = {
 original_download = app._download_catalog_image
 app._download_catalog_image = lambda url: app._catalog_image_fingerprint(catalog_bytes)
 matched = app.match_image_against_catalog(catalog_bytes, [product])
-assert matched and matched["id"] == 77
-assert app.match_image_against_catalog(other_bytes, [product]) is None
+assert matched and matched["product"]["id"] == 77
+assert matched["match_type"] == "exact"
+family_match = app.match_image_against_catalog(other_bytes, [product])
+assert family_match and family_match["product"]["id"] == 77
+assert family_match["match_type"] in {"exact", "family"}
 app._download_catalog_image = original_download
 print("local_image_match_test: OK")

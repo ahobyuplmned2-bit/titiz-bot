@@ -74,6 +74,7 @@ IMAGE_RETRY_BASE_SECONDS = max(float(os.environ.get("IMAGE_RETRY_BASE_SECONDS", 
 IMAGE_REQUEST_TIMEOUT = max(float(os.environ.get("IMAGE_REQUEST_TIMEOUT", "25")), 5.0)
 CATALOG_IMAGE_TIMEOUT = max(float(os.environ.get("CATALOG_IMAGE_TIMEOUT", "4")), 2.0)
 CATALOG_IMAGE_MATCH_THRESHOLD = max(float(os.environ.get("CATALOG_IMAGE_MATCH_THRESHOLD", "0.88")), 0.7)
+CATALOG_IMAGE_FAMILY_THRESHOLD = max(float(os.environ.get("CATALOG_IMAGE_FAMILY_THRESHOLD", "0.74")), 0.65)
 catalog_image_fingerprint_cache = {}
 
 # ===== تهيئة الخدمات =====
@@ -1341,7 +1342,7 @@ def _download_catalog_image(url):
 
 
 def match_image_against_catalog(image_bytes, products):
-    """مطابقة الصورة بدون اسم مع صور الكتالوج قبل استدعاء خدمة الرؤية."""
+    """مطابقة الصورة بدون اسم مع الصور، أو إرجاع أفضل مرشح فئوي عند اختلاف الموديل."""
     try:
         incoming = _catalog_image_fingerprint(image_bytes)
     except Exception as exc:
@@ -1358,13 +1359,16 @@ def match_image_against_catalog(image_bytes, products):
             if fingerprint
         ]
     scored.sort(key=lambda item: item[0], reverse=True)
-    if not scored or scored[0][0] < CATALOG_IMAGE_MATCH_THRESHOLD:
+    if not scored or scored[0][0] < CATALOG_IMAGE_FAMILY_THRESHOLD:
         return None
     best_score, best_product = scored[0]
     second_score = scored[1][0] if len(scored) > 1 else 0.0
     if best_score >= 0.94 or best_score - second_score >= 0.08:
         print(f"[مطابقة الصور] تطابق محلي {best_product.get('name')} بنسبة {best_score:.2f}")
-        return best_product
+        return {"product": best_product, "match_type": "exact", "score": best_score}
+    if best_score >= CATALOG_IMAGE_MATCH_THRESHOLD:
+        print(f"[مطابقة الفئة] موديل قريب من {best_product.get('name')} بنسبة {best_score:.2f}")
+        return {"product": best_product, "match_type": "family", "score": best_score}
     return None
 
 
@@ -1377,9 +1381,13 @@ def analyze_product_image(sender, message, caption=""):
     if caption_matches:
         return {"kind": "product_family", "products": caption_matches}
     image_bytes, mime_type = download_whatsapp_image(message.get("image", {}))
-    local_product = match_image_against_catalog(image_bytes, products)
-    if local_product:
-        return {"kind": "product", "product": local_product, "match_method": "local_image"}
+    local_match = match_image_against_catalog(image_bytes, products)
+    if local_match:
+        return {
+            "kind": "product",
+            "product": local_match["product"],
+            "match_method": f"local_{local_match['match_type']}",
+        }
     image_data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
     product_context = "\n".join(
         f"ID={p.get('id')}; الاسم={p.get('name', '')}; الكلمات={p.get('keywords', '')}; "
@@ -1676,6 +1684,25 @@ RELATED_PRODUCT_STOPWORDS = {
     "مدور", "مربع", "هندي", "مفتوح", "برمه", "حجم", "حبات", "قطعة", "قطع",
 }
 
+PRODUCT_FAMILY_HINTS = {
+    "tea_cooler": {"ثلاجة", "ثلاجات", "ثلاجه", "تبريد", "ثلاجات شاي"},
+    "juicer": {"عصارة", "عصارات", "عصير", "حمضيات"},
+    "peeler": {"مقشرة", "مقرشة", "بطاط", "تقشير"},
+    "pots": {"قدر", "قدور", "حلل", "طنجرة", "طناجر", "برمة"},
+    "scrubber": {"سلك", "مواعين", "جلي", "ليفة"},
+    "kettle": {"كتلي", "غلاية", "صفارة", "غلايه"},
+}
+
+
+def _product_family(text):
+    normalized = normalize_text(text)
+    scores = {
+        family: sum(1 for hint in hints if hint in normalized)
+        for family, hints in PRODUCT_FAMILY_HINTS.items()
+    }
+    family, score = max(scores.items(), key=lambda item: item[1])
+    return family if score else None
+
 
 def _family_token(token):
     token = normalize_text(token)
@@ -1696,6 +1723,7 @@ def products_related_to_image(product, products):
         for token in normalize_text(seed_text).replace(",", " ").split()
         if len(token) >= 3 and token not in RELATED_PRODUCT_STOPWORDS
     }
+    seed_family = _product_family(seed_text)
     if not seed_tokens:
         return [product]
     scored = []
@@ -1705,6 +1733,9 @@ def products_related_to_image(product, products):
             str(candidate.get("keywords") or ""),
             str(candidate.get("description") or ""),
         ])
+        candidate_family = _product_family(candidate_text)
+        if seed_family and candidate_family != seed_family:
+            continue
         candidate_tokens = {
             _family_token(token)
             for token in normalize_text(candidate_text).replace(",", " ").split()
