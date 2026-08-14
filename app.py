@@ -3089,12 +3089,6 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_message(sender, image_result["reply"])
             return
         notify_owner_uncertain_product_image(sender, image_id=image_id, caption=caption)
-        send_message(
-            sender,
-            "📸 وصلت صورة المنتج يا غالية 😊\n"
-            "لم أتمكن من مطابقتها مع الكتالوج حالياً، ولم أعتبرها غير متوفرة.\n"
-            "اكتبي اسم المنتج أو أرسلي صورة أوضح وسأرسل لكِ الصورة والسعر والوصف والأزرار مباشرة 🛍️",
-        )
         return
 
     if state == "product_context":

@@ -55,7 +55,7 @@ app.handle_customer_message(
 
 assert uncertain
 assert unavailable == []
-assert any("لم أتمكن من مطابقتها" in text for _, text in sent)
+assert sent == []
 
 tea_products = [
     {"id": 51, "name": "ثلاجة شاي المائدة", "keywords": "ثلاجة,ثلاجات,شاي"},
