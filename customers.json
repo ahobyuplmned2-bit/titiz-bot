@@ -5,8 +5,8 @@
     "address": "شارع العدين \nبقاله الجراش",
     "first_order_date": null,
     "order_count": 0,
-    "created_at": "2026-08-14 13:53:54",
-    "updated_at": "2026-08-14 13:53:54"
+    "created_at": "2026-08-14 21:01:43",
+    "updated_at": "2026-08-14 21:01:43"
   },
   "967712282204": {
     "phone_number": "967712282204",
@@ -14,8 +14,8 @@
     "address": "شلرع تعز \nبقاله المنصوب",
     "first_order_date": null,
     "order_count": 0,
-    "created_at": "2026-08-14 13:53:54",
-    "updated_at": "2026-08-14 13:53:54"
+    "created_at": "2026-08-14 21:01:43",
+    "updated_at": "2026-08-14 21:01:43"
   },
   "967778138769": {
     "phone_number": "967778138769",
@@ -23,8 +23,8 @@
     "address": "المركزي \nالوكيل لمس",
     "first_order_date": null,
     "order_count": 0,
-    "created_at": "2026-08-14 13:53:54",
-    "updated_at": "2026-08-14 13:53:54"
+    "created_at": "2026-08-14 21:01:43",
+    "updated_at": "2026-08-14 21:01:43"
   },
   "967774405284": {
     "phone_number": "967774405284",
@@ -32,7 +32,16 @@
     "address": "سعوان جوار السفارة الامريكية",
     "first_order_date": null,
     "order_count": 0,
-    "created_at": "2026-08-14 14:28:53",
-    "updated_at": "2026-08-14 14:29:23"
+    "created_at": "2026-08-14 21:01:43",
+    "updated_at": "2026-08-14 21:01:43"
+  },
+  "967780953749": {
+    "phone_number": "967780953749",
+    "name": "انس باعلوي",
+    "address": "",
+    "first_order_date": null,
+    "order_count": 0,
+    "created_at": "2026-08-14 21:21:09",
+    "updated_at": "2026-08-14 21:21:09"
   }
 }
