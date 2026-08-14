@@ -11,6 +11,7 @@ import os
 import re
 import base64
 import difflib
+import hashlib
 import io
 import hmac
 from datetime import datetime
@@ -46,9 +47,10 @@ app = Flask(__name__)
 BOT_NAME = "Titiz موظفتك الذكية، نرد على جميع طلباتكم 24 ساعة"
 
 # ===== بيانات WhatsApp =====
-ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN", "EAAVV1mNUcEkBRZCKz7cZAPn3Dc0NE33WUQm7kjSQ6bLJzT7iA0IswVwteUoSHInm2aW690MiEPT87UjciE9c5Bk0VQl9cMZBloQZCF3u4bZAEFrXCqrikv68EnaOPaZAZBAQXEhfCpWWNXGP68E5DPqxUa4hP5ZBeiVTqsnQZADrEHAR8zqESGtZAtn2EXWxZBI3QZDZD")
-PHONE_NUMBER_ID = os.environ.get("PHONE_NUMBER_ID", "1097018736835171")
+ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN", "").strip()
+PHONE_NUMBER_ID = os.environ.get("PHONE_NUMBER_ID", "").strip()
 VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN", "bot_adawat_manziliya_2026")
+APP_SECRET = os.environ.get("APP_SECRET", "").strip()
 OWNER_NUMBER = os.environ.get("OWNER_NUMBER", "967773595571")
 
 # ===== بيانات GitHub =====
@@ -89,6 +91,12 @@ user_states = {}
 active_message_events = {}
 voice_processing_lock = Lock()
 voice_recent_media = {}
+SEMANTIC_INTENTS = {
+    "product_search", "product_purchase", "price_inquiry", "orders", "cart", "payment",
+    "offers", "discount", "complaint", "greeting", "clarification", "general", "social_chat",
+    "affirmation", "rejection", "product_choice", "quantity_change", "comparison", "budget",
+    "agent_handoff", "stop_reminder", "shipping", "location", "warranty", "catalog", "out_of_scope",
+}
 
 # ===== تذكير استفسار المنتج وتقييم الرضا =====
 PRODUCT_FOLLOWUP_DELAY_SECONDS = max(
@@ -1077,7 +1085,8 @@ def _record_outbound_event(to, message_type, body="", media_id=""):
 
 def send_message(to, text):
     result = whatsapp.send_message(to, text)
-    _record_outbound_event(to, "text", text)
+    if result:
+        _record_outbound_event(to, "text", text)
     return result
 
 def _audio_extension(mime_type):
@@ -1119,6 +1128,35 @@ def _request_with_429_retry(request_func, request_name, *args, retries=None, ret
 
     last_response.raise_for_status()
     return last_response
+
+
+def _llm_token_limit(limit):
+    """اختيار اسم حد الإخراج المتوافق مع عائلة النموذج المضبوطة."""
+    if SMART_AI_MODEL.lower().startswith("gpt-5"):
+        return {"max_completion_tokens": int(limit)}
+    return {"max_tokens": int(limit)}
+
+
+def _semantic_response_format():
+    """إجبار النموذج على بنية نية آمنة وقابلة للتوجيه بدلاً من نص حر."""
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "titiz_customer_intent",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "intent": {"type": "string", "enum": sorted(SEMANTIC_INTENTS)},
+                    "confidence": {"type": "number"},
+                    "search_query": {"type": "string"},
+                    "reply": {"type": "string"},
+                },
+                "required": ["intent", "confidence", "search_query", "reply"],
+                "additionalProperties": False,
+            },
+        },
+    }
 
 def download_whatsapp_audio(audio_data):
     """تنزيل ملف صوتي من WhatsApp Cloud API باستخدام media_id أو url."""
@@ -1293,7 +1331,8 @@ def interpret_customer_message(sender, user_text):
         "intent, confidence, search_query, reply. "
         "intent يجب أن يكون واحداً من: product_search, product_purchase, price_inquiry, orders, "
         "cart, payment, offers, discount, complaint, greeting, clarification, general, social_chat, "
-        "affirmation, rejection, product_choice, quantity_change, comparison, budget, agent_handoff, stop_reminder. "
+        "affirmation, rejection, product_choice, quantity_change, comparison, budget, agent_handoff, stop_reminder, "
+        "shipping, location, warranty, catalog, out_of_scope. "
         "إذا كان الكلام عن منتج أو وصفه، صحح المعنى في search_query باستخدام اسم أو كلمات الكتالوج. "
         "عند الضحك أو المزاح أو اختبار البوت استخدم social_chat ورداً لطيفاً ثم اسأل كيف تساعد العميل. "
         "عند عدم كفاية المعلومات استخدم clarification واسأل سؤالاً واحداً قصيراً فقط. "
@@ -1303,6 +1342,8 @@ def interpret_customer_message(sender, user_text):
         "لكل رسالة عميل اختر رداً واحداً فقط، ولا تجمع ردوداً متعددة أو قوائم متعددة. "
         "عند الموافقة أو الرفض أو الأول والثاني استخدم السياق السابق ولا تنفذ شراء أو إلغاء من دون تأكيد صريح. "
         "عند طلب مندوبة استخدم agent_handoff، وعند طلب إيقاف التذكير استخدم stop_reminder. "
+        "استخدمي shipping للتوصيل، location للموقع، warranty للضمان أو الاستبدال، catalog لسؤال ماذا نبيع، "
+        "وout_of_scope عندما لا يتعلق السؤال بمنتجات Titiz أو خدماتها؛ عندها اطلبي توضيحاً قصيراً ولا تخمني. "
         "إذا كان المنتج أو السعر غير موجود في البيانات فلا تخترع سعراً. reply يكون فارغاً عندما يحتاج "
         "المسار بطاقة منتج أو سلة، ويكون رداً عربياً قصيراً فقط للنوايا العامة. "
         "استخدم السياق لفهم كلمات مثل هذا وهاذا وأريده والطلب السابق.\n\n"
@@ -1316,7 +1357,8 @@ def interpret_customer_message(sender, user_text):
             {"role": "user", "content": user_text},
         ],
         "temperature": 0.1,
-        "max_tokens": 300,
+        **_llm_token_limit(300),
+        "response_format": _semantic_response_format(),
     }
     event_id = active_message_events.get(sender)
     try:
@@ -1341,6 +1383,8 @@ def interpret_customer_message(sender, user_text):
                 update_message_event(event_id, ai_model=SMART_AI_MODEL, ai_status="invalid_json", ai_result=raw_result)
             return None
         intent = str(result.get("intent") or "general").strip()
+        if intent not in SEMANTIC_INTENTS:
+            intent = "general"
         try:
             confidence = float(result.get("confidence") or 0.5)
         except (TypeError, ValueError):
@@ -1402,8 +1446,32 @@ def route_semantic_intent(sender, msg_body, semantic_result, products=None):
     if semantic_intent == "offers":
         send_offers_response(sender)
         return True
+    if semantic_intent == "catalog":
+        send_product_request_menu(sender)
+        return True
+    if semantic_intent in {"shipping", "location", "warranty"}:
+        service_keywords = {
+            "shipping": "التوصيل",
+            "location": "الموقع",
+            "warranty": "الضمان",
+        }
+        service_response = find_response(normalize_text(service_keywords[semantic_intent]))
+        if service_response:
+            send_response(sender, service_response)
+        else:
+            send_guided_help(sender, semantic_reply)
+        return True
     if semantic_intent == "cart":
         send_cart_view(sender)
+        return True
+    if semantic_intent == "payment":
+        send_payment_choice(sender)
+        return True
+    if semantic_intent == "discount":
+        send_price_inquiry_response(sender)
+        return True
+    if semantic_intent == "complaint":
+        request_customer_complaint(sender)
         return True
     if semantic_intent == "greeting":
         send_welcome(sender)
@@ -1424,6 +1492,12 @@ def route_semantic_intent(sender, msg_body, semantic_result, products=None):
 
     if semantic_intent in {"social_chat", "clarification", "general"}:
         send_guided_help(sender, semantic_reply)
+        return True
+    if semantic_intent == "out_of_scope":
+        send_guided_help(
+            sender,
+            semantic_reply or "أقدر أساعدكِ بمنتجات Titiz والطلبات والسلة والدفع والعروض 😊",
+        )
         return True
 
     if semantic_intent in {
@@ -1468,7 +1542,7 @@ def generate_smart_reply(sender, user_text):
             {"role": "user", "content": user_text},
         ],
         "temperature": 0.2,
-        "max_tokens": 500,
+        **_llm_token_limit(500),
     }
     response = _request_with_429_retry(
         requests.post,
@@ -1716,7 +1790,7 @@ def analyze_product_image(sender, message, caption=""):
             },
         ],
         "temperature": 0.1,
-        "max_completion_tokens": 350,
+        **_llm_token_limit(350),
         "response_format": {
             "type": "json_schema",
             "json_schema": {
@@ -1787,23 +1861,27 @@ def deliver_pending_replies(to):
 
 def send_image(to, image_url, caption=""):
     result = whatsapp.send_image(to, image_url, caption)
-    _record_outbound_event(to, "image", caption, image_url)
+    if result:
+        _record_outbound_event(to, "image", caption, image_url)
     return result
 
 def send_image_by_id(to, media_id, caption=""):
     result = whatsapp.send_image_by_id(to, media_id, caption)
-    _record_outbound_event(to, "image", caption, media_id)
+    if result:
+        _record_outbound_event(to, "image", caption, media_id)
     return result
 
 def send_buttons(to, text, buttons):
     result = whatsapp.send_buttons(to, text, buttons)
-    _record_outbound_event(to, "interactive_buttons", text)
+    if result:
+        _record_outbound_event(to, "interactive_buttons", text)
     return result
 
 
 def send_carousel(to, text, cards):
     result = whatsapp.send_carousel(to, text, cards)
-    _record_outbound_event(to, "interactive_carousel", text)
+    if result:
+        _record_outbound_event(to, "interactive_carousel", text)
     return result
 
 
@@ -2209,7 +2287,8 @@ def send_matching_products_carousel(to, products, query_key=""):
 
 def send_list(to, text, button_text, sections):
     result = whatsapp.send_list(to, text, button_text, sections)
-    _record_outbound_event(to, "interactive_list", text)
+    if result:
+        _record_outbound_event(to, "interactive_list", text)
     return result
 
 def notify_owner(sender, msg_body):
@@ -3965,7 +4044,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     # === رد افتراضي عند عدم توفر خدمة الذكاء ===
-    send_welcome(sender)
+    send_guided_help(
+        sender,
+        "أنا معك يا غالية 😊 ما وصلني طلب واضح. اكتبي اسم المنتج أو اختاري الخدمة المناسبة.",
+    )
 
 
 # ╔══════════════════════════════════════════════════════════════╗
@@ -3983,7 +4065,16 @@ def verify_webhook():
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    data = request.get_json()
+    if APP_SECRET:
+        received_signature = request.headers.get("X-Hub-Signature-256", "")
+        expected_signature = "sha256=" + hmac.new(
+            APP_SECRET.encode("utf-8"), request.get_data(), hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(received_signature, expected_signature):
+            print("[Webhook] تم رفض طلب بتوقيع غير صالح")
+            return jsonify({"status": "forbidden"}), 403
+
+    data = request.get_json(silent=True) or {}
     try:
         entry = data["entry"][0]
         changes = entry["changes"][0]
@@ -4067,6 +4158,12 @@ def webhook():
             processing_message = dict(message)
             processing_message["type"] = "text"
             processing_message["text"] = {"body": msg_body}
+        else:
+            send_message(
+                sender,
+                "أقدر أساعدكِ بالنصوص والصور والرسائل الصوتية 😊 أرسلي طلبك كتابةً أو صورة المنتج.",
+            )
+            return jsonify({"status": "ok"}), 200
 
         msg_normalized = normalize_text(msg_body)
         original_message_type = message.get("type", "text")

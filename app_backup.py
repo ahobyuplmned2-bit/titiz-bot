@@ -7,8 +7,8 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-ACCESS_TOKEN = "EAAVV1mNUcEkBRZCKz7cZAPn3Dc0NE33WUQm7kjSQ6bLJzT7iA0IswVwteUoSHInm2aW690MiEPT87UjciE9c5Bk0VQl9cMZBloQZCF3u4bZAEFrXCqrikv68EnaOPaZAZBAQXEhfCpWWNXGP68E5DPqxUa4hP5ZBeiVTqsnQZADrEHAR8zqESGtZAtn2EXWxZBI3QZDZD"
-PHONE_NUMBER_ID = "1097018736835171"
+ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN", "").strip()
+PHONE_NUMBER_ID = os.environ.get("PHONE_NUMBER_ID", "").strip()
 VERIFY_TOKEN = "bot_adawat_manziliya_2026"
 OWNER_NUMBER = "967773595571"  # رقم المالك لاستقبال الإشعارات
 

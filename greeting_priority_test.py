@@ -22,6 +22,7 @@ app.send_response = lambda recipient, response: sent_responses.append((recipient
 app.notify_owner_unavailable_product = lambda *args, **kwargs: unavailable.append(args)
 app.restore_customer_session = lambda recipient: None
 app.cancel_customer_followup = lambda recipient: None
+app.interpret_customer_message = lambda recipient, text: None
 
 app.handle_customer_message(
     "967700000000",

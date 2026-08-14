@@ -29,8 +29,8 @@ BOT_NAME = "Titiz موظفتك الذكية نرد على جميع طلباتك�
 HIDE_ADMIN_NUMBER = True
 
 # ===== بيانات WhatsApp =====
-ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN", "EAAVV1mNUcEkBRZCKz7cZAPn3Dc0NE33WUQm7kjSQ6bLJzT7iA0IswVwteUoSHInm2aW690MiEPT87UjciE9c5Bk0VQl9cMZBloQZCF3u4bZAEFrXCqrikv68EnaOPaZAZBAQXEhfCpWWNXGP68E5DPqxUa4hP5ZBeiVTqsnQZADrEHAR8zqESGtZAtn2EXWxZBI3QZDZD")
-PHONE_NUMBER_ID = os.environ.get("PHONE_NUMBER_ID", "1097018736835171")
+ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN", "").strip()
+PHONE_NUMBER_ID = os.environ.get("PHONE_NUMBER_ID", "").strip()
 VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN", "bot_adawat_manziliya_2026")
 OWNER_NUMBER = os.environ.get("OWNER_NUMBER", "967773595571")
 
