@@ -1269,8 +1269,13 @@ def interpret_customer_message(sender, user_text):
         "ولا تكتفِ بمطابقة الكلمات حرفياً. أعد JSON فقط بلا Markdown بهذه المفاتيح: "
         "intent, confidence, search_query, reply. "
         "intent يجب أن يكون واحداً من: product_search, product_purchase, price_inquiry, orders, "
-        "cart, payment, offers, discount, complaint, greeting, clarification, general. "
+        "cart, payment, offers, discount, complaint, greeting, clarification, general, social_chat, "
+        "affirmation, rejection, product_choice, quantity_change, comparison, budget, agent_handoff, stop_reminder. "
         "إذا كان الكلام عن منتج أو وصفه، صحح المعنى في search_query باستخدام اسم أو كلمات الكتالوج. "
+        "عند الضحك أو المزاح أو اختبار البوت استخدم social_chat ورداً لطيفاً ثم اسأل كيف تساعد العميل. "
+        "عند عدم كفاية المعلومات استخدم clarification واسأل سؤالاً واحداً قصيراً فقط. "
+        "عند الموافقة أو الرفض أو الأول والثاني استخدم السياق السابق ولا تنفذ شراء أو إلغاء من دون تأكيد صريح. "
+        "عند طلب مندوبة استخدم agent_handoff، وعند طلب إيقاف التذكير استخدم stop_reminder. "
         "إذا كان المنتج أو السعر غير موجود في البيانات فلا تخترع سعراً. reply يكون فارغاً عندما يحتاج "
         "المسار بطاقة منتج أو سلة، ويكون رداً عربياً قصيراً فقط للنوايا العامة. "
         "استخدم السياق لفهم كلمات مثل هذا وهاذا وأريده والطلب السابق.\n\n"
@@ -1329,6 +1334,77 @@ def interpret_customer_message(sender, user_text):
         if event_id:
             update_message_event(event_id, ai_model=SMART_AI_MODEL, ai_status="error", ai_result=str(exc))
         raise
+
+
+def route_semantic_intent(sender, msg_body, semantic_result, products=None):
+    """تحويل نية LLM إلى مسار آمن. يعيد True عندما أرسل البوت رداً."""
+    if not semantic_result:
+        return False
+    semantic_intent = str(semantic_result.get("intent") or "general").strip()
+    semantic_query = str(semantic_result.get("search_query") or msg_body or "").strip()
+    semantic_reply = str(semantic_result.get("reply") or "").strip()
+    products = products if products is not None else get_all_products()
+
+    if semantic_intent in {"product_search", "product_purchase", "product_choice"}:
+        semantic_matching = match_products_from_text(semantic_query, products)
+        if len(semantic_matching) == 1:
+            found_product = semantic_matching[0]
+            user_sessions[sender] = {
+                **(user_sessions.get(sender, {}) if isinstance(user_sessions.get(sender, {}), dict) else {}),
+                "last_product_id": found_product.get("id"),
+                "last_product": found_product,
+            }
+            # لا نضيف إلى السلة إلا عندما تكون نية الشراء صريحة والمنتج بلا خيارات.
+            if semantic_intent == "product_purchase" and not product_variants(found_product):
+                if add_to_cart(sender, int(found_product.get("id"))):
+                    send_message(sender, f"✅ تم إضافة {found_product.get('name', 'المنتج')} إلى السلة.")
+                    send_cart_view(sender)
+                    return True
+            send_product_card(sender, found_product)
+            return True
+        if len(semantic_matching) > 1:
+            send_matching_products_carousel(sender, semantic_matching, semantic_query)
+            return True
+
+    if semantic_intent == "orders":
+        send_customer_orders(sender)
+        return True
+    if semantic_intent == "price_inquiry":
+        send_price_inquiry_response(sender)
+        return True
+    if semantic_intent == "offers":
+        send_offers_response(sender)
+        return True
+    if semantic_intent == "cart":
+        send_cart_view(sender)
+        return True
+    if semantic_intent == "greeting":
+        send_welcome(sender)
+        return True
+    if semantic_intent == "stop_reminder":
+        cancel_customer_followup(sender)
+        send_message(sender, "✅ تم إيقاف التذكير لكِ. أنا هنا وقت ما تحتاجين أي مساعدة 😊")
+        return True
+    if semantic_intent == "agent_handoff":
+        if not whatsapp.send_url_button(
+            sender,
+            "أكيد يا غالية، تواصلي مباشرة مع المندوبة وستساعدكِ في طلبك 😊",
+            "📞 التواصل مع المندوبة",
+            DELEGATE_WHATSAPP_URL,
+        ):
+            send_message(sender, f"📞 تواصلي مع المندوبة مباشرة:\n{DELEGATE_WHATSAPP_URL}")
+        return True
+
+    if semantic_intent in {
+        "social_chat", "affirmation", "rejection", "quantity_change", "comparison",
+        "budget", "clarification", "general", "complaint", "discount", "payment",
+    }:
+        if semantic_reply:
+            send_message(sender, semantic_reply)
+        else:
+            send_message(sender, "أنا معك يا غالية 😊 هل تبحثين عن منتج، تتابعين طلباً، أم تحتاجين مساعدة بشيء آخر؟")
+        return True
+    return False
 
 
 def generate_smart_reply(sender, user_text):
@@ -3684,7 +3760,12 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if exact_product:
             send_product_card(sender, exact_product)
         else:
-            send_welcome(sender)
+            try:
+                if route_semantic_intent(sender, msg_body, interpret_customer_message(sender, msg_body), products):
+                    return
+            except Exception as exc:
+                print(f"[الذكاء] تعذر فهم الرسالة القصيرة: {exc}")
+            send_message(sender, "أنا معك يا غالية 😊 هل تريدين منتجاً، متابعة طلب، أم مساعدة بشيء آخر؟")
         return
 
     matching = []
@@ -3729,48 +3810,8 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         semantic_result = interpret_customer_message(sender, msg_body)
     except Exception as exc:
         print(f"[الذكاء] تعذر فهم رسالة العميل دلالياً: {exc}")
-    if semantic_result:
-        semantic_intent = semantic_result.get("intent")
-        semantic_query = semantic_result.get("search_query") or msg_body
-        semantic_reply = (semantic_result.get("reply") or "").strip()
-        semantic_matching = []
-        if semantic_intent in {"product_search", "product_purchase"}:
-            semantic_matching = match_products_from_text(semantic_query, products)
-            if len(semantic_matching) == 1:
-                found_product = semantic_matching[0]
-                user_sessions[sender] = {
-                    **(user_sessions.get(sender, {}) if isinstance(user_sessions.get(sender, {}), dict) else {}),
-                    "last_product_id": found_product.get("id"),
-                }
-                if semantic_intent == "product_purchase" and not product_variants(found_product):
-                    added = add_to_cart(sender, int(found_product.get("id")))
-                    if added:
-                        send_message(sender, f"✅ تم إضافة {found_product.get('name', 'المنتج')} إلى السلة.")
-                        send_cart_view(sender)
-                        return
-                send_product_card(sender, found_product)
-                return
-            if len(semantic_matching) > 1:
-                send_matching_products_carousel(sender, semantic_matching, semantic_query)
-                return
-        elif semantic_intent == "orders":
-            send_customer_orders(sender)
-            return
-        elif semantic_intent == "price_inquiry":
-            send_price_inquiry_response(sender)
-            return
-        elif semantic_intent == "offers":
-            send_offers_response(sender)
-            return
-        elif semantic_intent == "cart":
-            send_cart_view(sender)
-            return
-        elif semantic_intent == "greeting":
-            send_welcome(sender)
-            return
-        elif semantic_reply and semantic_intent in {"general", "clarification", "complaint", "discount", "payment"}:
-            send_message(sender, semantic_reply)
-            return
+    if route_semantic_intent(sender, msg_body, semantic_result, products):
+        return
 
     # === طلب منتج غير متوفر من خلال كلمة أو وصف ===
     if msg_normalized and not is_low_information_query(msg_normalized):
