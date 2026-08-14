@@ -10,6 +10,7 @@ import json
 import os
 import re
 import base64
+import difflib
 from datetime import datetime
 import time
 import unicodedata
@@ -261,6 +262,50 @@ def is_low_information_query(normalized_text):
     return len(set(compact)) == 1
 
 
+SEARCH_SPELLING_CORRECTIONS = {
+    "قذور": "قدور", "كدور": "قدور", "قضور": "قدور",
+    "مقرشه": "مقشره", "مقرشه بطاط": "مقشره بطاط",
+    "ملاعك": "ملاعق", "ملاق": "ملاعق",
+}
+
+SEARCH_STOPWORDS = {
+    "هل", "عندكم", "لديكم", "معاكم", "متوفر", "متوفره", "متوفرين", "يوجد", "توجد",
+    "وين", "فين", "اين", "ايش", "وش", "ماذا", "اريد", "اشتي", "ابغى", "ابغا",
+    "ممكن", "لو", "سمحتي", "سمحت", "من", "عند", "لنا", "لي", "هذا", "هاذا", "هذه",
+    "هاذي", "المنتج", "منتج", "شيء", "شي", "حق", "حقكم", "مع", "عن", "في", "منكم",
+}
+
+
+def correct_search_spelling(normalized_text):
+    """تصحيح أخطاء شائعة في سؤال المنتج دون تعديل الاسم المحفوظ في الكتالوج."""
+    return " ".join(
+        SEARCH_SPELLING_CORRECTIONS.get(word, word)
+        for word in (normalized_text or "").split()
+    )
+
+
+def _searchable_product_text(product):
+    return normalize_text(" ".join([
+        str(product.get("name") or ""),
+        str(product.get("keywords") or ""),
+        str(product.get("description") or ""),
+    ]))
+
+
+def _fuzzy_token_match(query_token, product_tokens):
+    if len(query_token) < 4:
+        return False
+    return any(
+        len(product_token) >= 4
+        and (
+            query_token in product_token
+            or product_token in query_token
+            or difflib.SequenceMatcher(None, query_token, product_token).ratio() >= 0.76
+        )
+        for product_token in product_tokens
+    )
+
+
 JUICER_QUERY_ALIASES = {
     normalize_text(alias)
     for alias in [
@@ -277,9 +322,14 @@ JUICER_QUERY_ALIASES = {
 
 
 def product_search_terms(msg_normalized):
-    """استخراج كلمات بحث مختصرة من سؤال توفر طويل، مع دعم مرادفات العصارات."""
-    terms = [msg_normalized] if msg_normalized else []
-    if msg_normalized and any(alias in msg_normalized for alias in JUICER_QUERY_ALIASES):
+    """استخراج كلمات المنتج من السؤال مع تصحيح الأخطاء وإزالة كلمات السؤال العامة."""
+    corrected = correct_search_spelling(msg_normalized)
+    terms = [term for term in (msg_normalized, corrected) if term]
+    terms.extend(
+        word for word in corrected.split()
+        if len(word) >= 3 and word not in SEARCH_STOPWORDS
+    )
+    if corrected and any(alias in corrected for alias in JUICER_QUERY_ALIASES):
         terms.extend(["عصاره", "عصارات", "عصاره الدار", "عصارات الدار"])
     return list(dict.fromkeys(term for term in terms if term))
 
@@ -3293,10 +3343,19 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
 
     matching = []
     search_terms = product_search_terms(msg_normalized)
+    corrected_query = correct_search_spelling(msg_normalized)
+    query_tokens = {
+        token for token in corrected_query.split()
+        if len(token) >= 3 and token not in SEARCH_STOPWORDS
+    }
     for p in products:
         p_name = normalize_text(p['name'])
         p_keywords = normalize_text(p.get('keywords', '') or '')
+        p_description = normalize_text(p.get('description', '') or '')
+        searchable_text = _searchable_product_text(p)
         if any(term in p_name or p_name in term for term in search_terms):
+            matching.append(p)
+        elif any(term in searchable_text for term in search_terms if len(term) >= 3):
             matching.append(p)
         elif p_keywords:
             kw_list = [normalize_text(k.strip()) for k in p_keywords.split(",")]
@@ -3304,6 +3363,11 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 if kw and any(term in kw or kw in term for term in search_terms):
                     matching.append(p)
                     break
+        if p not in matching and query_tokens:
+            product_tokens = set(searchable_text.split())
+            fuzzy_hits = sum(_fuzzy_token_match(token, product_tokens) for token in query_tokens)
+            if fuzzy_hits >= 1 and (len(query_tokens) == 1 or fuzzy_hits >= 2):
+                matching.append(p)
 
     if len(matching) == 1:
         found = matching[0]
