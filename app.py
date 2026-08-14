@@ -258,6 +258,29 @@ def is_low_information_query(normalized_text):
     return len(set(compact)) == 1
 
 
+JUICER_QUERY_ALIASES = {
+    normalize_text(alias)
+    for alias in [
+        "عصاره", "عصارات", "العصاره", "العصارات", "عصارات الدار", "عصارة الدار",
+        "عصارات اصليه", "عصارة اصلية", "عصارات بلاستيك", "عصارة بلاستيك",
+        "عصارات ستيل", "عصارة ستيل", "عصارات استيل", "عصارة استيل",
+        "عصارات مربعة", "عصارة مربعة", "عصارات مدورة", "عصارة مدورة",
+        "عصارات خضار", "عصارة خضار", "عصارات خضروات", "عصارة خضروات",
+        "عصارات مكسرات", "عصارة مكسرات", "عصارات فلفل", "عصارة فلفل",
+        "عصارات قلات", "عصارة قلات", "عصارات يدوية", "عصارة يدوية",
+        "عصارات مطبخ", "عصارة مطبخ", "عصارة المائدة",
+    ]
+}
+
+
+def product_search_terms(msg_normalized):
+    """استخراج كلمات بحث مختصرة من سؤال توفر طويل، مع دعم مرادفات العصارات."""
+    terms = [msg_normalized] if msg_normalized else []
+    if msg_normalized and any(alias in msg_normalized for alias in JUICER_QUERY_ALIASES):
+        terms.extend(["عصاره", "عصارات", "عصاره الدار", "عصارات الدار"])
+    return list(dict.fromkeys(term for term in terms if term))
+
+
 # ╔══════════════════════════════════════════════════════════════╗
 # ║         نظام الردود الموحد (Unified Response System)        ║
 # ╚══════════════════════════════════════════════════════════════╝
@@ -3094,15 +3117,16 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     matching = []
+    search_terms = product_search_terms(msg_normalized)
     for p in products:
         p_name = normalize_text(p['name'])
         p_keywords = normalize_text(p.get('keywords', '') or '')
-        if msg_normalized in p_name or p_name in msg_normalized:
+        if any(term in p_name or p_name in term for term in search_terms):
             matching.append(p)
         elif p_keywords:
             kw_list = [normalize_text(k.strip()) for k in p_keywords.split(",")]
             for kw in kw_list:
-                if kw and (msg_normalized in kw or kw in msg_normalized):
+                if kw and any(term in kw or kw in term for term in search_terms):
                     matching.append(p)
                     break
 
