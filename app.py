@@ -11,11 +11,14 @@ import os
 import re
 import base64
 import difflib
+import io
 from datetime import datetime
 import time
 import unicodedata
 from threading import Lock, Thread
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import quote
+from PIL import Image, ImageOps
 
 # استيراد الملفات المخصصة
 from database import (
@@ -69,6 +72,9 @@ VOICE_DEDUP_SECONDS = max(int(os.environ.get("VOICE_DEDUP_SECONDS", "120")), 30)
 IMAGE_MAX_RETRIES = max(int(os.environ.get("IMAGE_MAX_RETRIES", "1")), 1)
 IMAGE_RETRY_BASE_SECONDS = max(float(os.environ.get("IMAGE_RETRY_BASE_SECONDS", "1")), 0.2)
 IMAGE_REQUEST_TIMEOUT = max(float(os.environ.get("IMAGE_REQUEST_TIMEOUT", "25")), 5.0)
+CATALOG_IMAGE_TIMEOUT = max(float(os.environ.get("CATALOG_IMAGE_TIMEOUT", "4")), 2.0)
+CATALOG_IMAGE_MATCH_THRESHOLD = max(float(os.environ.get("CATALOG_IMAGE_MATCH_THRESHOLD", "0.88")), 0.7)
+catalog_image_fingerprint_cache = {}
 
 # ===== تهيئة الخدمات =====
 whatsapp = WhatsAppAPI(ACCESS_TOKEN, PHONE_NUMBER_ID)
@@ -1275,6 +1281,93 @@ def notify_owner_uncertain_product_image(sender, image_id="", caption=""):
         send_image_by_id(OWNER_NUMBER, image_id, "صورة منتج تحتاج مطابقة")
 
 
+def _product_image_urls(product):
+    raw_urls = product.get("image_urls") or []
+    if isinstance(raw_urls, str):
+        try:
+            raw_urls = json.loads(raw_urls)
+        except (TypeError, ValueError):
+            raw_urls = [raw_urls] if raw_urls.startswith("http") else []
+    if not isinstance(raw_urls, list):
+        return []
+    return [str(url).strip() for url in raw_urls if str(url).strip().startswith("http")]
+
+
+def _catalog_image_fingerprint(image_bytes):
+    """بصمة مقاومة لتغيير الحجم والضغط للصورة المحوّلة من القناة."""
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    image = ImageOps.fit(image, (24, 24), method=Image.Resampling.LANCZOS)
+    gray = image.convert("L")
+    pixels = list(gray.getdata())
+    average = sum(pixels) / max(len(pixels), 1)
+    average_hash = tuple(pixel >= average for pixel in pixels)
+    differences = tuple(
+        gray.getpixel((x, y)) >= gray.getpixel((x - 1, y))
+        for y in range(24)
+        for x in range(1, 24)
+    )
+    color_buckets = tuple(
+        round(sum(image.getpixel((x, y))[channel] for x in range(24) for y in range(24)) / (24 * 24) / 16)
+        for channel in range(3)
+    )
+    return average_hash, differences, color_buckets
+
+
+def _catalog_image_similarity(left, right):
+    if not left or not right:
+        return 0.0
+    left_average, left_diff, left_colors = left
+    right_average, right_diff, right_colors = right
+    average_score = sum(a == b for a, b in zip(left_average, right_average)) / len(left_average)
+    difference_score = sum(a == b for a, b in zip(left_diff, right_diff)) / len(left_diff)
+    color_score = sum(abs(a - b) <= 1 for a, b in zip(left_colors, right_colors)) / len(left_colors)
+    return average_score * 0.45 + difference_score * 0.4 + color_score * 0.15
+
+
+def _download_catalog_image(url):
+    cached = catalog_image_fingerprint_cache.get(url)
+    if cached is not None:
+        return cached
+    try:
+        response = requests.get(url, timeout=CATALOG_IMAGE_TIMEOUT)
+        response.raise_for_status()
+        fingerprint = _catalog_image_fingerprint(response.content)
+        catalog_image_fingerprint_cache[url] = fingerprint
+        return fingerprint
+    except Exception as exc:
+        print(f"[مطابقة الصور] تعذر تنزيل صورة الكتالوج: {url} — {exc}")
+        catalog_image_fingerprint_cache[url] = False
+        return None
+
+
+def match_image_against_catalog(image_bytes, products):
+    """مطابقة الصورة بدون اسم مع صور الكتالوج قبل استدعاء خدمة الرؤية."""
+    try:
+        incoming = _catalog_image_fingerprint(image_bytes)
+    except Exception as exc:
+        print(f"[مطابقة الصور] تعذر استخراج بصمة الصورة الواردة: {exc}")
+        return None
+    candidates = [(product, url) for product in (products or []) for url in _product_image_urls(product)]
+    if not candidates:
+        return None
+    with ThreadPoolExecutor(max_workers=min(8, len(candidates))) as executor:
+        fingerprints = executor.map(lambda item: _download_catalog_image(item[1]), candidates)
+        scored = [
+            (_catalog_image_similarity(incoming, fingerprint), product)
+            for (product, _), fingerprint in zip(candidates, fingerprints)
+            if fingerprint
+        ]
+    scored.sort(key=lambda item: item[0], reverse=True)
+    if not scored or scored[0][0] < CATALOG_IMAGE_MATCH_THRESHOLD:
+        return None
+    best_score, best_product = scored[0]
+    second_score = scored[1][0] if len(scored) > 1 else 0.0
+    if best_score >= 0.94 or best_score - second_score >= 0.08:
+        print(f"[مطابقة الصور] تطابق محلي {best_product.get('name')} بنسبة {best_score:.2f}")
+        return best_product
+    return None
+
+
 def analyze_product_image(sender, message, caption=""):
     """تحليل صورة العميل ومطابقتها مع المنتجات دون اعتبار إثبات الدفع منتجاً."""
     if not SMART_AI_API_KEY:
@@ -1284,6 +1377,9 @@ def analyze_product_image(sender, message, caption=""):
     if caption_matches:
         return {"kind": "product_family", "products": caption_matches}
     image_bytes, mime_type = download_whatsapp_image(message.get("image", {}))
+    local_product = match_image_against_catalog(image_bytes, products)
+    if local_product:
+        return {"kind": "product", "product": local_product, "match_method": "local_image"}
     image_data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
     product_context = "\n".join(
         f"ID={p.get('id')}; الاسم={p.get('name', '')}; الكلمات={p.get('keywords', '')}; "
