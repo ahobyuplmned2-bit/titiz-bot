@@ -40,4 +40,27 @@ app.handle_customer_message(
 
 assert sent == [("967700000000", "طقم قدور هندي")]
 assert cart_added == []
+
+semantic_calls = []
+sent.clear()
+app.send_guided_help = lambda recipient, intro="": sent.append((recipient, "guided", intro))
+app.interpret_customer_message = lambda sender, text: semantic_calls.append((sender, text)) or {
+    "intent": "social_chat",
+    "confidence": 0.96,
+    "search_query": "",
+    "reply": "يسعدني كلامك يا غالية 😊 كيف أساعدك؟",
+}
+app.find_response = lambda _: (_ for _ in ()).throw(
+    AssertionError("لا يجب الوصول إلى الرد الثابت عندما ينجح الفهم السياقي")
+)
+
+app.handle_customer_message(
+    "967700000001",
+    "حلو كلامكم",
+    app.normalize_text("حلو كلامكم"),
+    {"type": "text"},
+)
+
+assert semantic_calls == [("967700000001", "حلو كلامكم")]
+assert sent == [("967700000001", "guided", "يسعدني كلامك يا غالية 😊 كيف أساعدك؟")]
 print("semantic_routing_test: OK")

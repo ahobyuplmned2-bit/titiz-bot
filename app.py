@@ -1293,6 +1293,10 @@ def interpret_customer_message(sender, user_text):
         "إذا كان الكلام عن منتج أو وصفه، صحح المعنى في search_query باستخدام اسم أو كلمات الكتالوج. "
         "عند الضحك أو المزاح أو اختبار البوت استخدم social_chat ورداً لطيفاً ثم اسأل كيف تساعد العميل. "
         "عند عدم كفاية المعلومات استخدم clarification واسأل سؤالاً واحداً قصيراً فقط. "
+        "عند المدح أو الكلام القصير مثل حلو أو تمام أو طيب، استخدم affirmation أو social_chat، "
+        "وأكمل من آخر منتج أو موضوع في السياق بدلاً من الانتقال إلى الخصم أو السعر. "
+        "لا تكرر كلام العميل، ولا تقترح خصماً إلا إذا طلب العميل تخفيضاً أو سعراً خاصاً بوضوح. "
+        "لكل رسالة عميل اختر رداً واحداً فقط، ولا تجمع ردوداً متعددة أو قوائم متعددة. "
         "عند الموافقة أو الرفض أو الأول والثاني استخدم السياق السابق ولا تنفذ شراء أو إلغاء من دون تأكيد صريح. "
         "عند طلب مندوبة استخدم agent_handoff، وعند طلب إيقاف التذكير استخدم stop_reminder. "
         "إذا كان المنتج أو السعر غير موجود في البيانات فلا تخترع سعراً. reply يكون فارغاً عندما يحتاج "
@@ -3834,13 +3838,24 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_guided_help(sender, social_intro)
         return
 
+    # المحادثة العامة تمر أولاً على فهم السياق؛ هذا يمنع أن تلتقط كلمة داخل
+    # عبارة طويلة ردّاً ثابتاً غير مناسب مثل رد الخصم لكلمة «طيب».
+    products = get_all_products()
+    semantic_result = None
+    try:
+        semantic_result = interpret_customer_message(sender, msg_body)
+    except Exception as exc:
+        print(f"[الذكاء] تعذر فهم رسالة العميل دلالياً: {exc}")
+    if route_semantic_intent(sender, msg_body, semantic_result, products):
+        return
+
+    # المسار الثابت احتياطي فقط عندما لا ينجح الفهم الدلالي في اختيار نية آمنة.
     response_data = find_response(msg_normalized)
     if response_data:
         send_response(sender, response_data)
         return
 
     # === البحث في المنتجات (قاعدة البيانات) ===
-    products = get_all_products()
     if is_low_information_query(msg_normalized):
         exact_product = next(
             (
@@ -3857,11 +3872,6 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if exact_product:
             send_product_card(sender, exact_product)
         else:
-            try:
-                if route_semantic_intent(sender, msg_body, interpret_customer_message(sender, msg_body), products):
-                    return
-            except Exception as exc:
-                print(f"[الذكاء] تعذر فهم الرسالة القصيرة: {exc}")
             send_message(sender, "أنا معك يا غالية 😊 هل تريدين منتجاً، متابعة طلب، أم مساعدة بشيء آخر؟")
         return
 
@@ -3899,15 +3909,6 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
     elif len(matching) > 1:
         send_matching_products_carousel(sender, matching, msg_normalized)
-        return
-
-    # === فهم دلالي عبر LLM للعبارات الجديدة أو الأخطاء غير الموجودة حرفياً ===
-    semantic_result = None
-    try:
-        semantic_result = interpret_customer_message(sender, msg_body)
-    except Exception as exc:
-        print(f"[الذكاء] تعذر فهم رسالة العميل دلالياً: {exc}")
-    if route_semantic_intent(sender, msg_body, semantic_result, products):
         return
 
     # === الاستعلام غير المطابق: لا نعلن عدم التوفر من أول رسالة ===
