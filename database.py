@@ -127,6 +127,38 @@ def init_db():
             )
         ''')
 
+        # سجل موحد دائم لكل الرسائل الواردة والصادرة ونتائج الفهم.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS message_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                whatsapp_message_id TEXT,
+                direction TEXT NOT NULL,
+                phone_number TEXT NOT NULL,
+                message_type TEXT,
+                body TEXT,
+                normalized_body TEXT,
+                caption TEXT,
+                media_id TEXT,
+                intent TEXT,
+                intent_confidence REAL,
+                product_id INTEGER,
+                order_number TEXT,
+                ai_model TEXT,
+                ai_status TEXT,
+                ai_result TEXT,
+                response_text TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_message_events_phone_time "
+            "ON message_events(phone_number, created_at)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_message_events_intent "
+            "ON message_events(intent, created_at)"
+        )
+
         # ردود الإدارة المؤجلة حتى يراسل العميل البوت لأول مرة.
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS pending_replies (
@@ -260,6 +292,116 @@ def claim_processed_webhook_message(message_id, received_at=None):
         conn.commit()
         conn.close()
         return claimed
+
+def record_message_event(
+    *,
+    whatsapp_message_id=None,
+    direction="inbound",
+    phone_number="",
+    message_type="text",
+    body="",
+    normalized_body="",
+    caption="",
+    media_id="",
+    intent=None,
+    intent_confidence=None,
+    product_id=None,
+    order_number=None,
+    ai_model=None,
+    ai_status=None,
+    ai_result=None,
+    response_text=None,
+):
+    """حفظ رسالة أو رد مع بيانات الفهم دون تعطيل مسار واتساب إذا تعذر التسجيل."""
+    try:
+        with db_lock:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.execute(
+                """
+                INSERT INTO message_events (
+                    whatsapp_message_id, direction, phone_number, message_type,
+                    body, normalized_body, caption, media_id, intent,
+                    intent_confidence, product_id, order_number, ai_model,
+                    ai_status, ai_result, response_text
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    whatsapp_message_id,
+                    direction,
+                    str(phone_number or ""),
+                    message_type,
+                    body,
+                    normalized_body,
+                    caption,
+                    media_id,
+                    intent,
+                    intent_confidence,
+                    product_id,
+                    order_number,
+                    ai_model,
+                    ai_status,
+                    ai_result,
+                    response_text,
+                ),
+            )
+            event_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+            return event_id
+    except Exception as exc:
+        print(f"[سجل الرسائل] تعذر حفظ الحدث: {exc}")
+        return None
+
+
+def update_message_event(event_id, **fields):
+    """تحديث نتيجة التصنيف أو ربط الرسالة بمنتج أو طلب بعد المعالجة."""
+    allowed = {
+        "intent", "intent_confidence", "product_id", "order_number",
+        "ai_model", "ai_status", "ai_result", "response_text",
+    }
+    updates = {key: value for key, value in fields.items() if key in allowed}
+    if not event_id or not updates:
+        return False
+    try:
+        assignments = ", ".join(f"{key} = ?" for key in updates)
+        values = list(updates.values()) + [event_id]
+        with db_lock:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.execute(
+                f"UPDATE message_events SET {assignments} WHERE id = ?",
+                values,
+            )
+            conn.commit()
+            changed = cursor.rowcount > 0
+            conn.close()
+            return changed
+    except Exception as exc:
+        print(f"[سجل الرسائل] تعذر تحديث الحدث: {exc}")
+        return False
+
+
+def get_message_events(limit=100, phone_number=None, intent=None):
+    """قراءة آخر الرسائل للوحة الإدارة أو المراجعة."""
+    limit = max(1, min(int(limit or 100), 500))
+    clauses = []
+    params = []
+    if phone_number:
+        clauses.append("phone_number = ?")
+        params.append(str(phone_number))
+    if intent:
+        clauses.append("intent = ?")
+        params.append(str(intent))
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            f"SELECT * FROM message_events {where} ORDER BY id DESC LIMIT ?",
+            params + [limit],
+        ).fetchall()
+        conn.close()
+    return [dict(row) for row in rows]
+
 
 def get_customer(phone_number):
     """الحصول على بيانات العميل"""

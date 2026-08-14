@@ -4,7 +4,7 @@
 نظام ردود موحد: كل الردود (المبرمجة والمضافة من واتساب) تُعامل بنفس الطريقة
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 import requests
 import json
 import os
@@ -12,6 +12,7 @@ import re
 import base64
 import difflib
 import io
+import hmac
 from datetime import datetime
 import time
 import unicodedata
@@ -34,7 +35,8 @@ from database import (
     record_contact, has_contact, queue_pending_reply,
     get_pending_replies, mark_pending_reply_sent, update_product_metadata,
     update_product_fields,
-    claim_processed_webhook_message
+    claim_processed_webhook_message, record_message_event, update_message_event,
+    get_message_events,
 )
 from whatsapp_api import WhatsAppAPI, format_product_card, parse_product_price
 
@@ -84,6 +86,7 @@ init_db()
 # ===== متغيرات الجلسات =====
 user_sessions = {}
 user_states = {}
+active_message_events = {}
 voice_processing_lock = Lock()
 voice_recent_media = {}
 
@@ -267,6 +270,36 @@ def is_low_information_query(normalized_text):
     if len(compact) < 3:
         return True
     return len(set(compact)) == 1
+
+
+MESSAGE_INTENT_PATTERNS = (
+    ("greeting", ("هلو", "هلا", "مرحبا", "السلام عليكم", "الو", "هاي", "hello")),
+    ("orders", ("طلباتي", "طلبي", "وين طلبي", "حاله طلبي", "تتبع الطلب", "الاوردر")),
+    ("payment", ("تحويل", "دفعت", "الدفع", "اشعار التحويل", "حساب التحويل")),
+    ("cart", ("السله", "سله", "اضف للسله", "حط بالسله", "اكمل الطلب")),
+    ("offers", ("العروض", "عرض", "خصومات", "كوبون", "قناه التخفيضات")),
+    ("discount", ("خصم", "نقصوا", "خفّض", "خفض", "سعر خاص", "راعونا")),
+    ("price_inquiry", ("بكم", "كم السعر", "السعر كم", "كم حق", "اخر سعر")),
+    ("cancel_order", ("الغاء الطلب", "الغي الطلب", "اشطب الطلب", "ما عاد اشتي")),
+    ("address", ("العنوان", "موقع التوصيل", "غير العنوان", "نقطه التوصيل")),
+    ("complaint", ("شكوي", "الطلب ناقص", "وصلني غلط", "ما وصل", "متاخر")),
+    ("product_search", ("عندكم", "متوفر", "اشتي", "اريد", "ابغى", "وين المنتج")),
+)
+
+
+def classify_message_intent(text, message_type="text"):
+    """تصنيف سريع قابل للتدقيق قبل الاستعانة بالنموذج الذكي."""
+    if message_type == "image":
+        return "product_image", 0.98
+    if message_type == "audio":
+        return "voice_message", 0.98
+    normalized = normalize_text(text)
+    if not normalized:
+        return "empty", 0.99
+    for intent, patterns in MESSAGE_INTENT_PATTERNS:
+        if any(normalize_text(pattern) in normalized for pattern in patterns):
+            return intent, 0.86
+    return "unknown", 0.25
 
 
 SEARCH_SPELLING_CORRECTIONS = {
@@ -1003,8 +1036,26 @@ load_customers_from_github()
 load_qa_from_github()
 load_custom_responses()
 
+def _record_outbound_event(to, message_type, body="", media_id=""):
+    """حفظ الرد الصادر وربطه بآخر رسالة واردة للعميل دون تعطيل الإرسال."""
+    try:
+        return record_message_event(
+            direction="outbound",
+            phone_number=to,
+            message_type=message_type,
+            body=body or "",
+            response_text=body or "",
+            media_id=media_id,
+        )
+    except Exception as exc:
+        print(f"[سجل الرسائل] تعذر حفظ الرد الصادر: {exc}")
+        return None
+
+
 def send_message(to, text):
-    return whatsapp.send_message(to, text)
+    result = whatsapp.send_message(to, text)
+    _record_outbound_event(to, "text", text)
+    return result
 
 def _audio_extension(mime_type):
     """اختيار امتداد مؤقت مناسب لصوت واتساب."""
@@ -1210,7 +1261,16 @@ def generate_smart_reply(sender, user_text):
     )
     response.raise_for_status()
     result = response.json()
-    return (result.get("choices", [{}])[0].get("message", {}).get("content") or "").strip() or None
+    reply = (result.get("choices", [{}])[0].get("message", {}).get("content") or "").strip() or None
+    event_id = active_message_events.get(sender)
+    if event_id:
+        update_message_event(
+            event_id,
+            ai_model=SMART_AI_MODEL,
+            ai_status="success" if reply else "empty",
+            ai_result=reply or "",
+        )
+    return reply
 
 
 IMAGE_MATCH_MIN_CONFIDENCE = 0.60
@@ -1502,17 +1562,25 @@ def deliver_pending_replies(to):
             mark_pending_reply_sent(pending["id"])
 
 def send_image(to, image_url, caption=""):
-    return whatsapp.send_image(to, image_url, caption)
+    result = whatsapp.send_image(to, image_url, caption)
+    _record_outbound_event(to, "image", caption, image_url)
+    return result
 
 def send_image_by_id(to, media_id, caption=""):
-    return whatsapp.send_image_by_id(to, media_id, caption)
+    result = whatsapp.send_image_by_id(to, media_id, caption)
+    _record_outbound_event(to, "image", caption, media_id)
+    return result
 
 def send_buttons(to, text, buttons):
-    return whatsapp.send_buttons(to, text, buttons)
+    result = whatsapp.send_buttons(to, text, buttons)
+    _record_outbound_event(to, "interactive_buttons", text)
+    return result
 
 
 def send_carousel(to, text, cards):
-    return whatsapp.send_carousel(to, text, cards)
+    result = whatsapp.send_carousel(to, text, cards)
+    _record_outbound_event(to, "interactive_carousel", text)
+    return result
 
 
 def product_variants(product):
@@ -1826,7 +1894,9 @@ def send_matching_products_carousel(to, products, query_key=""):
     return bool(unique_products)
 
 def send_list(to, text, button_text, sections):
-    return whatsapp.send_list(to, text, button_text, sections)
+    result = whatsapp.send_list(to, text, button_text, sections)
+    _record_outbound_event(to, "interactive_list", text)
+    return result
 
 def notify_owner(sender, msg_body):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -3661,6 +3731,26 @@ def webhook():
             processing_message["text"] = {"body": msg_body}
 
         msg_normalized = normalize_text(msg_body)
+        original_message_type = message.get("type", "text")
+        image_payload = message.get("image", {}) if original_message_type == "image" else {}
+        audio_payload = message.get("audio", {}) if original_message_type == "audio" else {}
+        intent, intent_confidence = classify_message_intent(
+            msg_body,
+            original_message_type,
+        )
+        message_event_id = record_message_event(
+            whatsapp_message_id=message_id,
+            direction="inbound",
+            phone_number=sender,
+            message_type=original_message_type,
+            body=msg_body,
+            normalized_body=msg_normalized,
+            caption=image_payload.get("caption", "") if image_payload else "",
+            media_id=image_payload.get("id", "") or audio_payload.get("id", ""),
+            intent=intent,
+            intent_confidence=intent_confidence,
+        )
+        active_message_events[sender] = message_event_id
 
         # جاري الكتابة (Typing Indicator)
         whatsapp.send_typing_indicator(message_id)
@@ -3675,6 +3765,7 @@ def webhook():
         # معالجة أوامر المالك
         if sender == OWNER_NUMBER:
             if handle_owner_command(sender, msg_body, msg_normalized, processing_message):
+                active_message_events.pop(sender, None)
                 return jsonify({"status": "ok"}), 200
 
         # معالجة رسائل العملاء (والمالك للاختبار)
@@ -3683,6 +3774,7 @@ def webhook():
             handle_customer_message(sender, msg_body, msg_normalized, processing_message)
         finally:
             persist_customer_session(sender)
+            active_message_events.pop(sender, None)
 
     except (KeyError, IndexError):
         pass
@@ -3690,6 +3782,72 @@ def webhook():
         print(f"خطأ: {e}")
 
     return jsonify({"status": "ok"}), 200
+
+
+def _dashboard_token_is_valid():
+    """حماية واجهة اللوحة بتوكن خادم لا يظهر داخل كود الموقع."""
+    configured = os.environ.get("DASHBOARD_API_TOKEN", "").strip()
+    supplied = request.headers.get("X-Titiz-Admin-Token", "").strip()
+    return bool(configured and supplied and hmac.compare_digest(supplied, configured))
+
+
+def _dashboard_cors(response):
+    origin = request.headers.get("Origin", "")
+    allowed_origin = os.environ.get("DASHBOARD_ORIGIN", "").strip()
+    if allowed_origin and origin == allowed_origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Titiz-Admin-Token"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Vary"] = "Origin"
+    return response
+
+
+@app.route("/admin/api/messages", methods=["GET", "OPTIONS"])
+def dashboard_messages():
+    if request.method == "OPTIONS":
+        return _dashboard_cors(make_response("", 204))
+    if not _dashboard_token_is_valid():
+        return _dashboard_cors(jsonify({"error": "unauthorized"})), 401
+    try:
+        limit = request.args.get("limit", 100, type=int)
+        rows = get_message_events(
+            limit=limit,
+            phone_number=request.args.get("phone") or None,
+            intent=request.args.get("intent") or None,
+        )
+        return _dashboard_cors(jsonify({"messages": rows, "count": len(rows)}))
+    except Exception as exc:
+        print(f"[لوحة الإدارة] تعذر قراءة الرسائل: {exc}")
+        return _dashboard_cors(jsonify({"error": "messages_unavailable"})), 500
+
+
+@app.route("/admin/api/summary", methods=["GET", "OPTIONS"])
+def dashboard_summary():
+    if request.method == "OPTIONS":
+        return _dashboard_cors(make_response("", 204))
+    if not _dashboard_token_is_valid():
+        return _dashboard_cors(jsonify({"error": "unauthorized"})), 401
+    rows = get_message_events(limit=500)
+    intents = {}
+    for row in rows:
+        key = row.get("intent") or "unknown"
+        intents[key] = intents.get(key, 0) + 1
+    return _dashboard_cors(jsonify({
+        "messages_total": len(rows),
+        "inbound_total": sum(1 for row in rows if row.get("direction") == "inbound"),
+        "outbound_total": sum(1 for row in rows if row.get("direction") == "outbound"),
+        "intents": intents,
+    }))
+
+
+@app.route("/admin/api/products", methods=["GET", "OPTIONS"])
+def dashboard_products():
+    if request.method == "OPTIONS":
+        return _dashboard_cors(make_response("", 204))
+    if not _dashboard_token_is_valid():
+        return _dashboard_cors(jsonify({"error": "unauthorized"})), 401
+    products = get_all_products()
+    return _dashboard_cors(jsonify({"products": products, "count": len(products)}))
 
 @app.route("/", methods=["GET"])
 def home():
