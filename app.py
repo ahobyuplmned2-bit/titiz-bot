@@ -480,9 +480,11 @@ def find_response(msg_normalized):
     if best_match:
         return best_match
 
-    # 3. مطابقة عكسية - الرسالة موجودة في كلمة مفتاحية
+    # 3. مطابقة عكسية - الرسالة موجودة في كلمة مفتاحية.
+    # لا نطابق كلمة قصيرة مثل «طيب» داخل عبارة طويلة مثل «عطونا سعر طيب»؛
+    # فهذا يحوّل الحديث الاجتماعي إلى رد خصم غير مرتبط بسياق العميل.
     for key, data in UNIFIED_RESPONSES.items():
-        if len(msg_normalized) > 2 and msg_normalized in key:
+        if len(msg_normalized) >= 5 and msg_normalized in key:
             return data
 
     return None
@@ -794,6 +796,12 @@ SOCIAL_OR_CONFUSED_PHRASES = {
     "ايش", "ايش؟", "مافهمت", "ما فهمت", "وش", "وش؟", "كيف", "كيف?",
     "انت روبوت", "انتي روبوت", "تفهمني", "تفهميني", "تجربه", "اختبار",
     "ما اعرف", "مدري", "ما ادري", "ساعدني", "ساعديني", "ابغى مساعده",
+}
+POSITIVE_SOCIAL_PHRASES = {
+    "حلو", "حلوه", "حلوة", "جميل", "جميله", "جميلة", "ممتاز", "ممتازه",
+    "ممتازة", "رائع", "رائعه", "رائعة", "تمام", "طيب", "اوكي", "اوكيه",
+    "حلو منتجكم", "منتجكم حلو", "منتجاتكم حلوه", "متجركم حلو", "متجركم جميل",
+    "عجبني", "عجبني المنتج", "عجبني متجركم", "شكرا", "شكراً", "يسلمو",
 }
 SHOPPING_ASSISTANT_MESSAGE = (
     "أهلاً بك! أنا مساعدك الذكي من Titiz، ويمكنني مساعدتك في القيام بالكثير من المهام التجارية، مثل:\n\n"
@@ -1872,6 +1880,44 @@ def send_guided_help(to, intro=""):
 
 def is_social_or_confused_message(normalized_text):
     return normalized_text in {normalize_text(item) for item in SOCIAL_OR_CONFUSED_PHRASES}
+
+
+def is_positive_social_message(normalized_text):
+    """تمييز المدح والقبول القصير عن سؤال السعر أو طلب التخفيض."""
+    return normalized_text in {normalize_text(item) for item in POSITIVE_SOCIAL_PHRASES}
+
+
+def send_contextual_praise_reply(to):
+    """رد واحد قصير للمدح، مع متابعة المنتج نفسه إن كان موجوداً في السياق."""
+    context = user_sessions.get(to, {})
+    last_product = context.get("last_product") if isinstance(context, dict) else None
+    if isinstance(last_product, dict) and last_product.get("id") and last_product.get("name"):
+        variants = product_variants(last_product)
+        valid_variants = [v for v in variants if parse_product_price(v.get("price")) is not None]
+        primary_button = (
+            {"id": f"variants_{last_product['id']}", "title": "📏 اختيار الحجم"}
+            if valid_variants
+            else {"id": f"add_{last_product['id']}", "title": "🛒 إضافة للسلة"}
+        )
+        send_buttons(
+            to,
+            f"يسعدنا إنه عجبكِ *{last_product['name']}* يا غالية 😊\nهل تحبين نكمل عليه أو تبحثين عن شيء ثاني؟",
+            [
+                primary_button,
+                {"id": f"det_{last_product['id']}", "title": "📋 التفاصيل"},
+                {"id": "shopping_assistant", "title": "🔍 بحث عن منتج"},
+            ],
+        )
+        return
+    send_list(to, "يسعدنا إن Titiz نال إعجابكِ يا غالية 😊\nقولي لي ما الذي تبحثين عنه وسأساعدكِ خطوة بخطوة.", "ابدئي الآن", [{
+        "title": "اختاري ما تحتاجينه",
+        "rows": [
+            {"id": "menu_search", "title": "🔍 البحث عن منتج", "description": "اكتبي الاسم أو صفي المنتج"},
+            {"id": "menu_cart", "title": "🛒 السلة", "description": "عرض المنتجات التي اخترتها"},
+            {"id": "menu_orders", "title": "📦 طلباتي", "description": "متابعة الطلبات والحالة"},
+            {"id": "menu_offers", "title": "🎁 العروض", "description": "قناة التخفيضات والخصومات"},
+        ],
+    }])
 
 
 _catalog_metadata_cache = None
@@ -3774,6 +3820,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     # ╔══════════════════════════════════════════════════════════╗
     # ║     البحث الموحد في كل الردود (مبرمجة + مخصصة)         ║
     # ╚══════════════════════════════════════════════════════════╝
+
+    if is_positive_social_message(msg_normalized):
+        send_contextual_praise_reply(sender)
+        return
 
     if is_social_or_confused_message(msg_normalized):
         social_intro = "ههههه منورة 😊" if "ه" in msg_normalized else "أنا معك يا غالية 😊"
