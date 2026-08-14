@@ -803,6 +803,10 @@ POSITIVE_SOCIAL_PHRASES = {
     "حلو منتجكم", "منتجكم حلو", "منتجاتكم حلوه", "متجركم حلو", "متجركم جميل",
     "عجبني", "عجبني المنتج", "عجبني متجركم", "شكرا", "شكراً", "يسلمو",
 }
+FRUSTRATION_OR_CONFUSION_PHRASES = {
+    "ما تفهم", "ما تفهم انت", "ما تفهمي", "ما فهمت علي", "مافهمت علي",
+    "مو فاهم", "مش فاهم", "ما تعرف", "ما تعرفي", "الرد غلط", "غلط",
+}
 SHOPPING_ASSISTANT_MESSAGE = (
     "أهلاً بك! أنا مساعدك الذكي من Titiz، ويمكنني مساعدتك في القيام بالكثير من المهام التجارية، مثل:\n\n"
     "- *البحث عن المنتجات:* العثور على جميع الأدوات المنزلية والمنتجات بأسعار تنافسية.\n"
@@ -1922,6 +1926,39 @@ def send_contextual_praise_reply(to):
             {"id": "menu_offers", "title": "🎁 العروض", "description": "قناة التخفيضات والخصومات"},
         ],
     }])
+
+
+def send_product_request_menu(to):
+    """طلب اسم المنتج في رسالة واحدة قابلة للتنفيذ دون تكرار سؤال عام."""
+    send_buttons(
+        to,
+        "أبشري يا غالية 😊 اكتبي اسم الأداة التي تريدينها، أو اختاري الفئة وسأبحث لكِ فوراً.",
+        [
+            {"id": "category_kitchen", "title": "🍳 أدوات مطبخ"},
+            {"id": "category_electronics", "title": "⚡ إلكترونيات"},
+            {"id": "category_cleaning", "title": "🧼 منظفات"},
+        ],
+    )
+
+
+def is_frustration_or_confusion_message(normalized_text):
+    normalized_phrases = {normalize_text(item) for item in FRUSTRATION_OR_CONFUSION_PHRASES}
+    return any(phrase == normalized_text or phrase in normalized_text for phrase in normalized_phrases)
+
+
+def send_conversational_recovery(to, msg_normalized, semantic_result=None):
+    """اختيار رد مهني واحد للرسالة غير المكتملة بدلاً من تكرار التوضيح القديم."""
+    semantic_intent = str((semantic_result or {}).get("intent") or "").strip()
+    if semantic_intent in {"product_search", "product_purchase", "product_choice"}:
+        send_product_request_menu(to)
+        return
+    if is_frustration_or_confusion_message(msg_normalized):
+        send_guided_help(
+            to,
+            "حقك علي يا غالية 😊 ما أبغى أكرر عليكِ. قولي لي تبغين منتج، سلة، طلب، أو عروض وسأمشي معكِ مباشرة.",
+        )
+        return
+    send_guided_help(to, "أنا معك يا غالية 😊 اختاري الخدمة المناسبة أو اكتبي طلبك بطريقتك.")
 
 
 _catalog_metadata_cache = None
@@ -3350,7 +3387,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     if raw_action == "shopping_assistant":
-        send_message(sender, SHOPPING_ASSISTANT_MESSAGE)
+        send_product_request_menu(sender)
         return
 
     if raw_action == "menu_search":
@@ -3729,7 +3766,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
 
     # أزرار القائمة التفاعلية
     if raw_action == "shopping_assistant" or raw_action == "menu_products" or msg_normalized == "menuproducts":
-        send_message(sender, SHOPPING_ASSISTANT_MESSAGE)
+        send_product_request_menu(sender)
         return
 
     if raw_action == "browse_products" or msg_normalized == "browseproducts":
@@ -3872,7 +3909,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if exact_product:
             send_product_card(sender, exact_product)
         else:
-            send_message(sender, "أنا معك يا غالية 😊 هل تريدين منتجاً، متابعة طلب، أم مساعدة بشيء آخر؟")
+            send_conversational_recovery(sender, msg_normalized, semantic_result)
         return
 
     matching = []
@@ -3911,30 +3948,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_matching_products_carousel(sender, matching, msg_normalized)
         return
 
-    # === الاستعلام غير المطابق: لا نعلن عدم التوفر من أول رسالة ===
+    # لا نعيد سؤال التوضيح الطويل مع كل رسالة غير مطابقة؛ نرد مرة واحدة
+    # حسب نية الرسالة ثم نفتح إجراءً واضحاً للعميل.
     if msg_normalized and not is_low_information_query(msg_normalized):
-        session_data = user_sessions.get(sender, {})
-        if not isinstance(session_data, dict):
-            session_data = {}
-        previous_query = normalize_text(session_data.get("pending_product_query", ""))
-        clarification_count = int(session_data.get("product_clarification_count", 0) or 0)
-        session_data["pending_product_query"] = msg_body.strip()
-        session_data["product_clarification_count"] = clarification_count + 1
-        user_sessions[sender] = session_data
-
-        # إذا أكد العميل نفس الطلب بعد سؤال توضيحي، نبلغ الإدارة فقط دون ادعاء عدم التوفر للعميل.
-        if previous_query == msg_normalized and clarification_count >= 1:
-            notify_owner_unavailable_product(sender, msg_body, source="text")
-            send_message(
-                sender,
-                "وصلني طلبك يا غالية 😊 سأرفعه للمراجعة وأتأكد لكِ من أقرب بديل أو من إمكانية توفيره."
-            )
-        else:
-            send_message(
-                sender,
-                "أبشري يا غالية 😊 حتى أساعدك بدقة، هل تقصدين منتجاً محدداً أم تصفين استخدامه؟ "
-                "اكتبي اسمه بطريقة أخرى أو أرسلي صورة له، وسأبحث لكِ عن الأنسب."
-            )
+        send_conversational_recovery(sender, msg_normalized, semantic_result)
         return
 
     # === الرد الذكي الاحتياطي للاستفسارات القصيرة غير المكتملة ===
