@@ -55,12 +55,19 @@ app.handle_customer_message(
 
 assert uncertain
 assert unavailable == []
-assert sent == []
+assert any("لم أتمكن من مطابقتها" in text for _, text in sent)
+
+tea_products = [
+    {"id": 51, "name": "ثلاجة شاي المائدة", "keywords": "ثلاجة,ثلاجات,شاي"},
+    {"id": 52, "name": "ثلاجات شاي التاج الملكي", "keywords": "ثلاجة,ثلاجات,شاي,التاج"},
+]
+assert {item["id"] for item in app.products_related_to_image(tea_products[0], tea_products)} == {51, 52}
 
 sent_cards = []
 cart_additions = []
 button_messages = []
 app.analyze_product_image = lambda *args, **kwargs: {"kind": "product", "product": products[0]}
+app.get_all_products = lambda: products
 real_send_product_card = app.send_product_card
 app.send_product_card = lambda recipient, product: (
     sent_cards.append((recipient, product)),

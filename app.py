@@ -65,6 +65,9 @@ SMART_AI_MODEL = os.environ.get("SMART_AI_MODEL", "gpt-5-mini")
 VOICE_MAX_RETRIES = max(int(os.environ.get("VOICE_MAX_RETRIES", "3")), 1)
 VOICE_RETRY_BASE_SECONDS = max(float(os.environ.get("VOICE_RETRY_BASE_SECONDS", "2")), 1.0)
 VOICE_DEDUP_SECONDS = max(int(os.environ.get("VOICE_DEDUP_SECONDS", "120")), 30)
+IMAGE_MAX_RETRIES = max(int(os.environ.get("IMAGE_MAX_RETRIES", "1")), 1)
+IMAGE_RETRY_BASE_SECONDS = max(float(os.environ.get("IMAGE_RETRY_BASE_SECONDS", "1")), 0.2)
+IMAGE_REQUEST_TIMEOUT = max(float(os.environ.get("IMAGE_REQUEST_TIMEOUT", "25")), 5.0)
 
 # ===== تهيئة الخدمات =====
 whatsapp = WhatsAppAPI(ACCESS_TOKEN, PHONE_NUMBER_ID)
@@ -935,10 +938,12 @@ def _audio_extension(mime_type):
         return ".amr"
     return ".ogg"
 
-def _request_with_429_retry(request_func, request_name, *args, **kwargs):
+def _request_with_429_retry(request_func, request_name, *args, retries=None, retry_base=None, **kwargs):
     """تنفيذ طلب خارجي مع انتظار تدريجي عند تجاوز الحد 429."""
+    max_retries = max(int(retries if retries is not None else VOICE_MAX_RETRIES), 1)
+    base_seconds = max(float(retry_base if retry_base is not None else VOICE_RETRY_BASE_SECONDS), 0.2)
     last_response = None
-    for attempt in range(VOICE_MAX_RETRIES):
+    for attempt in range(max_retries):
         response = request_func(*args, **kwargs)
         last_response = response
         if response.status_code != 429:
@@ -949,12 +954,12 @@ def _request_with_429_retry(request_func, request_name, *args, **kwargs):
             retry_after = float(retry_after_header) if retry_after_header else 0
         except (TypeError, ValueError):
             retry_after = 0
-        delay = max(retry_after, VOICE_RETRY_BASE_SECONDS * (2 ** attempt))
+        delay = max(retry_after, base_seconds * (2 ** attempt))
         print(
-            f"[الصوت] {request_name}: 429 Too Many Requests "
-            f"(محاولة {attempt + 1}/{VOICE_MAX_RETRIES})، انتظار {delay:.1f} ثانية"
+            f"[الخدمة] {request_name}: 429 Too Many Requests "
+            f"(محاولة {attempt + 1}/{max_retries})، انتظار {delay:.1f} ثانية"
         )
-        if attempt < VOICE_MAX_RETRIES - 1:
+        if attempt < max_retries - 1:
             time.sleep(delay)
 
     last_response.raise_for_status()
@@ -1149,7 +1154,12 @@ def resolve_image_product_match(result, products):
             if product:
                 return product
 
-    candidate_text = normalize_text(str(result.get("matched_product_name") or ""))
+    candidate_text = normalize_text(
+        " ".join(
+            str(result.get(key) or "")
+            for key in ("matched_product_name", "extracted_text", "brand", "visual_description")
+        )
+    )
     if not candidate_text:
         candidate_text = normalize_text(str(result.get("reply") or ""))
     if not candidate_text:
@@ -1211,7 +1221,8 @@ def analyze_product_image(sender, message, caption=""):
         else ""
     )
     user_text = (
-        "حلل صورة العميل. إذا كانت الصورة إيصال تحويل أو كشفاً مالياً فاجعل "
+        "حلل صورة العميل بدقة متعددة المراحل. استخرجي النص الظاهر والعلامة التجارية ورقم الموديل "
+        "ووصفاً بصرياً مختصراً للون والشكل والخامة والاستخدام. إذا كانت الصورة إيصال تحويل أو كشفاً مالياً فاجعل "
         "is_payment_proof=true ولا تطابقها مع منتج. إذا كانت صورة منتج، طابقها فقط "
         "مع منتج من القائمة، ويمكن قبول مطابقة معقولة إذا كان الشكل أو الاسم أو العلامة "
         "متوافقاً. لا تخترع اسماً أو سعراً. "
@@ -1223,8 +1234,9 @@ def analyze_product_image(sender, message, caption=""):
             {
                 "role": "system",
                 "content": (
-                    "أنت محللة صور لمتجر Titiz للأدوات المنزلية. أجيبي بنتيجة JSON فقط. "
-                    "قارني الصورة مع أسماء وكلمات المنتجات في الكتالوج، ولا تشترطي كابشن؛ "
+                    "أنت محللة صور دقيقة لمتجر Titiz للأدوات المنزلية. أجيبي بنتيجة JSON فقط. "
+                    "اقرئي أي نص أو شعار أو رقم موديل ظاهر، وصفي اللون والشكل والخامة والاستخدام، "
+                    "ثم قارني هذه الإشارات مع أسماء وكلمات ووصف المنتجات في الكتالوج، ولا تشترطي كابشن؛ "
                     "الصورة المحوّلة من القناة قد تصل بدون كابشن. "
                     "عند عدم التأكد الشديد اجعلي matched_product_id=null وconfidence=0، "
                     "واكتبي رداً عربياً قصيراً يطلب اسم المنتج أو صورة أوضح."
@@ -1252,6 +1264,9 @@ def analyze_product_image(sender, message, caption=""):
                         "is_payment_proof": {"type": "boolean"},
                         "matched_product_id": {"type": ["integer", "null"]},
                         "matched_product_name": {"type": "string"},
+                        "extracted_text": {"type": "string"},
+                        "brand": {"type": "string"},
+                        "visual_description": {"type": "string"},
                         "confidence": {"type": "number"},
                         "reply": {"type": "string"},
                     },
@@ -1260,6 +1275,9 @@ def analyze_product_image(sender, message, caption=""):
                         "is_payment_proof",
                         "matched_product_id",
                         "matched_product_name",
+                        "extracted_text",
+                        "brand",
+                        "visual_description",
                         "confidence",
                         "reply",
                     ],
@@ -1277,7 +1295,9 @@ def analyze_product_image(sender, message, caption=""):
             "Content-Type": "application/json",
         },
         json=payload,
-        timeout=90,
+        timeout=IMAGE_REQUEST_TIMEOUT,
+        retries=IMAGE_MAX_RETRIES,
+        retry_base=IMAGE_RETRY_BASE_SECONDS,
     )
     response.raise_for_status()
     content = response.json().get("choices", [{}])[0].get("message", {}).get("content") or "{}"
@@ -1475,6 +1495,54 @@ def send_product_card(to, product):
         {"id": "shopping_assistant", "title": "🔙 متابعة التسوق"},
     ])
     schedule_product_followup(to, product.get("name", ""))
+
+
+RELATED_PRODUCT_STOPWORDS = {
+    "اصلي", "الاصلي", "اصلية", "الاصلية", "ضمان", "منتجات", "المائدة", "المائده",
+    "الدار", "التاج", "الملكي", "الملكية", "ملك", "ابو", "كبير", "صغير", "وسط",
+    "مدور", "مربع", "هندي", "مفتوح", "برمه", "حجم", "حبات", "قطعة", "قطع",
+}
+
+
+def _family_token(token):
+    token = normalize_text(token)
+    return token[:5] if len(token) >= 5 else token
+
+
+def products_related_to_image(product, products):
+    """تجميع منتجات الفئة نفسها، مثل كل ثلاجات الشاي، من المنتج الذي طابقته الصورة."""
+    if not isinstance(product, dict):
+        return []
+    seed_text = " ".join([
+        str(product.get("name") or ""),
+        str(product.get("keywords") or ""),
+        str(product.get("description") or ""),
+    ])
+    seed_tokens = {
+        _family_token(token)
+        for token in normalize_text(seed_text).replace(",", " ").split()
+        if len(token) >= 3 and token not in RELATED_PRODUCT_STOPWORDS
+    }
+    if not seed_tokens:
+        return [product]
+    scored = []
+    for candidate in products:
+        candidate_text = " ".join([
+            str(candidate.get("name") or ""),
+            str(candidate.get("keywords") or ""),
+            str(candidate.get("description") or ""),
+        ])
+        candidate_tokens = {
+            _family_token(token)
+            for token in normalize_text(candidate_text).replace(",", " ").split()
+            if len(token) >= 3 and token not in RELATED_PRODUCT_STOPWORDS
+        }
+        overlap = len(seed_tokens & candidate_tokens)
+        if overlap:
+            scored.append((overlap, candidate))
+    scored.sort(key=lambda item: item[0], reverse=True)
+    related = [candidate for _, candidate in scored]
+    return related or [product]
 
 
 def send_matching_products_carousel(to, products, query_key=""):
@@ -2956,12 +3024,27 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             print(f"[الصورة] تعذر تحليل صورة المنتج: {exc}")
             image_result = None
         if image_result and image_result.get("kind") == "product":
-            send_product_card(sender, image_result["product"])
+            matched_product = image_result["product"]
+            related_products = products_related_to_image(matched_product, get_all_products())
+            if len(related_products) >= 2:
+                send_matching_products_carousel(
+                    sender,
+                    related_products,
+                    query_key=f"image_{matched_product.get('id', '')}",
+                )
+            else:
+                send_product_card(sender, matched_product)
             return
         if image_result and image_result.get("kind") == "payment_proof":
             send_message(sender, image_result["reply"])
             return
         notify_owner_uncertain_product_image(sender, image_id=image_id, caption=caption)
+        send_message(
+            sender,
+            "📸 وصلت صورة المنتج يا غالية 😊\n"
+            "لم أتمكن من مطابقتها مع الكتالوج حالياً، ولم أعتبرها غير متوفرة.\n"
+            "اكتبي اسم المنتج أو أرسلي صورة أوضح وسأرسل لكِ الصورة والسعر والوصف والأزرار مباشرة 🛍️",
+        )
         return
 
     if state == "product_context":
