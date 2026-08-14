@@ -334,6 +334,30 @@ def product_search_terms(msg_normalized):
     return list(dict.fromkeys(term for term in terms if term))
 
 
+def match_products_from_text(query, products):
+    """مطابقة اسم أو كابشن أو وصف المنتج قبل استدعاء تحليل الصورة المكلف."""
+    normalized_query = normalize_text(query)
+    if not normalized_query or is_low_information_query(normalized_query):
+        return []
+    corrected_query = correct_search_spelling(normalized_query)
+    search_terms = product_search_terms(normalized_query)
+    query_tokens = {
+        token for token in corrected_query.split()
+        if len(token) >= 3 and token not in SEARCH_STOPWORDS
+    }
+    matches = []
+    for product in products or []:
+        searchable_text = _searchable_product_text(product)
+        if any(term in searchable_text for term in search_terms if len(term) >= 3):
+            matches.append(product)
+            continue
+        product_tokens = set(searchable_text.split())
+        fuzzy_hits = sum(_fuzzy_token_match(token, product_tokens) for token in query_tokens)
+        if fuzzy_hits >= 1 and (len(query_tokens) == 1 or fuzzy_hits >= 2):
+            matches.append(product)
+    return matches
+
+
 PRODUCT_PURCHASE_KEYWORDS = [
     "اشتي هذا", "اشتي هاذا", "اشتي هذه", "اشتي هاذي", "أشتي هذا", "أشتي هاذا",
     "اريد هذا", "اريد هاذا", "اريد هذه", "اريد هاذي", "أريد هذا", "أريد هاذا",
@@ -1255,9 +1279,12 @@ def analyze_product_image(sender, message, caption=""):
     """تحليل صورة العميل ومطابقتها مع المنتجات دون اعتبار إثبات الدفع منتجاً."""
     if not SMART_AI_API_KEY:
         return None
+    products = get_all_products()[:60]
+    caption_matches = match_products_from_text(caption, products)
+    if caption_matches:
+        return {"kind": "product_family", "products": caption_matches}
     image_bytes, mime_type = download_whatsapp_image(message.get("image", {}))
     image_data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
-    products = get_all_products()[:60]
     product_context = "\n".join(
         f"ID={p.get('id')}; الاسم={p.get('name', '')}; الكلمات={p.get('keywords', '')}; "
         f"السعر={p.get('price', 0)} ريال; الوصف={p.get('description', '')}"
@@ -3084,6 +3111,17 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 )
             else:
                 send_product_card(sender, matched_product)
+            return
+        if image_result and image_result.get("kind") == "product_family":
+            family_products = image_result.get("products") or []
+            if len(family_products) >= 2:
+                send_matching_products_carousel(
+                    sender,
+                    family_products,
+                    query_key=f"caption_{normalize_text(caption)}",
+                )
+            elif family_products:
+                send_product_card(sender, family_products[0])
             return
         if image_result and image_result.get("kind") == "payment_proof":
             send_message(sender, image_result["reply"])

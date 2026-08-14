@@ -22,6 +22,8 @@ products = [
 
 assert "قدور" in app.product_search_terms(app.normalize_text("قذور"))
 assert app.correct_search_spelling(app.normalize_text("قذور")) == "قدور"
+assert app.match_products_from_text("قذور هندي", products)[0]["id"] == 1
+assert app.match_products_from_text("الشيء الذي يقطع الخضروات", products)[0]["id"] == 2
 
 sent = []
 unavailable = []
