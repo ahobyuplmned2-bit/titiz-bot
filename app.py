@@ -349,6 +349,59 @@ PRICE_INQUIRY_RESPONSE = (
     "أسعارنا مخفّضة من البداية ونحرص دائماً نعطيك أفضل سعر ممكن 💛\n"
     "إذا كانت الكمية أكثر من قطعة، أرسلي اسم المنتج والعدد المطلوب، وبنراجع لكِ أفضل سعر مع الإدارة بإذن الله 🤝"
 )
+OFFERS_CHANNEL_URL = "https://whatsapp.com/channel/0029VaqFTglLikgDDe0D5E2D"
+OFFERS_RESPONSE = (
+    "يمكنك العثور على أحدث العروض والخصومات على قناة تخفيضات *Titiz* للأدوات المنزلية "
+    "(تجزئة) في واتساب 📢\n\n"
+    f"🔗 {OFFERS_CHANNEL_URL}\n\n"
+    "من خلال عدة طرق:\n\n"
+    "1. *عروض Big Save:* ابحثي عن المنتجات الحصرية، حيث يمكنك الحصول على خصومات "
+    "في أقسام مخصصة على الصفحة الرئيسية.\n"
+    "2. *الكوبونات:* قد تتوفر كوبونات من المنصة أو من المتاجر مباشرة، ويمكنك التحقق منها عبر قناتنا.\n"
+    "3. *عروض المشترين الجدد:* إذا كانت هذه أول عملية شراء لكِ، فقد تتوفر عروض أو أكواد ترويجية حصرية.\n\n"
+    "تابعي القناة ليصلكِ كل جديد من المنتجات والعروض أولاً بأول 🛍️✨"
+)
+OFFERS_KEYWORDS = [
+    "وين العروض", "وين تنزل العروض", "وين تنزلو العروض", "وين تنزلوا العروض",
+    "اين العروض", "أين العروض", "فين العروض", "فين تنزل العروض", "فين تنزلو العروض",
+    "العروض وين", "العروض فين", "عروضكم وين", "عروضكم فين",
+    "عندكم عروض", "عندكم عرض", "في عروض", "فيه عروض", "في عرض", "فيه عرض",
+    "وين العرض", "وين تنزلوا العروض", "وين تنزلون العروض", "متى العروض",
+    "عروض اليوم", "عروض جديدة", "العروض الجديدة", "العروض الحالية", "العرض الحالي",
+    "عروض خاصة", "عروض حصرية", "عروض القناة", "قناة العروض", "قناة التخفيضات",
+    "التخفيضات", "تخفيضات", "تنزيلات", "تنزيلاتكم", "تنزلوا العروض",
+    "تنشروا العروض", "تنشرون العروض", "من وين اشوف العروض", "كيف اشوف العروض",
+    "كيف اعرف العروض", "ارسلوا العروض", "رابط العروض", "رابط قناة العروض",
+    "رابط القناة", "ايش العروض", "وش العروض", "ما هي العروض", "العروض ايش",
+    "عروض وخصومات", "وين الخصومات", "خصوماتكم وين", "في كوبونات", "كوبونات",
+    "كوبون خصم", "كود خصم", "عرض المشترين الجدد", "عرض المشتري الجديد",
+    "Big Save", "بيج سيف",
+]
+_NORMALIZED_OFFERS_KEYWORDS = {normalize_text(k) for k in OFFERS_KEYWORDS}
+
+
+def is_offers_inquiry(msg_normalized):
+    if not msg_normalized:
+        return False
+    return msg_normalized in _NORMALIZED_OFFERS_KEYWORDS or any(
+        len(keyword) >= 5 and keyword in msg_normalized
+        for keyword in _NORMALIZED_OFFERS_KEYWORDS
+    )
+
+
+def send_offers_response(to):
+    """إرسال رابط قناة العروض مع زر مباشر للمندوبة."""
+    if not whatsapp.send_url_button(
+        to,
+        OFFERS_RESPONSE,
+        "📞 التواصل مع المندوبة",
+        DELEGATE_WHATSAPP_URL,
+    ):
+        send_message(
+            to,
+            OFFERS_RESPONSE
+            + f"\n\n📞 للتواصل مع المندوبة مباشرة:\n{DELEGATE_WHATSAPP_URL}",
+        )
 PRICE_INQUIRY_KEYWORDS = [
     "بكم", "بكم هذا", "بكم هذي", "بكم المنتج", "كم السعر", "السعر كم",
     "كم سعره", "كم سعرها", "كم سعر المنتج", "كم حقه", "كم حقها",
@@ -420,6 +473,7 @@ add_response(
 )
 
 add_response(PRICE_INQUIRY_KEYWORDS, PRICE_INQUIRY_RESPONSE)
+add_response(OFFERS_KEYWORDS, OFFERS_RESPONSE)
 
 add_response(
     ["ثلاجة", "ثلاجه", "الثلاجة", "الثلاجه", "شاي", "ثلاجة شاي",
@@ -3003,6 +3057,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
 
     if is_price_inquiry(msg_normalized):
         send_price_inquiry_response(sender)
+        return
+
+    if is_offers_inquiry(msg_normalized):
+        send_offers_response(sender)
         return
 
     # ╔══════════════════════════════════════════════════════════╗
