@@ -784,6 +784,17 @@ add_response(
 )
 
 WELCOME_MESSAGE = f"👋 أهلاً بكِ في {BOT_NAME}\n\nكيف يمكنني مساعدتك اليوم؟\nهل تبحثين عن منتجات معينة، أم تودين الاستفسار عن طلباتك؟ 😊"
+GUIDED_HELP_MESSAGE = (
+    "أنا معك يا غالية 😊\n"
+    "أقدر أساعدك في البحث عن أي أداة منزلية، متابعة طلباتك، أو معرفة العروض.\n"
+    "اختاري الخدمة المناسبة أو اكتبي طلبك بطريقتك، وسأتابع معك خطوة بخطوة."
+)
+SOCIAL_OR_CONFUSED_PHRASES = {
+    "هههه", "ههههه", "هههههه", "هاها", "هاهاها", "احبك", "احبج", "احسك",
+    "ايش", "ايش؟", "مافهمت", "ما فهمت", "وش", "وش؟", "كيف", "كيف?",
+    "انت روبوت", "انتي روبوت", "تفهمني", "تفهميني", "تجربه", "اختبار",
+    "ما اعرف", "مدري", "ما ادري", "ساعدني", "ساعديني", "ابغى مساعده",
+}
 SHOPPING_ASSISTANT_MESSAGE = (
     "أهلاً بك! أنا مساعدك الذكي من Titiz، ويمكنني مساعدتك في القيام بالكثير من المهام التجارية، مثل:\n\n"
     "- *البحث عن المنتجات:* العثور على جميع الأدوات المنزلية والمنتجات بأسعار تنافسية.\n"
@@ -1395,9 +1406,13 @@ def route_semantic_intent(sender, msg_body, semantic_result, products=None):
             send_message(sender, f"📞 تواصلي مع المندوبة مباشرة:\n{DELEGATE_WHATSAPP_URL}")
         return True
 
+    if semantic_intent in {"social_chat", "clarification", "general"}:
+        send_guided_help(sender, semantic_reply)
+        return True
+
     if semantic_intent in {
-        "social_chat", "affirmation", "rejection", "quantity_change", "comparison",
-        "budget", "clarification", "general", "complaint", "discount", "payment",
+        "affirmation", "rejection", "quantity_change", "comparison", "budget",
+        "complaint", "discount", "payment",
     }:
         if semantic_reply:
             send_message(sender, semantic_reply)
@@ -1838,6 +1853,25 @@ def send_welcome(to):
         {"id": "menu_cart", "title": "🛒 السلة"},
         {"id": "menu_orders", "title": "📦 طلباتي"},
     ])
+
+
+def send_guided_help(to, intro=""):
+    """رد اجتماعي ودود مع قائمة Titiz بدون افتراض أن العميل يبحث عن منتج."""
+    body = (intro.strip() + "\n\n" if intro and intro.strip() else "") + GUIDED_HELP_MESSAGE
+    send_list(to, body, "اختاري الخدمة", [{
+        "title": "كيف أساعدك؟",
+        "rows": [
+            {"id": "menu_search", "title": "🔍 البحث عن منتج", "description": "اكتبي الاسم أو صفي المنتج"},
+            {"id": "menu_cart", "title": "🛒 السلة", "description": "عرض المنتجات التي اخترتها"},
+            {"id": "menu_orders", "title": "📦 طلباتي", "description": "متابعة طلباتك وحالتها"},
+            {"id": "menu_offers", "title": "🎁 العروض", "description": "قناة التخفيضات والخصومات"},
+            {"id": "menu_contact", "title": "📞 التواصل مع المندوبة", "description": "مساعدة مباشرة"},
+        ],
+    }])
+
+
+def is_social_or_confused_message(normalized_text):
+    return normalized_text in {normalize_text(item) for item in SOCIAL_OR_CONFUSED_PHRASES}
 
 
 _catalog_metadata_cache = None
@@ -3684,6 +3718,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_contact_menu(sender)
         return
 
+    if raw_action == "menu_offers" or msg_normalized == "menuoffers":
+        send_offers_response(sender)
+        return
+
     order_number_in_message = extract_order_number(msg_body)
     if (
         is_order_detail_inquiry(msg_normalized)
@@ -3736,6 +3774,15 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     # ╔══════════════════════════════════════════════════════════╗
     # ║     البحث الموحد في كل الردود (مبرمجة + مخصصة)         ║
     # ╚══════════════════════════════════════════════════════════╝
+
+    if is_social_or_confused_message(msg_normalized):
+        social_intro = "ههههه منورة 😊" if "ه" in msg_normalized else "أنا معك يا غالية 😊"
+        if msg_normalized in {normalize_text("احبك"), normalize_text("احبج")}:
+            social_intro = "شكراً لكِ يا غالية، لطفك أسعدني 😊"
+        elif msg_normalized in {normalize_text("مافهمت"), normalize_text("ما فهمت"), normalize_text("ايش"), normalize_text("وش")}:
+            social_intro = "ولا يهمك يا غالية، أبشرح لكِ بطريقة أبسط 😊"
+        send_guided_help(sender, social_intro)
+        return
 
     response_data = find_response(msg_normalized)
     if response_data:

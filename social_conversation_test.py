@@ -3,6 +3,7 @@ import app
 
 sent = []
 app.send_message = lambda recipient, text: sent.append((recipient, text))
+app.send_list = lambda recipient, body, button_text, sections: sent.append((recipient, body, button_text, sections))
 app.send_welcome = lambda recipient: sent.append((recipient, "welcome"))
 app.send_product_card = lambda recipient, product: sent.append((recipient, product.get("name")))
 app.send_cart_view = lambda recipient: sent.append((recipient, "cart"))
@@ -16,6 +17,10 @@ assert app.route_semantic_intent(
     [],
 )
 assert "منورة" in sent[-1][1]
+assert sent[-1][2] == "اختاري الخدمة"
+assert {row["id"] for row in sent[-1][3][0]["rows"]} >= {
+    "menu_search", "menu_cart", "menu_orders", "menu_offers", "menu_contact"
+}
 
 assert app.route_semantic_intent(
     "967700000000",
