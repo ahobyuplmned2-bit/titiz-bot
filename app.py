@@ -2311,7 +2311,12 @@ def products_related_to_image(product, products):
 
 
 def send_matching_products_carousel(to, products, query_key=""):
-    """إرسال كل النتائج المطابقة في كاروسيل واحد دون قائمة أرقام."""
+    """عرض نتائج البحث المتعددة بقائمة واتساب أصلية قابلة للاختيار.
+
+    الكاروسيل الديناميكي ليس رسالة تفاعلية عادية في واجهة WhatsApp Cloud API؛
+    لذلك لا نعتمد عليه لطلب المنتج أو إضافته للسلة. كل صف هنا يحمل معرف المنتج
+    ويقود إلى بطاقته المفردة ذات الأزرار والقائمة المستقرة.
+    """
     guard_key = (to, normalize_text(query_key or ""))
     now = time.time()
     if query_key and now - matching_send_guard.get(guard_key, 0) < MATCHING_SEND_WINDOW:
@@ -2328,71 +2333,57 @@ def send_matching_products_carousel(to, products, query_key=""):
         seen_product_keys.add(product_key)
         unique_products.append(product)
 
-    # نحفظ أول بطاقة ظاهرة كسياق مباشر للنصوص مثل «إضافة» و«أضف».
-    # الأزرار تبقى الوسيلة الأدق لاختيار بطاقة أخرى داخل الكاروسيل.
-    if unique_products:
-        current_session = user_sessions.get(to, {})
-        current_session = current_session if isinstance(current_session, dict) else {}
-        user_sessions[to] = {**current_session, "last_product": unique_products[0]}
-        user_states[to] = "product_context"
-
-    variant_products = [
-        product for product in unique_products
-        if any(parse_product_price(v.get("price")) is not None for v in product_variants(product))
-    ]
-    if len(variant_products) == 1:
-        remember_variant_context(to, variant_products[0])
-
-    cards = []
-    scheduled_names = []
-    seen_card_keys = set()
-    for product in unique_products[:10]:
-        raw_urls = product.get("image_urls", "")
-        if isinstance(raw_urls, str):
-            try:
-                image_urls = json.loads(raw_urls) if raw_urls.startswith("[") else []
-            except json.JSONDecodeError:
-                image_urls = []
-        else:
-            image_urls = raw_urls or []
-        valid_urls = [url for url in image_urls if isinstance(url, str) and url.startswith("http")]
-        if not valid_urls:
+    rows = []
+    seen_titles = set()
+    selected_ids = []
+    for index, product in enumerate(unique_products[:10], 1):
+        product_id = product.get("id")
+        if product_id is None:
             continue
-        scheduled_names.append(product.get("name", ""))
-        # النسخة المختصرة تضع السعر قبل الوصف حتى لا يحذفه حد 160 حرفاً في بطاقة WhatsApp.
-        body = format_product_card(product, compact=True)
-        for url in valid_urls:
-            card_key = (product.get("id") or product.get("name", ""), url)
-            if card_key in seen_card_keys:
-                continue
-            seen_card_keys.add(card_key)
-            valid_variants = [v for v in product_variants(product) if parse_product_price(v.get("price")) is not None]
-            if not valid_variants and parse_product_price(product.get("price")) is None:
-                continue
-            buttons = [{"id": f"det_{product['id']}", "title": "📋 التفاصيل"}]
-            if valid_variants:
-                buttons.insert(0, {"id": f"variants_{product['id']}", "title": "📏 اختيار الحجم"})
-            else:
-                buttons.insert(0, {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"})
-            cards.append({
-                "image_url": url,
-                "body": body,
-                "buttons": buttons,
-            })
+        variants = [
+            variant for variant in product_variants(product)
+            if parse_product_price(variant.get("price")) is not None
+        ]
+        base_price = parse_product_price(product.get("price"))
+        if not variants and base_price is None:
+            continue
+        title = str(product.get("name") or "منتج")[:24]
+        if title in seen_titles:
+            title = f"{title[:20]} {index}"
+        seen_titles.add(title)
+        if variants:
+            prices = [parse_product_price(variant.get("price")) for variant in variants]
+            prices = [price for price in prices if price is not None]
+            description = f"{len(prices)} أحجام — من {int(min(prices))} ريال"
+        else:
+            description = f"السعر: {int(base_price)} ريال"
+        rows.append({
+            "id": f"product_{product_id}",
+            "title": title,
+            "description": description[:72],
+        })
+        selected_ids.append(int(product_id))
 
-    if len(cards) >= 2 and send_carousel(to, "🔍 هذه كل المنتجات المطابقة، اسحبي للعرض:", cards[:10]):
-        if query_key:
-            matching_send_guard[guard_key] = now
-        for name in scheduled_names[:1]:
-            schedule_product_followup(to, name)
-        return True
+    if not rows:
+        return False
 
-    # بديل آمن إذا لم تتوفر روابط صور عامة كافية للكاروسيل.
-    for product in unique_products[:10]:
-        send_product_card(to, canonicalize_product(product))
-    if query_key and unique_products:
+    current_session = user_sessions.get(to, {})
+    current_session = current_session if isinstance(current_session, dict) else {}
+    user_sessions[to] = {
+        **current_session,
+        "matching_product_ids": selected_ids,
+        "search_query": query_key,
+    }
+    user_states[to] = "search_results"
+    result = send_list(
+        to,
+        "🔍 لقيت لك أكثر من خيار مطابق. اختاري المنتج الذي تريدينه وسأرسل لكِ صورته وسعره وأزراره 😊",
+        "اختيار منتج",
+        [{"title": "النتائج المطابقة", "rows": rows}],
+    )
+    if result and query_key:
         matching_send_guard[guard_key] = now
-    return bool(unique_products)
+    return result
 
 def send_list(to, text, button_text, sections):
     _send_voice_reply_if_needed(to, text)
@@ -3519,6 +3510,23 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_variant_list(sender, product)
         else:
             send_message(sender, "⚠️ افتحي بطاقة المنتج مرة أخرى ثم اضغطي «اختيار الحجم» لعرض الخيارات.")
+        return
+
+    # اختيار منتج من قائمة نتائج البحث المتعددة. لا نستخدم أزرار الكاروسيل
+    # لأن القائمة الأصلية تعيد list_reply ثابتاً إلى هذا المسار.
+    if raw_action.startswith("product_"):
+        try:
+            product_id = int(raw_action.split("_", 1)[1])
+        except (ValueError, IndexError):
+            product_id = None
+        allowed_ids = session_context.get("matching_product_ids", [])
+        allowed_ids = {int(item) for item in allowed_ids if str(item).isdigit()}
+        product = get_product(product_id) if product_id and (not allowed_ids or product_id in allowed_ids) else None
+        product = canonicalize_product(product) if product else None
+        if product:
+            send_product_card(sender, product)
+        else:
+            send_message(sender, "⚠️ انتهت صلاحية هذه النتائج. اكتبي اسم المنتج مرة أخرى وسأعرضه لكِ فوراً.")
         return
 
     # فتح قائمة أحجام المنتج من بطاقة الكاروسيل.

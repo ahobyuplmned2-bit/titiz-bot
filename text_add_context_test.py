@@ -29,12 +29,12 @@ assert added_products == [(SENDER, PRODUCT["id"], 1)]
 assert any("تم إضافة" in text for _, text in sent_messages)
 assert not any("المنتجات المطابقة" in text for _, text in sent_messages)
 
-# يحفظ الكاروسيل البطاقة الأولى كسياق نصي عند عرض أكثر من منتج.
+# نتائج البحث المتعددة تطلب اختيار المنتج أولاً ولا تفترض البطاقة الأولى.
 app.user_states.clear()
 app.user_sessions.clear()
-app.send_carousel = lambda *args, **kwargs: True
+app.send_list = lambda *args, **kwargs: True
 app.send_matching_products_carousel(SENDER, [PRODUCT, {**PRODUCT, "id": 98766, "name": "طقم قدور آخر"}], "قدور")
-assert app.user_states[SENDER] == "product_context"
-assert int(app.user_sessions[SENDER]["last_product"]["id"]) == int(PRODUCT["id"])
+assert app.user_states[SENDER] == "search_results"
+assert app.user_sessions[SENDER]["matching_product_ids"] == [PRODUCT["id"], 98766]
 
 print("text_add_context_test: OK")
