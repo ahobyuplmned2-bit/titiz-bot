@@ -4428,10 +4428,9 @@ def webhook():
             processing_message["type"] = "text"
             processing_message["text"] = {"body": msg_body}
         else:
-            send_message(
-                sender,
-                "أقدر أساعدكِ بالنصوص والصور والرسائل الصوتية 😊 أرسلي طلبك كتابةً أو صورة المنتج.",
-            )
+            # لا نرسل رسالة عامة هنا؛ أنواع واتساب غير المدعومة قد تأتي بجانب
+            # ضغطات الأزرار أو بطاقات المنتج، والرد العام يربك مسار الشراء.
+            print(f"[Webhook] تم تجاهل نوع رسالة غير مدعوم: {message.get('type', '')}")
             return jsonify({"status": "ok"}), 200
 
         msg_normalized = normalize_text(msg_body)

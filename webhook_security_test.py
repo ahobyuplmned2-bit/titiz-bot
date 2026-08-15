@@ -41,8 +41,7 @@ valid = client.post(
     headers={"X-Hub-Signature-256": signature},
 )
 assert valid.status_code == 200
-assert len(sent) == 1
-assert "النصوص والصور والرسائل الصوتية" in sent[0][1]
+assert sent == []
 
 handled = []
 app.handle_customer_message = lambda sender, body, normalized, message: handled.append(
