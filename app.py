@@ -3457,6 +3457,63 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     }:
         cancel_customer_followup(sender)
 
+    # بعض أجهزة واتساب تعيد عنوان الزر الظاهر مع الإيموجي بدلاً من المعرّف.
+    # نحول العنوان المكتوب أو عنوان الزر إلى نفس المعرّف قبل أن يصل للفهم العام.
+    button_text_aliases = {
+        "التفاصيل": "details",
+        "تفاصيل": "details",
+        "اضافة للسلة": "add_to_cart",
+        "اضافه للسلة": "add_to_cart",
+        "اضف للسلة": "add_to_cart",
+        "اضف هذا الحجم": "add_matched_variant",
+        "اضافة هذا الحجم": "add_matched_variant",
+        "عرض السلة": "menu_cart",
+        "السلة": "menu_cart",
+        "اكمال الطلب": "checkout",
+        "اكمل الطلب": "checkout",
+        "تفريغ السلة": "clear_cart",
+        "متابعة التسوق": "shopping_assistant",
+        "المنتجات": "browse_products",
+        "طلباتي": "menu_orders",
+        "العروض": "menu_offers",
+        "التواصل مع المندوبة": "menu_contact",
+    }
+    text_button_action = button_text_aliases.get(msg_normalized)
+    session_context = user_sessions.get(sender, {})
+    session_context = session_context if isinstance(session_context, dict) else {}
+    context_product = session_context.get("last_product")
+    context_product = canonicalize_product(context_product) if isinstance(context_product, dict) else None
+    if not context_product:
+        context_product = get_variant_context_product(sender)
+
+    if text_button_action == "details":
+        if context_product:
+            raw_action = f"det_{context_product['id']}"
+        else:
+            send_message(sender, "📋 أرسلي اسم المنتج أو افتحي بطاقته أولاً لعرض التفاصيل.")
+            return
+    elif text_button_action == "add_to_cart":
+        if context_product:
+            raw_action = (
+                f"variants_{context_product['id']}"
+                if product_variants(context_product)
+                else f"add_{context_product['id']}"
+            )
+        else:
+            send_message(sender, "🛒 افتحي بطاقة المنتج أو اكتبي اسمه أولاً حتى أضيفه للسلة.")
+            return
+    elif text_button_action == "add_matched_variant":
+        variant_index = session_context.get("matched_variant_index")
+        if context_product and isinstance(variant_index, int):
+            raw_action = f"variant_{context_product['id']}_{variant_index}"
+        elif context_product:
+            raw_action = f"variants_{context_product['id']}"
+        else:
+            send_message(sender, "📏 افتحي بطاقة المنتج أو اختاري الحجم أولاً.")
+            return
+    elif text_button_action:
+        raw_action = text_button_action
+
     if raw_action == PRODUCT_FOLLOWUP_SATISFIED_ID:
         send_message(sender, PRODUCT_FOLLOWUP_SATISFIED_MESSAGE)
         followup = get_customer_followup(sender) or {}
