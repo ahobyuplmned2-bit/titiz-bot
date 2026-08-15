@@ -27,7 +27,8 @@ for phrase in phrases:
     assert "أفضل سعر" in response["reply"], phrase
     assert "اسم المنتج" in response["reply"], phrase
 
-assert app.find_response(app.normalize_text("ثلاجة شاي")) is not None
+# لم يعد هناك رد ثابت لثلاجة M213 المحذوفة؛ البحث يمر عبر الكتالوج والذكاء السياقي.
+assert app.find_response(app.normalize_text("ثلاجة شاي")) is None
 assert app.find_response(app.normalize_text("نقصوا لنا ثلاجة شاي"))["reply"] == app.RESP_DISCOUNT
 assert app.find_response(app.normalize_text("احنا زبائن عندكم نقصوا لنا"))["reply"] == app.RESP_DISCOUNT
 assert app.find_response(app.normalize_text("اكسبو نا زبان"))["reply"] == app.RESP_DISCOUNT

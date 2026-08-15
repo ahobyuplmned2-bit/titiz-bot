@@ -19,8 +19,11 @@ import time
 import unicodedata
 from threading import Lock, Thread
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import ContextVar
 from urllib.parse import quote
 from PIL import Image, ImageOps
+import asyncio
+import edge_tts
 
 # استيراد الملفات المخصصة
 from database import (
@@ -73,6 +76,9 @@ SMART_AI_MODEL = os.environ.get("SMART_AI_MODEL", "gpt-5-mini")
 VOICE_MAX_RETRIES = max(int(os.environ.get("VOICE_MAX_RETRIES", "3")), 1)
 VOICE_RETRY_BASE_SECONDS = max(float(os.environ.get("VOICE_RETRY_BASE_SECONDS", "2")), 1.0)
 VOICE_DEDUP_SECONDS = max(int(os.environ.get("VOICE_DEDUP_SECONDS", "120")), 30)
+VOICE_REPLY_ENABLED = os.environ.get("VOICE_REPLY_ENABLED", "true").strip().lower() not in {"0", "false", "no", "off"}
+VOICE_REPLY_VOICE = os.environ.get("VOICE_REPLY_VOICE", "ar-YE-MaryamNeural").strip() or "ar-YE-MaryamNeural"
+VOICE_REPLY_MAX_CHARS = max(int(os.environ.get("VOICE_REPLY_MAX_CHARS", "480")), 120)
 IMAGE_MAX_RETRIES = max(int(os.environ.get("IMAGE_MAX_RETRIES", "1")), 1)
 IMAGE_RETRY_BASE_SECONDS = max(float(os.environ.get("IMAGE_RETRY_BASE_SECONDS", "1")), 0.2)
 IMAGE_REQUEST_TIMEOUT = max(float(os.environ.get("IMAGE_REQUEST_TIMEOUT", "25")), 5.0)
@@ -91,6 +97,8 @@ user_states = {}
 active_message_events = {}
 voice_processing_lock = Lock()
 voice_recent_media = {}
+voice_reply_mode = ContextVar("voice_reply_mode", default=False)
+voice_reply_sent = ContextVar("voice_reply_sent", default=False)
 SEMANTIC_INTENTS = {
     "product_search", "product_purchase", "price_inquiry", "orders", "cart", "payment",
     "offers", "discount", "complaint", "greeting", "clarification", "general", "social_chat",
@@ -1073,7 +1081,49 @@ def _record_outbound_event(to, message_type, body="", media_id=""):
         return None
 
 
+def _voice_text(text):
+    """تنظيف نص الرد واحتواؤه في طول مناسب لمقطع صوتي قصير."""
+    cleaned = re.sub(r"[*_`~]", "", str(text or ""))
+    cleaned = re.sub(r"https?://\S+", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if len(cleaned) > VOICE_REPLY_MAX_CHARS:
+        cleaned = cleaned[:VOICE_REPLY_MAX_CHARS].rsplit(" ", 1)[0].strip() + "..."
+    return cleaned
+
+
+async def _generate_female_voice_audio(spoken_text):
+    """توليد MP3 عربي بصوت أنثوي عبر خدمة Edge TTS."""
+    output = io.BytesIO()
+    communicate = edge_tts.Communicate(spoken_text, VOICE_REPLY_VOICE, rate="+0%", pitch="+0Hz")
+    async for chunk in communicate.stream():
+        if chunk.get("type") == "audio":
+            output.write(chunk.get("data", b""))
+    return output.getvalue()
+
+
+def _send_voice_reply_if_needed(to, text):
+    """يرسل أول رد للرسالة الصوتية كمقطع صوتي، ويعيد False للنص الاحتياطي عند التعذر."""
+    if not VOICE_REPLY_ENABLED or not voice_reply_mode.get() or voice_reply_sent.get():
+        return False
+    spoken_text = _voice_text(text)
+    if not spoken_text:
+        return False
+    try:
+        audio_bytes = asyncio.run(_generate_female_voice_audio(spoken_text))
+        if len(audio_bytes) < 512:
+            raise ValueError("ملف الرد الصوتي قصير جداً")
+        if whatsapp.send_audio(to, audio_bytes, "audio/mpeg", "titiz-reply.mp3"):
+            _record_outbound_event(to, "audio", spoken_text)
+            voice_reply_sent.set(True)
+            return True
+    except Exception as exc:
+        print(f"[الصوت] تعذر إنشاء أو إرسال الرد الصوتي: {exc}")
+    return False
+
+
 def send_message(to, text):
+    if _send_voice_reply_if_needed(to, text):
+        return True
     result = whatsapp.send_message(to, text)
     if result:
         _record_outbound_event(to, "text", text)
@@ -1850,18 +1900,21 @@ def deliver_pending_replies(to):
             mark_pending_reply_sent(pending["id"])
 
 def send_image(to, image_url, caption=""):
+    _send_voice_reply_if_needed(to, caption)
     result = whatsapp.send_image(to, image_url, caption)
     if result:
         _record_outbound_event(to, "image", caption, image_url)
     return result
 
 def send_image_by_id(to, media_id, caption=""):
+    _send_voice_reply_if_needed(to, caption)
     result = whatsapp.send_image_by_id(to, media_id, caption)
     if result:
         _record_outbound_event(to, "image", caption, media_id)
     return result
 
 def send_buttons(to, text, buttons):
+    _send_voice_reply_if_needed(to, text)
     result = whatsapp.send_buttons(to, text, buttons)
     if result:
         _record_outbound_event(to, "interactive_buttons", text)
@@ -1869,6 +1922,7 @@ def send_buttons(to, text, buttons):
 
 
 def send_carousel(to, text, cards):
+    _send_voice_reply_if_needed(to, text)
     result = whatsapp.send_carousel(to, text, cards)
     if result:
         _record_outbound_event(to, "interactive_carousel", text)
@@ -2276,6 +2330,7 @@ def send_matching_products_carousel(to, products, query_key=""):
     return bool(unique_products)
 
 def send_list(to, text, button_text, sections):
+    _send_voice_reply_if_needed(to, text)
     result = whatsapp.send_list(to, text, button_text, sections)
     if result:
         _record_outbound_event(to, "interactive_list", text)
@@ -4194,10 +4249,19 @@ def webhook():
                 return jsonify({"status": "ok"}), 200
 
         # معالجة رسائل العملاء (والمالك للاختبار)
+        voice_mode_token = None
+        voice_sent_token = None
+        if original_message_type == "audio" and sender != OWNER_NUMBER:
+            voice_mode_token = voice_reply_mode.set(True)
+            voice_sent_token = voice_reply_sent.set(False)
         try:
             deliver_pending_replies(sender)
             handle_customer_message(sender, msg_body, msg_normalized, processing_message)
         finally:
+            if voice_sent_token is not None:
+                voice_reply_sent.reset(voice_sent_token)
+            if voice_mode_token is not None:
+                voice_reply_mode.reset(voice_mode_token)
             persist_customer_session(sender)
             active_message_events.pop(sender, None)
 

@@ -8,6 +8,9 @@ class FakeResponse:
     status_code = 200
     text = "ok"
 
+    def json(self):
+        return {"id": "uploaded-audio-id"}
+
 
 def fake_post(url, **kwargs):
     requests_payloads.append((url, kwargs.get("json") or {}))
@@ -31,11 +34,15 @@ assert client.send_list("967700000001", "الخدمات", "اختاري", [{
     "rows": [{"id": "menu_search", "title": "بحث", "description": "بحث عن منتج"}],
 }])
 assert client.send_url_button("967700000001", "مساعدة", "مراسلة", "https://wa.me/967712282204")
+assert client.send_audio("967700000001", b"ID3" + b"x" * 1024)
 
 buttons_payload = requests_payloads[3][1]
 assert buttons_payload["interactive"]["type"] == "button"
 assert len(buttons_payload["interactive"]["action"]["buttons"]) == 3
 assert requests_payloads[4][1]["interactive"]["type"] == "list"
 assert requests_payloads[5][1]["interactive"]["type"] == "cta_url"
+assert requests_payloads[6][0].endswith("/media")
+assert requests_payloads[7][1]["type"] == "audio"
+assert requests_payloads[7][1]["audio"]["id"] == "uploaded-audio-id"
 
 print("whatsapp_payload_test: OK")

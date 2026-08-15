@@ -169,6 +169,42 @@ class WhatsAppAPI:
             print(f"خطأ في إرسال الصورة: {e}")
             return False
 
+    def send_audio(self, recipient_phone, audio_bytes, mime_type="audio/mpeg", filename="titiz-reply.mp3"):
+        """رفع مقطع صوتي ثم إرساله للعميل كرسالة صوتية عبر WhatsApp Cloud API."""
+        try:
+            headers = {"Authorization": f"Bearer {self.access_token}"}
+            upload_response = requests.post(
+                f"{self.api_url}/media",
+                headers=headers,
+                data={"messaging_product": "whatsapp", "type": "audio"},
+                files={"file": (filename, audio_bytes, mime_type)},
+                timeout=30,
+            )
+            if upload_response.status_code not in {200, 201}:
+                print(f"خطأ رفع الصوت لواتساب: {upload_response.status_code} {upload_response.text[:300]}")
+                return False
+            media_id = (upload_response.json() or {}).get("id", "")
+            if not media_id:
+                print("خطأ رفع الصوت لواتساب: لم يرجع معرف الوسائط")
+                return False
+            response = requests.post(
+                self.messages_url,
+                headers={**headers, "Content-Type": "application/json"},
+                json={
+                    "messaging_product": "whatsapp",
+                    "to": recipient_phone,
+                    "type": "audio",
+                    "audio": {"id": media_id},
+                },
+                timeout=20,
+            )
+            if response.status_code != 200:
+                print(f"خطأ إرسال الصوت لواتساب: {response.status_code} {response.text[:300]}")
+            return response.status_code == 200
+        except Exception as e:
+            print(f"خطأ في إرسال الصوت: {e}")
+            return False
+
     def send_carousel(self, recipient_phone, message_text, cards):
         """إرسال كاروسيل أفقي من 2 إلى 10 بطاقات صور مع أزرار سريعة."""
         try:
