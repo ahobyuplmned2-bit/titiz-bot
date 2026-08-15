@@ -396,6 +396,17 @@ def match_products_from_text(query, products):
     if not normalized_query or is_low_information_query(normalized_query):
         return []
     corrected_query = correct_search_spelling(normalized_query)
+    precise_phrase = " ".join(
+        token for token in corrected_query.split()
+        if len(token) >= 2 and token not in SEARCH_STOPWORDS
+    )
+    if len(precise_phrase) >= 5:
+        exact_phrase_matches = [
+            product for product in products or []
+            if precise_phrase in _searchable_product_text(product)
+        ]
+        if exact_phrase_matches:
+            return exact_phrase_matches
     search_terms = product_search_terms(normalized_query)
     query_tokens = {
         token for token in corrected_query.split()
