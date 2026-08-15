@@ -10,6 +10,7 @@ containers = catalog["علب حافظات أبو قفل طقم 5 قطع"]
 trays = catalog["صياني أكواب 3 حبات"]
 gas_spanner = catalog["بانات غاز جهتين أصلية"]
 pressure_whistles = catalog["صفيرات ضغط 3 أحجام"]
+crown_glasses = catalog["اقلاص التاج الملكي الصغير 6 حبات"]
 
 assert flask["price"] == "1600"
 assert "أبو قلص" in flask["keywords"]
@@ -40,6 +41,11 @@ assert "صفارات ضغط" in pressure_whistles["keywords"]
 assert "3 احجام" in pressure_whistles["keywords"]
 assert "pressure-cooker-whistles-400.jpg" in pressure_whistles["image_urls"]
 
+assert crown_glasses["price"] == "1000"
+assert "اقلاص التاج الملكي" in crown_glasses["keywords"]
+assert "6 حبات" in crown_glasses["keywords"]
+assert crown_glasses["image_urls"].count("crown-royal-tea-glasses-small-") == 3
+
 products = [{"id": index, **data} for index, data in enumerate(catalog.values(), 1)]
 flask_matches = app.match_products_from_text("ابو قلص", products)
 chopper_matches = app.match_products_from_text("فرامة مروحية", products)
@@ -47,11 +53,13 @@ container_matches = app.match_products_from_text("حافظات ابو قفل", p
 tray_matches = app.match_products_from_text("صياني اكواب", products)
 gas_spanner_matches = app.match_products_from_text("مفتاح غاز", products)
 pressure_whistle_matches = app.match_products_from_text("صفارات ضغط", products)
+crown_glasses_matches = app.match_products_from_text("قلاص التاج الملكي", products)
 assert [item["name"] for item in flask_matches] == [flask["name"]]
 assert [item["name"] for item in chopper_matches] == [chopper["name"]]
 assert containers["name"] in [item["name"] for item in container_matches]
 assert trays["name"] in [item["name"] for item in tray_matches]
 assert gas_spanner["name"] in [item["name"] for item in gas_spanner_matches]
 assert pressure_whistles["name"] in [item["name"] for item in pressure_whistle_matches]
+assert crown_glasses["name"] in [item["name"] for item in crown_glasses_matches]
 
 print("new_catalog_products_test: OK")
