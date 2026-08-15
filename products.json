@@ -458,5 +458,40 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/crown-royal-tea-glasses/crown-royal-tea-glasses-small-1.jpg\", \"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/crown-royal-tea-glasses/crown-royal-tea-glasses-small-2.jpg\", \"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/crown-royal-tea-glasses/crown-royal-tea-glasses-small-3.jpg\"]",
     "variants": ""
+  },
+  "سلال رحلات": {
+    "name": "سلال رحلات",
+    "price": "800",
+    "description": "سلال رحلات عملية وخفيفة بتصميم أنيق ومقبضين للحمل، مناسبة للرحلات والتنزه والتسوق وترتيب أغراض المنزل.",
+    "keywords": "سلال رحلات,سلة رحلات,سلال,سله,سلة,سلال نزهة,سلة نزهة,سلال تنزه,سلة تنزه,سلة سفر,سلال سفر,سلال طلعات,سلة طلعات,سلة بيكنك,سلال بيكنك,سلة تسوق,سلال تسوق,سلة بلاستيك,سلال بلاستيك,سلة اغراض,سلة أغراض,سلال اغراض,سلال أغراض,سلة ملابس,سلال ملابس,رحلات,نزهات,تنزه,حديقة,تخييم,تسوق,أدوات منزلية,مستلزمات المنزل",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/picnic-baskets/picnic-basket-800.jpg\"]",
+    "variants": ""
+  },
+  "صحون فرم حراري 3 أحجام": {
+    "name": "صحون فرم حراري 3 أحجام",
+    "price": "1500",
+    "description": "صحون فرم حراري زجاجية متوفرة بثلاثة أحجام، مناسبة للتقديم والسلطات وحفظ الحرارة، ويمكن طلب كل حجم أو الطقم كامل 3 حبات.",
+    "keywords": "صحون فرم,صحون فرم حراري,صحن فرم,صحن حراري,صحون حراري,صحون زجاج,صحون زجاجية,صحن زجاج,طبق فرم,طبق حراري,اطباق فرم,أطباق فرم,اطباق حرارية,أطباق حرارية,صحون تقديم,صحون سلطة,صحون سلطه,زبدية,زبدية زجاج,زبادي زجاج,جاط زجاج,جاط حراري,صغير,وسط,كبير,3 احجام,٣ احجام,ثلاث احجام,ثلاثة احجام,طقم صحون,طقم 3 حبات,طقم ثلاث حبات,3 حبات,فرم,حراري,زجاج مقاوم للحرارة,تقديم,ضيافة,أدوات تقديم,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/thermal-serving-bowls/thermal-serving-bowls-3sizes.jpg\"]",
+    "variants": [
+      {
+        "name": "صغير",
+        "price": "1500"
+      },
+      {
+        "name": "وسط",
+        "price": "2000"
+      },
+      {
+        "name": "كبير",
+        "price": "2500"
+      },
+      {
+        "name": "الطقم 3 حبات",
+        "price": "5000"
+      }
+    ]
   }
 }
