@@ -2282,6 +2282,14 @@ def send_matching_products_carousel(to, products, query_key=""):
         seen_product_keys.add(product_key)
         unique_products.append(product)
 
+    # نحفظ أول بطاقة ظاهرة كسياق مباشر للنصوص مثل «إضافة» و«أضف».
+    # الأزرار تبقى الوسيلة الأدق لاختيار بطاقة أخرى داخل الكاروسيل.
+    if unique_products:
+        current_session = user_sessions.get(to, {})
+        current_session = current_session if isinstance(current_session, dict) else {}
+        user_sessions[to] = {**current_session, "last_product": unique_products[0]}
+        user_states[to] = "product_context"
+
     variant_products = [
         product for product in unique_products
         if any(parse_product_price(v.get("price")) is not None for v in product_variants(product))
@@ -3779,7 +3787,22 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         context = user_sessions.get(sender, {})
         last_product = context.get("last_product") if isinstance(context, dict) else None
         if last_product:
-            if raw_action in {"add", "اضف", "أضف", "إضافة", "طلب", "شراء"} or is_product_purchase_request(msg_normalized):
+            add_actions = {
+                normalize_text(action)
+                for action in [
+                    "add", "إضافة", "اضافه", "أضف", "اضف", "ضيف", "ضف",
+                    "حط", "حطه", "حطيه", "طلب", "شراء",
+                ]
+            }
+            if msg_normalized in add_actions or is_product_purchase_request(msg_normalized):
+                valid_variants = [
+                    variant for variant in product_variants(last_product)
+                    if parse_product_price(variant.get("price")) is not None
+                ]
+                if valid_variants:
+                    send_message(sender, f"📏 اختاري الحجم أو الخيار المطلوب من *{last_product['name']}* أولاً 😊")
+                    send_variant_list(sender, last_product)
+                    return
                 if add_to_cart(sender, last_product["id"], 1):
                     send_message(sender, f"✅ تم إضافة *{last_product['name']}* إلى السلة")
                     send_buttons(sender, "ماذا تريدين الآن؟", [
