@@ -2311,12 +2311,7 @@ def products_related_to_image(product, products):
 
 
 def send_matching_products_carousel(to, products, query_key=""):
-    """عرض نتائج البحث المتعددة بقائمة واتساب أصلية قابلة للاختيار.
-
-    الكاروسيل الديناميكي ليس رسالة تفاعلية عادية في واجهة WhatsApp Cloud API؛
-    لذلك لا نعتمد عليه لطلب المنتج أو إضافته للسلة. كل صف هنا يحمل معرف المنتج
-    ويقود إلى بطاقته المفردة ذات الأزرار والقائمة المستقرة.
-    """
+    """إرسال كل النتائج المطابقة في كاروسيل متجاور كما يظهر للعميل."""
     guard_key = (to, normalize_text(query_key or ""))
     now = time.time()
     if query_key and now - matching_send_guard.get(guard_key, 0) < MATCHING_SEND_WINDOW:
@@ -2333,57 +2328,64 @@ def send_matching_products_carousel(to, products, query_key=""):
         seen_product_keys.add(product_key)
         unique_products.append(product)
 
-    rows = []
-    seen_titles = set()
-    selected_ids = []
-    for index, product in enumerate(unique_products[:10], 1):
-        product_id = product.get("id")
-        if product_id is None:
-            continue
-        variants = [
-            variant for variant in product_variants(product)
-            if parse_product_price(variant.get("price")) is not None
-        ]
-        base_price = parse_product_price(product.get("price"))
-        if not variants and base_price is None:
-            continue
-        title = str(product.get("name") or "منتج")[:24]
-        if title in seen_titles:
-            title = f"{title[:20]} {index}"
-        seen_titles.add(title)
-        if variants:
-            prices = [parse_product_price(variant.get("price")) for variant in variants]
-            prices = [price for price in prices if price is not None]
-            description = f"{len(prices)} أحجام — من {int(min(prices))} ريال"
-        else:
-            description = f"السعر: {int(base_price)} ريال"
-        rows.append({
-            "id": f"product_{product_id}",
-            "title": title,
-            "description": description[:72],
-        })
-        selected_ids.append(int(product_id))
-
-    if not rows:
-        return False
-
+    # يبقى أول منتج كسياق للكتابة مثل «أضف»، وتبقى أزرار كل بطاقة هي الأدق.
     current_session = user_sessions.get(to, {})
     current_session = current_session if isinstance(current_session, dict) else {}
-    user_sessions[to] = {
-        **current_session,
-        "matching_product_ids": selected_ids,
-        "search_query": query_key,
-    }
-    user_states[to] = "search_results"
-    result = send_list(
-        to,
-        "🔍 لقيت لك أكثر من خيار مطابق. اختاري المنتج الذي تريدينه وسأرسل لكِ صورته وسعره وأزراره 😊",
-        "اختيار منتج",
-        [{"title": "النتائج المطابقة", "rows": rows}],
-    )
-    if result and query_key:
+    if unique_products:
+        user_sessions[to] = {**current_session, "last_product": unique_products[0]}
+        user_states[to] = "product_context"
+
+    variant_products = [
+        product for product in unique_products
+        if any(parse_product_price(v.get("price")) is not None for v in product_variants(product))
+    ]
+    if len(variant_products) == 1:
+        remember_variant_context(to, variant_products[0])
+
+    cards = []
+    scheduled_names = []
+    seen_card_keys = set()
+    for product in unique_products[:10]:
+        raw_urls = product.get("image_urls", "")
+        if isinstance(raw_urls, str):
+            try:
+                image_urls = json.loads(raw_urls) if raw_urls.startswith("[") else []
+            except json.JSONDecodeError:
+                image_urls = []
+        else:
+            image_urls = raw_urls or []
+        valid_urls = [url for url in image_urls if isinstance(url, str) and url.startswith("http")]
+        if not valid_urls:
+            continue
+        scheduled_names.append(product.get("name", ""))
+        body = format_product_card(product, compact=True)
+        for url in valid_urls:
+            card_key = (product.get("id") or product.get("name", ""), url)
+            if card_key in seen_card_keys:
+                continue
+            seen_card_keys.add(card_key)
+            valid_variants = [v for v in product_variants(product) if parse_product_price(v.get("price")) is not None]
+            if not valid_variants and parse_product_price(product.get("price")) is None:
+                continue
+            buttons = [{"id": f"det_{product['id']}", "title": "📋 التفاصيل"}]
+            if valid_variants:
+                buttons.insert(0, {"id": f"variants_{product['id']}", "title": "📏 اختيار الحجم"})
+            else:
+                buttons.insert(0, {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"})
+            cards.append({"image_url": url, "body": body, "buttons": buttons})
+
+    if len(cards) >= 2 and send_carousel(to, "🔍 هذه كل المنتجات المطابقة، اسحبي للعرض:", cards[:10]):
         matching_send_guard[guard_key] = now
-    return result
+        for name in scheduled_names[:1]:
+            schedule_product_followup(to, name)
+        return True
+
+    # إذا لم تتوفر صورتان عامتان، نرسل البطاقات المفردة بدلاً من إخفاء النتائج.
+    for product in unique_products[:10]:
+        send_product_card(to, canonicalize_product(product))
+    if query_key and unique_products:
+        matching_send_guard[guard_key] = now
+    return bool(unique_products)
 
 def send_list(to, text, button_text, sections):
     _send_voice_reply_if_needed(to, text)
@@ -4340,6 +4342,11 @@ def webhook():
             elif interactive.get("type") == "list_reply":
                 list_reply = interactive.get("list_reply", {})
                 msg_body = list_reply.get("id") or list_reply.get("title", "")
+        elif message.get("type") == "button":
+            # أزرار quick reply داخل الكاروسيل تصل من واتساب بنوع button
+            # وpayload يحتوي المعرّف نفسه مثل variants_123 أو det_123.
+            button = message.get("button", {}) or {}
+            msg_body = button.get("payload") or button.get("text", "")
         elif message.get("type") == "image":
             msg_body = message.get("image", {}).get("caption", "").strip()
         elif message.get("type") == "document":
