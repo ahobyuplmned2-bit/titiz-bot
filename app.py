@@ -2444,6 +2444,29 @@ def notify_owner_unavailable_product(sender, request_text, source="text", image_
     if image_id:
         send_image_by_id(OWNER_NUMBER, image_id, "🖼️ صورة المنتج المطلوب غير المتوفر")
 
+
+UNAVAILABLE_IMAGE_RESPONSE = (
+    "💛 يا غالية، وصلتنا صورة المنتج وراجعنا الكتالوج بعناية.\n\n"
+    "المنتج غير متوفر عندنا حالياً، لكن ما خلّينا طلبك يضيع: أرسلنا الصورة مباشرة للإدارة "
+    "حتى نحاول توفيره لكِ بأسرع وقت ممكن.\n\n"
+    "📞 إذا تحبين تعرفين البدائل أو تتابعين توفره، تواصلي مع المندوبة الآن، "
+    "وسنتواصل معكِ فور توفره بإذن الله 😊"
+)
+
+
+def send_unavailable_image_response(to):
+    """إبلاغ العميل بلطف مع زر مباشر للمندوبة عند عدم مطابقة صورة المنتج."""
+    if not whatsapp.send_url_button(
+        to,
+        UNAVAILABLE_IMAGE_RESPONSE,
+        "📞 التواصل مع المندوبة",
+        DELEGATE_WHATSAPP_URL,
+    ):
+        send_message(
+            to,
+            UNAVAILABLE_IMAGE_RESPONSE + f"\n\n📞 التواصل مع المندوبة:\n{DELEGATE_WHATSAPP_URL}",
+        )
+
 def notify_owner_new_order(order_number, phone, name, address, items, total, payment_method):
     items_text = ""
     for item in items:
@@ -3851,7 +3874,13 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if image_result and image_result.get("kind") == "payment_proof":
             send_message(sender, image_result["reply"])
             return
-        notify_owner_uncertain_product_image(sender, image_id=image_id, caption=caption)
+        notify_owner_unavailable_product(
+            sender,
+            caption or "صورة منتج غير مطابقة للكتالوج",
+            source="image",
+            image_id=image_id,
+        )
+        send_unavailable_image_response(sender)
         return
 
     if state == "product_context":

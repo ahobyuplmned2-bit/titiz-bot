@@ -38,10 +38,14 @@ assert app.resolve_image_product_match(
 uncertain = []
 unavailable = []
 sent = []
+url_calls = []
 app.analyze_product_image = lambda *args, **kwargs: {"kind": "unknown", "reply": "غير واضح"}
 app.notify_owner_uncertain_product_image = lambda *args, **kwargs: uncertain.append(args)
 app.notify_owner_unavailable_product = lambda *args, **kwargs: unavailable.append(args)
 app.send_message = lambda recipient, text: sent.append((recipient, text))
+app.whatsapp.send_url_button = lambda recipient, text, title, url: url_calls.append(
+    (recipient, text, title, url)
+) or True
 app.send_image_by_id = lambda *args, **kwargs: None
 app.restore_customer_session = lambda recipient: None
 app.cancel_customer_followup = lambda recipient: None
@@ -53,9 +57,13 @@ app.handle_customer_message(
     {"type": "image", "image": {"id": "media-123", "caption": ""}, "context": {"forwarded": True}},
 )
 
-assert uncertain
-assert unavailable == []
+assert uncertain == []
+assert unavailable
 assert sent == []
+assert len(url_calls) == 1
+assert "ما خلّينا طلبك يضيع" in url_calls[0][1]
+assert url_calls[0][2] == "📞 التواصل مع المندوبة"
+assert url_calls[0][3] == app.DELEGATE_WHATSAPP_URL
 
 tea_products = [
     {"id": 51, "name": "ثلاجة شاي المائدة", "keywords": "ثلاجة,ثلاجات,شاي"},
