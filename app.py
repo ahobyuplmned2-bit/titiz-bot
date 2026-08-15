@@ -2049,6 +2049,32 @@ def is_social_or_confused_message(normalized_text):
     return normalized_text in {normalize_text(item) for item in SOCIAL_OR_CONFUSED_PHRASES}
 
 
+def is_search_examples_request(normalized_text):
+    """تمييز سؤال العميل عن أمثلة للبحث كي لا يُفسر كطلب منتج."""
+    examples_phrases = {
+        "مثل ايش اكتب", "مثلا ايش اكتب", "مثال ايش اكتب", "كيف اكتب",
+        "كيف ابحث", "ايش اكتب", "وش اكتب", "ما الذي اكتب", "ماذا اكتب",
+        "اعطيني مثال", "عطيني مثال", "هات مثال", "ابغى مثال",
+        "وش اكتب لكم", "ايش اكتب لكم", "ما هي الامثله", "ماهي الامثله",
+    }
+    return normalized_text in {normalize_text(item) for item in examples_phrases}
+
+
+def send_search_examples(to):
+    """إرسال أمثلة كتابة فقط، دون تشغيل البحث أو عرض بطاقات منتجات."""
+    send_message(
+        to,
+        "اكتبي اسم المنتج أو حتى كلمة منه 😊\n\n"
+        "*مثلاً:*\n"
+        "☕ كتلي شاي\n"
+        "🍽️ صحون فرم\n"
+        "🧺 سلال رحلات\n"
+        "🥣 حافظات أبو قفل\n"
+        "🥛 اقلاص شاي\n\n"
+        "وإذا ما تعرفي الاسم، وصفيه لي مثل: *صحن زجاج كبير* أو *مفتاح غاز*، وسأبحث لكِ عنه فوراً."
+    )
+
+
 def is_positive_social_message(normalized_text):
     """تمييز المدح والقبول القصير عن سؤال السعر أو طلب التخفيض."""
     return normalized_text in {normalize_text(item) for item in POSITIVE_SOCIAL_PHRASES}
@@ -4180,6 +4206,11 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         elif msg_normalized in {normalize_text("مافهمت"), normalize_text("ما فهمت"), normalize_text("ايش"), normalize_text("وش")}:
             social_intro = "ولا يهمك يا غالية، أبشرح لكِ بطريقة أبسط 😊"
         send_guided_help(sender, social_intro)
+        return
+
+    # سؤال العميل عن طريقة الكتابة لا يمثل اسم منتج؛ نجيب بأمثلة قبل أي بحث أو فهم دلالي.
+    if is_search_examples_request(msg_normalized):
+        send_search_examples(sender)
         return
 
     # المحادثة العامة تمر أولاً على فهم السياق؛ هذا يمنع أن تلتقط كلمة داخل
