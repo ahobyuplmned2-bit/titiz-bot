@@ -1678,6 +1678,28 @@ def resolve_image_product_match(result, products):
     return None
 
 
+def resolve_image_variant_match(result, product):
+    """إرجاع خيار المنتج عندما يظهر موديله بوضوح في تحليل الصورة."""
+    if not result or not isinstance(product, dict):
+        return None
+    evidence = " ".join(
+        str(result.get(key) or "")
+        for key in ("detected_model", "extracted_text", "matched_product_name", "visual_description")
+    )
+    compact_evidence = re.sub(r"[^a-z0-9]", "", evidence.lower())
+    if not compact_evidence:
+        return None
+    for index, variant in enumerate(product_variants(product)):
+        variant_name = str(variant.get("name") or variant.get("label") or "")
+        model_match = re.search(r"\b(?:md|model)[\s_-]*[a-z0-9]+\b", variant_name, re.IGNORECASE)
+        if not model_match:
+            continue
+        compact_model = re.sub(r"[^a-z0-9]", "", model_match.group(0).lower())
+        if compact_model and compact_model in compact_evidence:
+            return {"index": index, "variant": variant}
+    return None
+
+
 def notify_owner_uncertain_product_image(sender, image_id="", caption=""):
     """تنبيه الإدارة بصورة تحتاج مطابقة دون وصفها خطأً بأنها غير متوفرة."""
     send_message(
@@ -1800,7 +1822,7 @@ def analyze_product_image(sender, message, caption=""):
     image_data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
     product_context = "\n".join(
         f"ID={p.get('id')}; الاسم={p.get('name', '')}; الكلمات={p.get('keywords', '')}; "
-        f"السعر={p.get('price', 0)} ريال; الوصف={p.get('description', '')}"
+        f"السعر={p.get('price', 0)} ريال; الخيارات={p.get('variants', '')}; الوصف={p.get('description', '')}"
         for p in products
     ) or "لا توجد منتجات محفوظة حالياً."
     forwarded = bool((message.get("context") or {}).get("forwarded"))
@@ -1826,6 +1848,7 @@ def analyze_product_image(sender, message, caption=""):
                 "content": (
                     "أنت محللة صور دقيقة لمتجر Titiz للأدوات المنزلية. أجيبي بنتيجة JSON فقط. "
                     "اقرئي أي نص أو شعار أو رقم موديل ظاهر، وصفي اللون والشكل والخامة والاستخدام، "
+                    "ضعي رقم الموديل الظاهر في detected_model كما هو، مثل MD-5266، أو اتركيه فارغاً إذا لم يظهر. "
                     "ثم قارني هذه الإشارات مع أسماء وكلمات ووصف المنتجات في الكتالوج، ولا تشترطي كابشن؛ "
                     "الصورة المحوّلة من القناة قد تصل بدون كابشن. "
                     "عند عدم التأكد الشديد اجعلي matched_product_id=null وconfidence=0، "
@@ -1854,6 +1877,7 @@ def analyze_product_image(sender, message, caption=""):
                         "is_payment_proof": {"type": "boolean"},
                         "matched_product_id": {"type": ["integer", "null"]},
                         "matched_product_name": {"type": "string"},
+                        "detected_model": {"type": "string"},
                         "extracted_text": {"type": "string"},
                         "brand": {"type": "string"},
                         "visual_description": {"type": "string"},
@@ -1865,6 +1889,7 @@ def analyze_product_image(sender, message, caption=""):
                         "is_payment_proof",
                         "matched_product_id",
                         "matched_product_name",
+                        "detected_model",
                         "extracted_text",
                         "brand",
                         "visual_description",
@@ -1899,7 +1924,8 @@ def analyze_product_image(sender, message, caption=""):
         }
     product = resolve_image_product_match(result, products)
     if product:
-        return {"kind": "product", "product": product}
+        variant_match = resolve_image_variant_match(result, product)
+        return {"kind": "product", "product": product, "variant_match": variant_match}
     return {"kind": "unknown", "reply": result.get("reply") or "🔍 لم أتمكن من تحديد المنتج بدقة. أرسلي صورة أوضح أو اكتبي اسم المنتج من فضلكِ 😊"}
 
 def deliver_pending_replies(to):
@@ -2191,6 +2217,47 @@ def send_product_card(to, product):
         {"id": "shopping_assistant", "title": "🔙 متابعة التسوق"},
     ])
     schedule_product_followup(to, product.get("name", ""))
+
+
+def send_matched_product_variant_card(to, product, variant_match):
+    """عرض نفس المنتج مع خيار الموديل الظاهر في صورة العميل فقط."""
+    product = canonicalize_product(product)
+    variant_index = int((variant_match or {}).get("index", -1))
+    variants = product_variants(product)
+    if not (0 <= variant_index < len(variants)):
+        return send_product_card(to, product)
+    variant = variants[variant_index]
+    price = parse_product_price(variant.get("price"))
+    if price is None:
+        return send_product_card(to, product)
+
+    user_states[to] = "product_context"
+    previous = user_sessions.get(to, {})
+    previous = previous if isinstance(previous, dict) else {}
+    user_sessions[to] = {**previous, "last_product": product, "matched_variant_index": variant_index}
+    remember_variant_context(to, product)
+
+    image_urls = _product_image_urls(product)
+    if image_urls:
+        send_image(to, image_urls[0])
+    elif product.get("image_id"):
+        send_image_by_id(to, product["image_id"])
+
+    variant_name = str(variant.get("name") or variant.get("label") or "الخيار الظاهر")
+    send_buttons(
+        to,
+        f"✅ لقيت نفس المنتج عندنا: *{product.get('name', 'المنتج')}*\n"
+        f"🎯 الموديل/الحجم الظاهر: *{variant_name}*\n"
+        f"💰 السعر: *{int(price)} ريال*\n\n"
+        "تقدرين تضيفين هذا الخيار مباشرة أو تختارين حجماً آخر 😊",
+        [
+            {"id": f"variant_{product['id']}_{variant_index}", "title": "🛒 إضافة هذا الحجم"},
+            {"id": f"variants_{product['id']}", "title": "📏 اختيار حجم آخر"},
+            {"id": "menu_cart", "title": "🛍️ عرض السلة"},
+        ],
+    )
+    schedule_product_followup(to, product.get("name", ""))
+    return True
 
 
 RELATED_PRODUCT_STOPWORDS = {
@@ -3756,6 +3823,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             image_result = None
         if image_result and image_result.get("kind") == "product":
             matched_product = image_result["product"]
+            variant_match = image_result.get("variant_match")
+            if variant_match:
+                send_matched_product_variant_card(sender, matched_product, variant_match)
+                return
             related_products = products_related_to_image(matched_product, get_all_products())
             if len(related_products) >= 2:
                 send_matching_products_carousel(
