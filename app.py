@@ -2177,30 +2177,9 @@ def send_product_card(to, product):
             image_urls = []
     else:
         image_urls = raw_image_urls or []
-    if len(image_urls) >= 2:
-        carousel_body = product_reply
-        carousel_buttons = [
-            {"id": f"variants_{product['id']}", "title": "📏 اختيار الحجم"}
-        ] if valid_variants else [
-            {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"}
-        ]
-        carousel_buttons.append({"id": f"det_{product['id']}", "title": "📋 التفاصيل"})
-        carousel_cards = [
-            {
-                "image_url": url,
-                "body": carousel_body,
-                "buttons": carousel_buttons,
-            }
-            for url in image_urls[:10]
-            if isinstance(url, str) and url.startswith("http")
-        ]
-        if len(carousel_cards) >= 2 and send_carousel(
-            to,
-            f"🖼️ صور {product.get('name', 'المنتج')}",
-            carousel_cards,
-        ):
-            schedule_product_followup(to, product.get("name", ""))
-            return True
+    # بطاقة المنتج المختار يجب أن تسلك مساراً واحداً ثابتاً. الكاروسيل مناسب
+    # لنتائج البحث المتعددة، لكنه يكرر نفس المنتج ويجعل ضغطات الحجم غير ثابتة.
+    # لذلك نعرض صورة واحدة مع قائمة الأحجام الأصلية من واتساب.
     image_id = product.get("image_id", "")
     if image_id:
         send_image_by_id(to, image_id)
@@ -4461,8 +4440,9 @@ def webhook():
 
         # لا نحفظ العميل عند أول رسالة؛ يتم الحفظ بعد إدخال الاسم فقط.
 
-        # إشعار المالك
-        if sender != OWNER_NUMBER and msg_body:
+        # إشعار المالك للرسائل الفعلية فقط. ضغطات الأزرار والقوائم تولد تفاعلات
+        # تقنية وليست رسائل جديدة، وإشعار الإدارة بها كان يضاعف الإرسال لكل ضغطة.
+        if sender != OWNER_NUMBER and msg_body and original_message_type != "interactive":
             notify_owner(sender, msg_body)
 
         # معالجة أوامر المالك

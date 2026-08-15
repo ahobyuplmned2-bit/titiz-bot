@@ -7,6 +7,8 @@ import requests
 import time
 import json
 import re
+import os
+from threading import Lock
 
 
 def parse_product_price(value):
@@ -31,6 +33,39 @@ class WhatsAppAPI:
         self.phone_number_id = phone_number_id
         self.api_url = f"https://graph.facebook.com/v26.0/{phone_number_id}"
         self.messages_url = f"{self.api_url}/messages"
+        # تمر كل رسائل العميل والإدارة من بوابة واحدة حتى لا تتزاحم وتُرفض بـ429.
+        self._outbound_lock = Lock()
+        self._last_outbound_at = 0.0
+        self._cooldown_until = 0.0
+        self._min_outbound_interval = max(
+            float(os.environ.get("WHATSAPP_SEND_MIN_INTERVAL_SECONDS", "0.45")), 0.1
+        )
+        self._rate_limit_cooldown = max(
+            float(os.environ.get("WHATSAPP_429_COOLDOWN_SECONDS", "8")), 1.0
+        )
+
+    def _post_outbound_message(self, headers, payload, timeout=10):
+        """إرسال متسلسل بلا تكرار أعمى، مع فترة تبريد موحدة بعد 429."""
+        with self._outbound_lock:
+            now = time.monotonic()
+            if now < self._cooldown_until:
+                remaining = self._cooldown_until - now
+                print(f"[واتساب] تم حجب رد إضافي أثناء تبريد 429 ({remaining:.1f} ثانية)")
+                return None
+            wait_seconds = self._min_outbound_interval - (now - self._last_outbound_at)
+            if wait_seconds > 0:
+                time.sleep(wait_seconds)
+            response = requests.post(self.messages_url, headers=headers, json=payload, timeout=timeout)
+            self._last_outbound_at = time.monotonic()
+            if response.status_code == 429:
+                try:
+                    retry_after = float(response.headers.get("Retry-After", "0") or 0)
+                except (TypeError, ValueError):
+                    retry_after = 0.0
+                cooldown = max(retry_after, self._rate_limit_cooldown)
+                self._cooldown_until = self._last_outbound_at + cooldown
+                print(f"[واتساب] 429 Too Many Requests؛ توقف إرسال مؤقتاً لمدة {cooldown:.1f} ثانية")
+            return response
     
     def send_message(self, recipient_phone, message_text):
         """إرسال رسالة نصية"""
@@ -49,14 +84,9 @@ class WhatsAppAPI:
                 }
             }
             
-            response = requests.post(
-                self.messages_url,
-                headers=headers,
-                json=payload,
-                timeout=10
-            )
+            response = self._post_outbound_message(headers, payload, timeout=10)
             
-            return response.status_code == 200
+            return bool(response and response.status_code == 200)
         except Exception as e:
             print(f"خطأ في إرسال الرسالة: {e}")
             return False
@@ -136,14 +166,9 @@ class WhatsAppAPI:
             if caption:
                 payload["image"]["caption"] = caption
             
-            response = requests.post(
-                self.messages_url,
-                headers=headers,
-                json=payload,
-                timeout=10
-            )
+            response = self._post_outbound_message(headers, payload, timeout=10)
             
-            return response.status_code == 200
+            return bool(response and response.status_code == 200)
         except Exception as e:
             print(f"خطأ في إرسال الصورة: {e}")
             return False
@@ -163,8 +188,8 @@ class WhatsAppAPI:
             }
             if caption:
                 payload["image"]["caption"] = caption
-            response = requests.post(self.messages_url, headers=headers, json=payload, timeout=10)
-            return response.status_code == 200
+            response = self._post_outbound_message(headers, payload, timeout=10)
+            return bool(response and response.status_code == 200)
         except Exception as e:
             print(f"خطأ في إرسال الصورة: {e}")
             return False
@@ -187,10 +212,9 @@ class WhatsAppAPI:
             if not media_id:
                 print("خطأ رفع الصوت لواتساب: لم يرجع معرف الوسائط")
                 return False
-            response = requests.post(
-                self.messages_url,
-                headers={**headers, "Content-Type": "application/json"},
-                json={
+            response = self._post_outbound_message(
+                {**headers, "Content-Type": "application/json"},
+                {
                     "messaging_product": "whatsapp",
                     "to": recipient_phone,
                     "type": "audio",
@@ -198,9 +222,11 @@ class WhatsAppAPI:
                 },
                 timeout=20,
             )
-            if response.status_code != 200:
-                print(f"خطأ إرسال الصوت لواتساب: {response.status_code} {response.text[:300]}")
-            return response.status_code == 200
+            if not response or response.status_code != 200:
+                status = response.status_code if response else "محجوب مؤقتاً"
+                detail = response.text[:300] if response else ""
+                print(f"خطأ إرسال الصوت لواتساب: {status} {detail}")
+            return bool(response and response.status_code == 200)
         except Exception as e:
             print(f"خطأ في إرسال الصوت: {e}")
             return False
@@ -246,10 +272,12 @@ class WhatsAppAPI:
                     "action": {"cards": carousel_cards},
                 },
             }
-            response = requests.post(self.messages_url, headers=headers, json=payload, timeout=15)
-            if response.status_code != 200:
-                print(f"خطأ كاروسيل واتساب: {response.status_code} {response.text[:300]}")
-            return response.status_code == 200
+            response = self._post_outbound_message(headers, payload, timeout=15)
+            if not response or response.status_code != 200:
+                status = response.status_code if response else "محجوب مؤقتاً"
+                detail = response.text[:300] if response else ""
+                print(f"خطأ كاروسيل واتساب: {status} {detail}")
+            return bool(response and response.status_code == 200)
         except Exception as e:
             print(f"خطأ في إرسال الكاروسيل: {e}")
             return False
@@ -293,14 +321,9 @@ class WhatsAppAPI:
                 }
             }
             
-            response = requests.post(
-                self.messages_url,
-                headers=headers,
-                json=payload,
-                timeout=10
-            )
+            response = self._post_outbound_message(headers, payload, timeout=10)
             
-            return response.status_code == 200
+            return bool(response and response.status_code == 200)
         except Exception as e:
             print(f"خطأ في إرسال الأزرار: {e}")
             return False
@@ -328,10 +351,12 @@ class WhatsAppAPI:
                     },
                 },
             }
-            response = requests.post(self.messages_url, headers=headers, json=payload, timeout=10)
-            if response.status_code != 200:
-                print(f"خطأ زر الرابط: {response.status_code} {response.text[:300]}")
-            return response.status_code == 200
+            response = self._post_outbound_message(headers, payload, timeout=10)
+            if not response or response.status_code != 200:
+                status = response.status_code if response else "محجوب مؤقتاً"
+                detail = response.text[:300] if response else ""
+                print(f"خطأ زر الرابط: {status} {detail}")
+            return bool(response and response.status_code == 200)
         except Exception as e:
             print(f"خطأ في إرسال زر الرابط: {e}")
             return False
@@ -364,14 +389,9 @@ class WhatsAppAPI:
                 }
             }
             
-            response = requests.post(
-                self.messages_url,
-                headers=headers,
-                json=payload,
-                timeout=10
-            )
+            response = self._post_outbound_message(headers, payload, timeout=10)
             
-            return response.status_code == 200
+            return bool(response and response.status_code == 200)
         except Exception as e:
             print(f"خطأ في إرسال القائمة: {e}")
             return False
