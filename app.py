@@ -499,8 +499,6 @@ def find_response(msg_normalized):
 
 # ===== تسجيل الردود المبرمجة =====
 
-RESP_THALAJA = "☕ *ثلاجة شاي المائدة M213 - 0.7 لتر*\n\n✅ تحفظ الحرارة 6 ساعات\n✅ الألوان: وردي 💗 | بيج 🤎 | أزرق 💙 | كحلي\n✅ تصميم أنيق للضيافة\n\n💰 السعر: 2,500 ريال\n\n🚚 التوصيل مجاني لداخل المحافظة\n⏰ الكمية محدودة"
-
 RESP_DISCOUNT = (
     "أبشري يا غالية 😊\n\n"
     "أسعارنا مخفّضة من البداية ونحرص دائماً نعطيك أفضل سعر ممكن 💛\n"
@@ -644,14 +642,6 @@ add_response(
 
 add_response(PRICE_INQUIRY_KEYWORDS, PRICE_INQUIRY_RESPONSE)
 add_response(OFFERS_KEYWORDS, OFFERS_RESPONSE)
-
-add_response(
-    ["ثلاجة", "ثلاجه", "الثلاجة", "الثلاجه", "شاي", "ثلاجة شاي",
-     "ثلاجه شاي", "ثلاجة الشاي", "ثلاجه الشاي", "ترمس", "ترمز", "حافظة", "حافظه",
-     "ثلاجة المائدة", "ثلاجه المائده"],
-    RESP_THALAJA,
-    images=[{"type": "url", "src": IMG_THALAJA, "caption": RESP_THALAJA}]
-)
 
 # --- التحيات ---
 add_response(
