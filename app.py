@@ -4195,6 +4195,36 @@ def webhook():
                 msg_body = list_reply.get("id") or list_reply.get("title", "")
         elif message.get("type") == "image":
             msg_body = message.get("image", {}).get("caption", "").strip()
+        elif message.get("type") == "document":
+            # بعض العملاء يرسلون صورة المنتج كملف/مستند بدلاً من نوع image.
+            # نحوّل الصور فقط إلى مسار المطابقة البصرية ولا نرسل رسالة عامة مضللة.
+            document = message.get("document", {}) or {}
+            mime_type = str(document.get("mime_type") or "").lower()
+            filename = str(document.get("filename") or "").lower()
+            is_image_document = mime_type.startswith("image/") or filename.endswith(
+                (".jpg", ".jpeg", ".png", ".webp")
+            )
+            if is_image_document and document.get("id"):
+                msg_body = str(document.get("caption") or "").strip()
+                processing_message = dict(message)
+                processing_message["type"] = "image"
+                processing_message["image"] = {
+                    "id": document.get("id"),
+                    "caption": msg_body,
+                    "mime_type": mime_type or "image/jpeg",
+                }
+            else:
+                recent_product = (user_sessions.get(sender, {}) or {}).get("last_product")
+                if recent_product:
+                    send_buttons(sender, "إذا تريدين هذا المنتج، اختاري الإجراء المناسب:", [
+                        {"id": f"variants_{recent_product['id']}", "title": "📏 اختيار الحجم"}
+                        if product_variants(recent_product)
+                        else {"id": f"add_{recent_product['id']}", "title": "🛒 إضافة للسلة"},
+                        {"id": "menu_cart", "title": "🛍️ عرض السلة"},
+                    ])
+                else:
+                    send_message(sender, "📎 أرسلي صورة المنتج أو اكتبي اسمه، وسأساعدكِ فوراً 😊")
+                return jsonify({"status": "ok"}), 200
         elif message.get("type") == "audio":
             try:
                 msg_body = transcribe_voice_message(message) or ""
@@ -4246,7 +4276,7 @@ def webhook():
 
         msg_normalized = normalize_text(msg_body)
         original_message_type = message.get("type", "text")
-        image_payload = message.get("image", {}) if original_message_type == "image" else {}
+        image_payload = processing_message.get("image", {}) if processing_message.get("type") == "image" else {}
         audio_payload = message.get("audio", {}) if original_message_type == "audio" else {}
         intent, intent_confidence = classify_message_intent(
             msg_body,
