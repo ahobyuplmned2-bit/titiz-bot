@@ -32,4 +32,9 @@ app.variant_button_context["967700000000"] = {
 app.handle_customer_message("967700000000", "اختيار الحجم", "اختيار الحجم", {"type": "interactive"})
 assert sent_lists == [("967700000000", 901)]
 assert not sent_messages
+
+sent_lists.clear()
+app.handle_customer_message("967700000000", "📏 اختيار الحجم", "اختيار الحجم", {"type": "interactive"})
+assert sent_lists == [("967700000000", 901)]
+assert not sent_messages
 print("variants_button_test: OK")

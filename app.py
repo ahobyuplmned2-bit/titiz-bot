@@ -3474,7 +3474,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     # بعض نسخ WhatsApp تعيد عنوان الزر بدلاً من id؛ افتحي آخر قائمة أحجام محفوظة.
-    if raw_action in {"اختيار الحجم", "اختيار الحجم والسعر", "اختيار المقاس"}:
+    variant_action_labels = {"اختيار الحجم", "اختيار الحجم والسعر", "اختيار المقاس"}
+    # قد يعيد واتساب عنوان الزر كاملاً مثل «📏 اختيار الحجم»؛
+    # النص المطبّع يزيل الإيموجي ويحافظ على مسار الأحجام بدلاً من المرور للمساعدة العامة.
+    if raw_action in variant_action_labels or msg_normalized in variant_action_labels:
         product = get_variant_context_product(sender)
         if product and any(parse_product_price(v.get("price")) is not None for v in product_variants(product)):
             send_variant_list(sender, product)
