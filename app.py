@@ -1950,6 +1950,24 @@ def send_image_by_id(to, media_id, caption=""):
         _record_outbound_event(to, "image", caption, media_id)
     return result
 
+
+def send_admin_share_card(product, image_id=""):
+    """إرسال بطاقة منتج مكتملة لرقم الإدارة كي يشاركها يدوياً بأمان."""
+    if not isinstance(product, dict):
+        return False
+    product = canonicalize_product(product)
+    body = (
+        "📣 *بطاقة جاهزة للنشر*\n\n"
+        f"{format_product_card(product)}\n\n"
+        "↗️ شاركي هذه البطاقة مع قناة Titiz أو مجموعة العروض."
+    )
+    if image_id:
+        return send_image_by_id(OWNER_NUMBER, image_id, body)
+    image_urls = _product_image_urls(product)
+    if image_urls:
+        return send_image(OWNER_NUMBER, image_urls[0], body)
+    return send_message(OWNER_NUMBER, body)
+
 def send_buttons(to, text, buttons):
     _send_voice_reply_if_needed(to, text)
     result = whatsapp.send_buttons(to, text, buttons)
@@ -3066,6 +3084,9 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                 saved = sync_products_to_github()
                 if saved:
                     send_message(OWNER_NUMBER, f"✅ تم إضافة وحفظ المنتج دائمًا على GitHub:\n📦 {product_name}\n💰 {int(price_val)} ريال\n📝 {product_desc}\n🔑 كلمات: {keywords_str or 'لا يوجد'}\n\nلإضافة صورة: أرسل صورة مع كابشن فيه اسم المنتج")
+                    product = get_product(product_id)
+                    if product:
+                        send_admin_share_card(product)
                 else:
                     send_message(OWNER_NUMBER, f"⚠️ تم إضافة المنتج محلياً، لكن *فشل حفظه على GitHub* (تأكد من GITHUB_TOKEN):\n📦 {product_name}\n💰 {int(price_val)} ريال")
             else:
@@ -3425,6 +3446,9 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                 conn.commit()
                 conn.close()
             sync_products_to_github()
+            product, _ = find_admin_product(caption)
+            if product:
+                send_admin_share_card(product, image_id=media_id)
         elif media_id and not caption:
             send_message(OWNER_NUMBER, "❌ أرسل الصورة مع كابشن فيه اسم المنتج")
         return True
