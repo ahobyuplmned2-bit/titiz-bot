@@ -2355,7 +2355,7 @@ def products_related_to_image(product, products):
 
 
 def send_matching_products_carousel(to, products, query_key=""):
-    """إرسال كل النتائج المطابقة في كاروسيل متجاور كما يظهر للعميل."""
+    """إرسال نتائج متشابهة: تمهيد، بطاقات متجاورة، ثم تواصل مندوبة منفصل."""
     guard_key = (to, normalize_text(query_key or ""))
     now = time.time()
     if query_key and now - matching_send_guard.get(guard_key, 0) < MATCHING_SEND_WINDOW:
@@ -2418,18 +2418,44 @@ def send_matching_products_carousel(to, products, query_key=""):
                 buttons.insert(0, {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"})
             cards.append({"image_url": url, "body": body, "buttons": buttons})
 
-    if len(cards) >= 2 and send_carousel(to, "🔍 هذه كل المنتجات المطابقة، اسحبي للعرض:", cards[:10]):
+    intro_text = "🔍 لقيت لكِ منتجات مشابهة لطلبك 😊\nشاهدي الخيارات التالية:"
+    delegate_text = (
+        "هل تريد التأكد من حصولك على أفضل سعر؟ لا يزال بإمكانك التواصل مباشرة "
+        "مع مندوبة Titiz إذا أعجبك عرضها."
+    )
+
+    if cards:
+        send_message(to, intro_text)
+
+    if len(cards) >= 2 and send_carousel(to, "🛍️ اسحبي لمشاهدة المنتجات:", cards[:10]):
         matching_send_guard[guard_key] = now
         for name in scheduled_names[:1]:
             schedule_product_followup(to, name)
+        if not whatsapp.send_url_button(
+            to,
+            delegate_text,
+            "📞 التواصل مع المندوبة",
+            DELEGATE_WHATSAPP_URL,
+        ):
+            send_message(to, delegate_text + f"\n\n📞 {DELEGATE_WHATSAPP_URL}")
         return True
 
     # إذا لم تتوفر صورتان عامتان، نرسل البطاقات المفردة بدلاً من إخفاء النتائج.
+    sent_cards = 0
     for product in unique_products[:10]:
-        send_product_card(to, canonicalize_product(product))
+        if send_product_card(to, canonicalize_product(product)):
+            sent_cards += 1
+    if sent_cards:
+        if not whatsapp.send_url_button(
+            to,
+            delegate_text,
+            "📞 التواصل مع المندوبة",
+            DELEGATE_WHATSAPP_URL,
+        ):
+            send_message(to, delegate_text + f"\n\n📞 {DELEGATE_WHATSAPP_URL}")
     if query_key and unique_products:
         matching_send_guard[guard_key] = now
-    return bool(unique_products)
+    return bool(sent_cards)
 
 def send_list(to, text, button_text, sections):
     _send_voice_reply_if_needed(to, text)

@@ -23,6 +23,7 @@ products = [
 carousel_calls = []
 cards = []
 messages = []
+delegate_calls = []
 sender = "967700000000"
 
 app.matching_send_guard.clear()
@@ -35,6 +36,9 @@ app.send_carousel = lambda recipient, text, carousel_cards: carousel_calls.appen
 app.get_product = lambda product_id: next((item for item in products if item["id"] == int(product_id)), None)
 app.send_product_card = lambda recipient, product: cards.append((recipient, product["id"])) or True
 app.send_message = lambda recipient, text: messages.append((recipient, text)) or True
+app.whatsapp.send_url_button = lambda recipient, text, title, url: delegate_calls.append(
+    (recipient, text, title, url)
+) or True
 app.cancel_customer_followup = lambda recipient: None
 
 assert app.send_matching_products_carousel(sender, products, "قلاصات") is True
@@ -46,6 +50,15 @@ assert carousel_cards[1]["buttons"][0]["id"] == "add_921"
 assert app.user_states[sender] == "product_context"
 assert app.user_sessions[sender]["last_product"]["id"] == 920
 assert cards == []
-assert messages == []
+assert messages == [(sender, "🔍 لقيت لكِ منتجات مشابهة لطلبك 😊\nشاهدي الخيارات التالية:")]
+assert carousel_calls[0][1] == "🛍️ اسحبي لمشاهدة المنتجات:"
+assert delegate_calls == [
+    (
+        sender,
+        "هل تريد التأكد من حصولك على أفضل سعر؟ لا يزال بإمكانك التواصل مباشرة مع مندوبة Titiz إذا أعجبك عرضها.",
+        "📞 التواصل مع المندوبة",
+        app.DELEGATE_WHATSAPP_URL,
+    )
+]
 
 print("multi_product_results_test: OK")
