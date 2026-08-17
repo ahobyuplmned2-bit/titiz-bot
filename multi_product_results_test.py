@@ -7,6 +7,7 @@ products = [
         "name": "قلاص شاي ستيل",
         "price": "1400",
         "quantity": 10,
+        "description": "قلاص عملي وأنيق مناسب للشاي والضيافة اليومية.",
         "variants": [],
         "image_urls": '["https://catalog.test/glass-steel.jpg"]',
     },
@@ -15,6 +16,7 @@ products = [
         "name": "قلاص شاي زجاج",
         "price": "1600",
         "quantity": 10,
+        "description": "قلاص زجاجي شفاف مناسب للعصائر والمشروبات الباردة.",
         "variants": [],
         "image_urls": '["https://catalog.test/glass-glass.jpg"]',
     },
@@ -50,8 +52,22 @@ assert carousel_cards[1]["buttons"][0]["id"] == "add_921"
 assert app.user_states[sender] == "product_context"
 assert app.user_sessions[sender]["last_product"]["id"] == 920
 assert cards == []
-assert messages == [(sender, "🔍 لقيت لكِ منتجات مشابهة لطلبك 😊\nشاهدي الخيارات التالية:")]
+assert messages == [
+    (
+        sender,
+        "🔍 لقيت لكِ خيارات مشابهة من *قلاصات* 😊\n\n"
+        "هذه المنتجات تأتي بأشكال وأسعار مختلفة لتختاري الأنسب لاستخدامكِ.\n"
+        "شاهدي الصور والوصف والسعر، ثم اختاري الحجم أو أضيفي المنتج للسلة.",
+    )
+]
 assert carousel_calls[0][1] == "🛍️ اسحبي لمشاهدة المنتجات:"
+card_body = carousel_cards[0]["body"]
+assert "قلاص شاي ستيل" in card_body
+assert "قلاص عملي وأنيق" in card_body
+assert "💰 السعر: 1400 ريال" in card_body
+assert "مرحبًا، أنا مهتم بمنتج قلاص شاي ستيل. هل يمكنكم تزويدي بتفاصيل أكثر؟" in card_body
+assert "الحد الأدنى للطلب" not in card_body
+assert card_body.index("قلاص عملي وأنيق") < card_body.index("💰 السعر") < card_body.index("مرحبًا، أنا مهتم")
 assert delegate_calls == [
     (
         sender,

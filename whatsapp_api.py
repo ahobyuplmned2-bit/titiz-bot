@@ -452,12 +452,13 @@ def format_product_card(product, compact=False):
                 valid_variants.append((variant, price))
         if valid_variants:
             if compact:
-                price_lines.append(
-                    "💰 " + " | ".join(
-                        f"{variant.get('name') or variant.get('label') or 'الخيار'}: {int(price)}"
-                        for variant, price in valid_variants
-                    ) + " ريال"
-                )
+                prices = [price for _, price in valid_variants]
+                if len(set(prices)) == 1:
+                    price_lines.append(f"💰 السعر: {int(prices[0])} ريال")
+                else:
+                    price_lines.append(
+                        f"💰 الأسعار حسب الحجم: {int(min(prices))} - {int(max(prices))} ريال"
+                    )
             else:
                 price_lines.append("💰 *الأسعار حسب الحجم:*")
                 price_lines.extend(
@@ -474,14 +475,18 @@ def format_product_card(product, compact=False):
     description = str(product.get("description") or "").strip()
 
     if compact:
-        # السعر يأتي قبل الوصف، والوصف يُضاف فقط إذا بقي مجال داخل حد WhatsApp للبطاقة.
-        message = "\n\n".join([f"📦 *{name}*", "\n".join(price_lines), availability])
-        if description:
-            short_description = " ".join(description.split())[:55].rstrip()
-            candidate = f"{message}\n\n{short_description}"
-            if len(candidate) <= 155:
-                message = candidate
-        return message
+        # ترتيب الكاروسيل المتفق عليه: الاسم، الوصف، السعر، ثم رسالة الاهتمام.
+        interest = f"مرحبًا، أنا مهتم بمنتج {name}. هل يمكنكم تزويدي بتفاصيل أكثر؟"
+        title = f"📦 *{name}*"
+        price_text = "\n".join(price_lines)
+        fixed_length = len("\n\n".join([title, price_text, interest]))
+        available_description_length = max(0, 160 - fixed_length - 2)
+        short_description = " ".join(description.split())[:available_description_length].rstrip()
+        parts = [title]
+        if short_description:
+            parts.append(short_description)
+        parts.extend([price_text, interest])
+        return "\n\n".join(parts)[:160]
 
     message = f"📦 *{name}*\n\n"
     if description:

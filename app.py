@@ -2418,7 +2418,12 @@ def send_matching_products_carousel(to, products, query_key=""):
                 buttons.insert(0, {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"})
             cards.append({"image_url": url, "body": body, "buttons": buttons})
 
-    intro_text = "🔍 لقيت لكِ منتجات مشابهة لطلبك 😊\nشاهدي الخيارات التالية:"
+    query_label = " ".join(str(query_key or "المنتجات").split())[:45] or "المنتجات"
+    intro_text = (
+        f"🔍 لقيت لكِ خيارات مشابهة من *{query_label}* 😊\n\n"
+        "هذه المنتجات تأتي بأشكال وأسعار مختلفة لتختاري الأنسب لاستخدامكِ.\n"
+        "شاهدي الصور والوصف والسعر، ثم اختاري الحجم أو أضيفي المنتج للسلة."
+    )
     delegate_text = (
         "هل تريد التأكد من حصولك على أفضل سعر؟ لا يزال بإمكانك التواصل مباشرة "
         "مع مندوبة Titiz إذا أعجبك عرضها."
