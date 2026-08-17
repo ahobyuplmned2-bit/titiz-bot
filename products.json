@@ -698,5 +698,66 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/maeda-spice-grinder/original-electric-spice-grinder-2500.jpg\"]",
     "variants": ""
+  },
+  "غطاء كوع رائحة حمام تركي أصلي أبو فتحتين": {
+    "name": "غطاء كوع رائحة حمام تركي أصلي أبو فتحتين",
+    "price": "500",
+    "description": "غطاء كوع حمام تركي أصلي أبو فتحتين، عملي للمساعدة في منع روائح الحمام من فتحة الصرف وسهل التركيب والتنظيف.",
+    "keywords": "غطاء كوع حمام,غطا كوع حمام,غطاء رائحة حمام,غطا ريحة حمام,غطاء ريحه حمام,كوع حمام,كوع رائحة,كوع ريحة,غطاء صرف حمام,غطاء بالوعة,غطاء بالوعه,مانع رائحة,مانع ريحة,ابو فتحتين,أبو فتحتين,تركي,تركي أصلي,تركي اصلي,500 ريال,أدوات حمام,مستلزمات حمام",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/turkish-toilet-drain-cover/turkish-double-opening-toilet-drain-cover-500.jpg\"]",
+    "variants": ""
+  },
+  "مساحات زجاج تركية أصلية": {
+    "name": "مساحات زجاج تركية أصلية",
+    "price": "500",
+    "description": "مساحات زجاج تركية أصلية لتنظيف زجاج النوافذ والمرايا والأسطح الملساء، متوفرة بمقاسين صغير وكبير.",
+    "keywords": "مساحات زجاج,مساحة زجاج,مسّاحات زجاج,سحاب زجاج,سحابات زجاج,مساحة شباك,مساحات شبابيك,مساحة مرايا,مساحات مرايا,مساحة حمام,مساحات حمام,تنظيف زجاج,تنظيف شبابيك,ممسحة زجاج,ممسحة شباك,تركي,تركية,تركي أصلي,تركي اصلي,صغير,كبير,500 ريال,700 ريال,أدوات تنظيف,مستلزمات منزلية",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/turkish-glass-squeegees/turkish-glass-squeegee-small-large.jpg\"]",
+    "variants": [
+      {"name": "صغير", "price": "500"},
+      {"name": "كبير", "price": "700"}
+    ]
+  },
+  "خلاط كهربائي أصلي المائدة M80": {
+    "name": "خلاط كهربائي أصلي المائدة M80",
+    "price": "5000",
+    "description": "خلاط كهربائي يدوي أصلي من المائدة بضمان، موديل SK-6621 بقوة 800 واط، مناسب لخفق الكيك والعجين والخلط المنزلي.",
+    "keywords": "خلاط كهربائي,خلاط يدوي,خلاط المائدة,خلاط كيك,مضرب كهربائي,مضرب كيك,مضرب بيض,خلاط عجين,خلاط حلويات,SK-6621,SK6621,800 واط,800W,المائدة,المائده,خلاط اصلي,خلاط أصلي,ضمان,5000 ريال,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/maeda-hand-mixer/original-maeda-hand-mixer-sk6621-5000.jpg\"]",
+    "variants": ""
+  },
+  "جزوات دلة استيل أصلية 3 أحجام": {
+    "name": "جزوات دلة استيل أصلية 3 أحجام",
+    "price": "1500",
+    "description": "جزوات دلة استيل أصلية ومتينة لتحضير القهوة والشاي، متوفرة بأحجام صغير ووسط وكبير.",
+    "keywords": "جزوات دلة,جزوة دلة,جزوات,جزوة,دلة استيل,دلة ستيل,دلال استيل,ابريق قهوة,إبريق قهوة,ابريق شاي,إبريق شاي,جزوة استيل,جزوة ستيل,صغير,وسط,كبير,1500 ريال,1800 ريال,2000 ريال,استيل,ستانلس,أصلي,اصلية,اصليه,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/stainless-steel-dallahs/original-stainless-steel-dallahs-3sizes.jpg\"]",
+    "variants": [
+      {"name": "صغير", "price": "1500"},
+      {"name": "وسط", "price": "1800"},
+      {"name": "كبير", "price": "2000"}
+    ]
+  },
+  "اقلاص عصير مربع 6 حبات": {
+    "name": "اقلاص عصير مربع 6 حبات",
+    "price": "1500",
+    "description": "طقم اقلاص عصير مربع زجاجي، عبوة 6 حبات بتصميم أنيق مناسب للعصائر والمشروبات والضيافة.",
+    "keywords": "اقلاص عصير مربع,قلاص عصير مربع,قلص عصير مربع,اقلاص مربع,قلاص مربع,قلص مربع,كاسات عصير مربع,اكواب عصير مربع,أكواب عصير مربع,كاسات مربعة,كاسات مربعه,عبوة 6,عبوه 6,6 حبات,ست حبات,ستة حبات,اقلاص عصير,قلاص عصير,كاسات عصير,1500 ريال,زجاج,ضيافة,أدوات تقديم,أدوات مطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/square-juice-glasses/square-juice-glasses-6pcs-1500.jpg\"]",
+    "variants": ""
+  },
+  "طباخة المائدة M60X نحاس 3 عيون": {
+    "name": "طباخة المائدة M60X نحاس 3 عيون",
+    "price": "22500",
+    "description": "طباخة المائدة شولة نحاس أصلية بضمان، 3 عيون قوية، موديل M60X، مناسبة للمطبخ والطبخ اليومي.",
+    "keywords": "طباخة المائدة,طباخه المائدة,شولة المائدة,شوله المائدة,طباخة نحاس,طباخه نحاس,شولة نحاس,شوله نحاس,طباخة 3 عيون,طباخه 3 عيون,شولة 3 عيون,شوله 3 عيون,موقد غاز,موقد 3 عيون,M60X,M60,رقم 60,المائدة,المائده,نحاس,استيل,ضمان,22500 ريال,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/maeda-stove-m60x/original-maeda-stove-m60x-copper-3burners-22500.jpg\"]",
+    "variants": ""
   }
 }
