@@ -759,5 +759,53 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/maeda-stove-m60x/original-maeda-stove-m60x-copper-3burners-22500.jpg\"]",
     "variants": ""
+  },
+  "مطابع كعك ومعمول": {
+    "name": "مطابع كعك ومعمول",
+    "price": "800",
+    "description": "مطابع يدوية للكعك والمعمول مع قوالب نقش متنوعة، متوفرة بخيار أبو 6 وخيار أبو 8 قوالب.",
+    "keywords": "مطابع كعك,مطابع معمول,مطابع كعك ومعمول,مطبعة كعك,مطبعة معمول,قالب كعك,قوالب كعك,قالب معمول,قوالب معمول,مكبس كعك,مكبس معمول,ماكينة معمول,اداة معمول,أبو 6,ابو 6,6 قوالب,ست قوالب,أبو 8,ابو 8,8 قوالب,ثمان قوالب,800 ريال,1000 ريال,حلويات,مطبخ,أدوات مطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/maamoul-molds/maamoul-mold-6pieces-800.jpg\", \"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/maamoul-molds/maamoul-mold-8pieces-1000.jpg\"]",
+    "variants": [
+      {"name": "أبو 6 قوالب", "price": "800"},
+      {"name": "أبو 8 قوالب", "price": "1000"}
+    ]
+  },
+  "مطابع كعك إيلابيو أبو 4": {
+    "name": "مطابع كعك إيلابيو أبو 4",
+    "price": "500",
+    "description": "مطابع كعك إيلابيو ملونة، 4 أشكال مختلفة للزينة والكوكيز والمعمول الصغير.",
+    "keywords": "مطابع كعك ايلابيو,مطابع كعك إيلابيو,مطابع ايلابيو,مطابع إيلابيو,مطبعة كعك ايلابيو,مطبعة كعك إيلابيو,قوالب كعك,قالب كوكيز,قوالب كوكيز,قوالب بسكويت,مطابع ملونة,مطابع كعك ابو 4,مطابع كعك أبو 4,ابو 4,أبو 4,4 قوالب,أربعة قوالب,500 ريال,حلويات,أدوات مطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/cake-molds-ilafio/ilafio-cake-molds-4pieces-500.jpg\"]",
+    "variants": ""
+  },
+  "مطابع كعك صغيرة أبو 10": {
+    "name": "مطابع كعك صغيرة أبو 10",
+    "price": "500",
+    "description": "مطابع كعك صغيرة متعددة الأشكال، عبوة 10 قطع مناسبة للكوكيز والبسكويت والزينة.",
+    "keywords": "مطابع كعك صغيرة,مطابع صغيره,مطبعة كعك صغيرة,مطبعة كعك صغيره,قوالب كعك صغيرة,قوالب كعك صغيره,قوالب كوكيز صغيرة,قوالب بسكويت صغيرة,مطابع ابو 10,مطابع أبو 10,ابو 10,أبو 10,10 قوالب,عشرة قوالب,500 ريال,حلويات,أدوات مطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/small-cake-molds-10/small-cake-molds-10pieces-500.jpg\"]",
+    "variants": ""
+  },
+  "بيلان خبز": {
+    "name": "بيلان خبز",
+    "price": "800",
+    "description": "بيلان خشب عملي لفرد العجين وتحضير الخبز والمعجنات، قطعة واحدة للاستخدام اليومي في المطبخ.",
+    "keywords": "بيلان خبز,بيلم خبز,بيلان,بيلم,نشابة,نشابه,نشابة عجين,نشابه عجين,فرد العجين,فرد عجين,مرقاق,مرقاق عجين,عصا عجين,عصاية عجين,800 ريال,قطعة واحدة,العدد 1,معجنات,خبز,أدوات مطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/bread-rolling-pin/bread-rolling-pin-800.jpg\"]",
+    "variants": ""
+  },
+  "ملاعق خشب أبو 4": {
+    "name": "ملاعق خشب أبو 4",
+    "price": "600",
+    "description": "طقم ملاعق خشب للطبخ، 4 قطع متنوعة مناسبة للتقليب والتقديم والاستخدام اليومي.",
+    "keywords": "ملاعق خشب ابو 4,ملاعق خشب أبو 4,ملعقة خشب,ملاعق خشب,ملاعق طبخ خشب,ملعقة طبخ خشب,طقم ملاعق خشب,أبو 4,ابو 4,4 قطع,أربع قطع,600 ريال,ملاعق تقليب,ملاعق تقديم,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/wooden-cooking-spoons-4/wooden-cooking-spoons-4pieces-600.jpg\"]",
+    "variants": ""
   }
 }
