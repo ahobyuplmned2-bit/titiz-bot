@@ -87,7 +87,8 @@ with tempfile.TemporaryDirectory() as temporary_directory:
     assert app.user_sessions["967700000001"]["last_conversation_topic"] == "طقم ملاعق"
     app.send_product_followup("967700000001", "طقم ملاعق")
     assert "طقم ملاعق" in captured["text"]
-    assert app.TITIZ_COMMUNITY_URL in captured["text"]
+    assert app.TITIZ_CHANNEL_URL in captured["text"]
+    assert "مرحباً السادة! هل أنت راضٍ عن الردود" in captured["text"]
     assert captured["buttons"][0]["id"] == app.PRODUCT_FOLLOWUP_SATISFIED_ID
     assert captured["buttons"][1]["id"] == app.PRODUCT_FOLLOWUP_UNSATISFIED_ID
 
