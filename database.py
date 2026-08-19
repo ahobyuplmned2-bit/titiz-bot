@@ -7,15 +7,43 @@ import sqlite3
 import os
 import json
 import time
+import shutil
 from datetime import datetime
 from threading import Lock
 
 # قفل للتعامل الآمن مع قاعدة البيانات
 db_lock = Lock()
 
-# اختيار نوع قاعدة البيانات
+# اختيار نوع قاعدة البيانات. عند ضبط DATABASE_PATH على قرص دائم في Render
+# تنتقل كل بيانات البوت (المحادثات والطلبات والسلة والتذكيرات) إلى المسار نفسه.
 USE_SQLITE = True
-DB_PATH = "titiz_bot.db"
+DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "titiz_bot.db")
+
+
+def _resolve_db_path():
+    """اختيار مسار SQLite القابل للاستمرار وترحيل الملف المحلي في أول تشغيل."""
+    configured_path = (os.environ.get("DATABASE_PATH") or "").strip()
+    database_path = os.path.abspath(os.path.expanduser(configured_path or DEFAULT_DB_PATH))
+    database_dir = os.path.dirname(database_path)
+    if database_dir:
+        os.makedirs(database_dir, exist_ok=True)
+
+    # عند تفعيل القرص الدائم لأول مرة، نحافظ على البيانات المحلية المتاحة
+    # بنسخها إلى المسار الجديد بدلاً من البدء بقاعدة فارغة.
+    if (
+        database_path != DEFAULT_DB_PATH
+        and not os.path.exists(database_path)
+        and os.path.isfile(DEFAULT_DB_PATH)
+    ):
+        try:
+            shutil.copy2(DEFAULT_DB_PATH, database_path)
+            print(f"[قاعدة البيانات] تم ترحيل البيانات إلى المسار الدائم: {database_path}")
+        except OSError as exc:
+            print(f"[قاعدة البيانات] تعذر ترحيل النسخة المحلية: {exc}")
+    return database_path
+
+
+DB_PATH = _resolve_db_path()
 
 def init_db():
     """إنشاء جداول قاعدة البيانات"""
@@ -176,6 +204,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 phone_number TEXT UNIQUE NOT NULL,
                 product_name TEXT,
+                context_text TEXT,
                 due_at REAL NOT NULL,
                 sent_at REAL,
                 followup_kind TEXT DEFAULT 'satisfaction',
@@ -183,6 +212,10 @@ def init_db():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        try:
+            cursor.execute('ALTER TABLE customer_followups ADD COLUMN context_text TEXT')
+        except sqlite3.OperationalError:
+            pass
         
         # جدول الأسئلة والأجوبة
         cursor.execute('''
@@ -607,22 +640,35 @@ def mark_pending_reply_sent(reply_id):
         conn.close()
         return updated
 
-def schedule_customer_followup(phone_number, product_name="", delay_seconds=1800, followup_kind="satisfaction"):
+def schedule_customer_followup(
+    phone_number,
+    product_name="",
+    delay_seconds=86400,
+    followup_kind="satisfaction",
+    context_text="",
+):
     """جدولة متابعة واحدة للعميل، مع استبدال أي متابعة سابقة."""
     due_at = datetime.utcnow().timestamp() + max(int(delay_seconds), 60)
     with db_lock:
         conn = sqlite3.connect(DB_PATH)
         conn.execute('''
             INSERT INTO customer_followups
-                (phone_number, product_name, due_at, sent_at, followup_kind, updated_at)
-            VALUES (?, ?, ?, NULL, ?, CURRENT_TIMESTAMP)
+                (phone_number, product_name, context_text, due_at, sent_at, followup_kind, updated_at)
+            VALUES (?, ?, ?, ?, NULL, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(phone_number) DO UPDATE SET
                 product_name = excluded.product_name,
+                context_text = excluded.context_text,
                 due_at = excluded.due_at,
                 sent_at = NULL,
                 followup_kind = excluded.followup_kind,
                 updated_at = CURRENT_TIMESTAMP
-        ''', (phone_number, product_name or "", due_at, followup_kind or "satisfaction"))
+        ''', (
+            phone_number,
+            product_name or "",
+            context_text or "",
+            due_at,
+            followup_kind or "satisfaction",
+        ))
         conn.commit()
         conn.close()
 
@@ -641,7 +687,7 @@ def get_due_customer_followups(limit=50):
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         rows = conn.execute('''
-            SELECT phone_number, product_name, due_at, followup_kind
+            SELECT phone_number, product_name, context_text, due_at, followup_kind
             FROM customer_followups
             WHERE sent_at IS NULL AND due_at <= ?
             ORDER BY due_at ASC
@@ -656,7 +702,7 @@ def get_customer_followup(phone_number):
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         row = conn.execute('''
-            SELECT phone_number, product_name, due_at, sent_at, followup_kind
+            SELECT phone_number, product_name, context_text, due_at, sent_at, followup_kind
             FROM customer_followups
             WHERE phone_number = ?
         ''', (phone_number,)).fetchone()

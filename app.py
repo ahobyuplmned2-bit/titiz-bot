@@ -108,34 +108,27 @@ SEMANTIC_INTENTS = {
 
 # ===== تذكير استفسار المنتج وتقييم الرضا =====
 PRODUCT_FOLLOWUP_DELAY_SECONDS = max(
-    int(os.environ.get("PRODUCT_FOLLOWUP_DELAY_SECONDS", "1800")), 60
+    int(os.environ.get("PRODUCT_FOLLOWUP_DELAY_SECONDS", "86400")), 60
 )
 PRODUCT_FOLLOWUP_POLL_SECONDS = max(
     int(os.environ.get("PRODUCT_FOLLOWUP_POLL_SECONDS", "30")), 10
 )
+FOLLOWUP_WORKER_ENABLED = os.environ.get("FOLLOWUP_WORKER_ENABLED", "true").strip().lower() not in {
+    "0", "false", "no", "off"
+}
 PRODUCT_NEXT_DAY_DELAY_SECONDS = max(
     int(os.environ.get("PRODUCT_NEXT_DAY_DELAY_SECONDS", "86400")), 60
 )
 PRODUCT_FOLLOWUP_SATISFIED_ID = "product_followup_satisfied"
 PRODUCT_FOLLOWUP_UNSATISFIED_ID = "product_followup_unsatisfied"
+PRODUCT_FOLLOWUP_CONTINUE_ID = "product_followup_continue"
+PRODUCT_FOLLOWUP_STOP_ID = "product_followup_stop"
 PRODUCT_RECOMMENDATION_KIND = "next_day_recommendation"
-PRODUCT_FOLLOWUP_MESSAGE = (
-    "مرحباً السادة! هل أنت راضٍ عن الردود من مساعدك الحصري، المتوفر على مدار الساعة "
-    "طوال أيام الأسبوع فقط لك؟ 😊\n"
-    "سأبقيك على اطلاع بأحدث العروض، وتوصيات المنتجات الرائجة، ومعلومات الطلبات في الوقت الفعلي.\n"
-    "إذا كان لديك أي طلبات أخرى، فقط ناديني! أنا هنا من أجلك. 🛍️✨\n"
-    "بعد محادثتنا وجدنا مجموعة خاصة"
-)
 PRODUCT_FOLLOWUP_SATISFIED_MESSAGE = (
-    "شكراً جزيلاً لك! 😊 نحن سعداء جداً برضاك عن الخدمة 👍 إذا احتجت أي مساعدة إضافية أو استفسار، "
-    "لا تتردد بالتواصل في أي وقت. يمكنك أيضاً زيارة قناتنا على واتساب والضغط على المتابعة "
-    "للحصول على توصيات منتجات مخصصة لك 🛒✨\n\n"
-    "اكتشف ما يناسبك الآن:\n"
-    "https://whatsapp.com/channel/0029VaqFTglLikgDDe0D5E2D"
+    "يسعدنا رضاكِ يا غالية 😊 إذا احتجتِ أي منتج أو مساعدة، اكتبي لي في أي وقت."
 )
 PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE = (
-    "نعتذر إذا لم يكن الرد بالمستوى المطلوب 🙏\n"
-    "اكتبي لنا ما الذي لم يكن واضحاً أو ما الذي تحتاجينه، وسنساعدك مباشرة."
+    "تمام يا غالية، لن أرسل لكِ تذكيراً آخر. أنا هنا وقت ما تحتاجين أي مساعدة 😊"
 )
 PRODUCT_NEXT_DAY_MESSAGE_TEMPLATE = (
     "مرحبًا! 🎉 بعد محادثتنا، وجدنا لك مجموعة خاصة من {product_name} 🍅 "
@@ -147,20 +140,55 @@ PRODUCT_NEXT_DAY_MESSAGE_TEMPLATE = (
 followup_worker_lock = Lock()
 followup_worker_started = False
 
-def schedule_product_followup(phone_number, product_name=""):
-    """جدولة تذكير واحد بعد رد متعلق بمنتج، مع استمرار الجدولة بعد إعادة التشغيل."""
+def _compact_followup_context(value, limit=120):
+    """حفظ ملخص قصير وآمن من موضوع العميل داخل التذكير."""
+    return " ".join(str(value or "").split())[:limit]
+
+
+def schedule_product_followup(phone_number, product_name="", inquiry_text=""):
+    """جدولة تذكير واحد بعد 24 ساعة عن منتج أو استفسار العميل."""
     if phone_number and phone_number != OWNER_NUMBER:
+        session_data = user_sessions.get(phone_number)
+        if isinstance(session_data, dict):
+            topic = _compact_followup_context(product_name or inquiry_text)
+            if topic:
+                session_data["last_conversation_topic"] = topic
+                session_data["last_conversation_at"] = datetime.utcnow().isoformat(timespec="seconds")
+                user_sessions[phone_number] = session_data
         schedule_customer_followup(
             phone_number,
-            product_name,
+            _compact_followup_context(product_name),
             PRODUCT_FOLLOWUP_DELAY_SECONDS,
+            context_text=_compact_followup_context(inquiry_text),
         )
 
-def send_product_followup(phone_number, product_name=""):
-    """إرسال رسالة التذكير مع زري تقييم الرضا."""
-    send_buttons(phone_number, PRODUCT_FOLLOWUP_MESSAGE, [
-        {"id": PRODUCT_FOLLOWUP_SATISFIED_ID, "title": "👍 راضٍ"},
-        {"id": PRODUCT_FOLLOWUP_UNSATISFIED_ID, "title": "👎 غير راضٍ"},
+
+def schedule_inquiry_followup(phone_number, inquiry_text):
+    """جدولة متابعة لاستفسار عام عندما لا يكون اسم منتج محدداً."""
+    context = _compact_followup_context(inquiry_text)
+    if len(context) >= 3:
+        schedule_product_followup(phone_number, inquiry_text=context)
+
+
+def _followup_subject(product_name="", context_text=""):
+    if product_name:
+        return f"عن *{_compact_followup_context(product_name)}*"
+    if context_text:
+        return f"عن استفسارك: «{_compact_followup_context(context_text)}»"
+    return "عن آخر استفسار لكِ"
+
+
+def send_product_followup(phone_number, product_name="", context_text=""):
+    """إرسال متابعة واحدة مرتبطة بآخر منتج أو استفسار للعميل."""
+    subject = _followup_subject(product_name, context_text)
+    message = (
+        "هلا يا غالية 🌷\n"
+        f"قبل 24 ساعة تكلمنا {subject}.\n"
+        "هل ما زلتِ تحتاجين مساعدة؟"
+    )
+    return send_buttons(phone_number, message, [
+        {"id": PRODUCT_FOLLOWUP_CONTINUE_ID, "title": "✅ نعم، أحتاج"},
+        {"id": PRODUCT_FOLLOWUP_STOP_ID, "title": "🙏 لا، شكراً"},
     ])
 
 def send_next_day_recommendation(phone_number, product_name=""):
@@ -175,17 +203,19 @@ def product_followup_worker():
     while True:
         try:
             for followup in get_due_customer_followups():
-                if mark_customer_followup_sent(
+                if not mark_customer_followup_sent(
                     followup["phone_number"], followup["due_at"]
                 ):
-                    if followup.get("followup_kind") == PRODUCT_RECOMMENDATION_KIND:
-                        send_next_day_recommendation(
-                            followup["phone_number"], followup.get("product_name", "")
-                        )
-                    else:
-                        send_product_followup(
-                            followup["phone_number"], followup.get("product_name", "")
-                        )
+                    continue
+                # إيقاف أي متابعة قديمة ثانية حتى يصبح لكل محادثة تذكير واحد فقط.
+                if followup.get("followup_kind") == PRODUCT_RECOMMENDATION_KIND:
+                    continue
+                if not send_product_followup(
+                    followup["phone_number"],
+                    followup.get("product_name", ""),
+                    followup.get("context_text", ""),
+                ):
+                    print(f"تعذر إرسال تذكير العميل {followup['phone_number']}")
         except Exception as exc:
             print(f"خطأ في عامل تذكير العملاء: {exc}")
         time.sleep(PRODUCT_FOLLOWUP_POLL_SECONDS)
@@ -193,6 +223,8 @@ def product_followup_worker():
 def start_product_followup_worker():
     """تشغيل عامل التذكير مرة واحدة لكل عملية تشغيل."""
     global followup_worker_started
+    if not FOLLOWUP_WORKER_ENABLED:
+        return
     with followup_worker_lock:
         if followup_worker_started:
             return
@@ -1493,9 +1525,11 @@ def route_semantic_intent(sender, msg_body, semantic_result, products=None):
         return True
     if semantic_intent == "price_inquiry":
         send_price_inquiry_response(sender)
+        schedule_inquiry_followup(sender, semantic_query)
         return True
     if semantic_intent == "offers":
         send_offers_response(sender)
+        schedule_inquiry_followup(sender, semantic_query)
         return True
     if semantic_intent == "catalog":
         send_product_request_menu(sender)
@@ -1511,6 +1545,7 @@ def route_semantic_intent(sender, msg_body, semantic_result, products=None):
             send_response(sender, service_response)
         else:
             send_guided_help(sender, semantic_reply)
+        schedule_inquiry_followup(sender, semantic_query)
         return True
     if semantic_intent == "cart":
         send_cart_view(sender)
@@ -1539,10 +1574,13 @@ def route_semantic_intent(sender, msg_body, semantic_result, products=None):
             DELEGATE_WHATSAPP_URL,
         ):
             send_message(sender, f"📞 تواصلي مع المندوبة مباشرة:\n{DELEGATE_WHATSAPP_URL}")
+        schedule_inquiry_followup(sender, semantic_query)
         return True
 
     if semantic_intent in {"social_chat", "clarification", "general"}:
         send_guided_help(sender, semantic_reply)
+        if semantic_intent != "social_chat":
+            schedule_inquiry_followup(sender, semantic_query)
         return True
     if semantic_intent == "out_of_scope":
         send_guided_help(
@@ -1559,6 +1597,8 @@ def route_semantic_intent(sender, msg_body, semantic_result, products=None):
             send_message(sender, semantic_reply)
         else:
             send_message(sender, "أنا معك يا غالية 😊 هل تبحثين عن منتج، تتابعين طلباً، أم تحتاجين مساعدة بشيء آخر؟")
+        if semantic_intent in {"comparison", "budget"}:
+            schedule_inquiry_followup(sender, semantic_query)
         return True
     return False
 
@@ -3569,17 +3609,17 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
 
     if raw_action == PRODUCT_FOLLOWUP_SATISFIED_ID:
         send_message(sender, PRODUCT_FOLLOWUP_SATISFIED_MESSAGE)
-        followup = get_customer_followup(sender) or {}
-        schedule_customer_followup(
-            sender,
-            followup.get("product_name", ""),
-            PRODUCT_NEXT_DAY_DELAY_SECONDS,
-            PRODUCT_RECOMMENDATION_KIND,
-        )
         return
 
     if raw_action == PRODUCT_FOLLOWUP_UNSATISFIED_ID:
-        cancel_customer_followup(sender)
+        send_message(sender, PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE)
+        return
+
+    if raw_action == PRODUCT_FOLLOWUP_CONTINUE_ID:
+        send_message(sender, "تمام يا غالية 😊 اكتبي اسم المنتج أو سؤالك وسأكمل معكِ من حيث توقفنا.")
+        return
+
+    if raw_action == PRODUCT_FOLLOWUP_STOP_ID:
         send_message(sender, PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE)
         return
 
