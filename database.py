@@ -228,6 +228,10 @@ def init_db():
             cursor.execute('ALTER TABLE customer_followups ADD COLUMN context_text TEXT')
         except sqlite3.OperationalError:
             pass
+        try:
+            cursor.execute('ALTER TABLE customer_followups ADD COLUMN last_message_at REAL')
+        except sqlite3.OperationalError:
+            pass
         
         # جدول الأسئلة والأجوبة
         cursor.execute('''
@@ -689,18 +693,21 @@ def schedule_customer_followup(
     delay_seconds=86400,
     followup_kind="satisfaction",
     context_text="",
+    last_message_at=None,
 ):
     """جدولة متابعة واحدة للعميل، مع استبدال أي متابعة سابقة."""
-    due_at = datetime.utcnow().timestamp() + max(int(delay_seconds), 60)
+    last_message_at = float(last_message_at or datetime.utcnow().timestamp())
+    due_at = last_message_at + max(int(delay_seconds), 60)
     with db_lock:
         conn = sqlite3.connect(DB_PATH)
         conn.execute('''
             INSERT INTO customer_followups
-                (phone_number, product_name, context_text, due_at, sent_at, followup_kind, updated_at)
-            VALUES (?, ?, ?, ?, NULL, ?, CURRENT_TIMESTAMP)
+                (phone_number, product_name, context_text, last_message_at, due_at, sent_at, followup_kind, updated_at)
+            VALUES (?, ?, ?, ?, ?, NULL, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(phone_number) DO UPDATE SET
                 product_name = excluded.product_name,
                 context_text = excluded.context_text,
+                last_message_at = excluded.last_message_at,
                 due_at = excluded.due_at,
                 sent_at = NULL,
                 followup_kind = excluded.followup_kind,
@@ -709,6 +716,7 @@ def schedule_customer_followup(
             phone_number,
             product_name or "",
             context_text or "",
+            last_message_at,
             due_at,
             followup_kind or "satisfaction",
         ))
@@ -730,7 +738,7 @@ def get_due_customer_followups(limit=50):
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         rows = conn.execute('''
-            SELECT phone_number, product_name, context_text, due_at, followup_kind
+            SELECT phone_number, product_name, context_text, last_message_at, due_at, followup_kind
             FROM customer_followups
             WHERE sent_at IS NULL AND due_at <= ?
             ORDER BY due_at ASC
@@ -745,7 +753,7 @@ def get_customer_followup(phone_number):
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         row = conn.execute('''
-            SELECT phone_number, product_name, context_text, due_at, sent_at, followup_kind
+            SELECT phone_number, product_name, context_text, last_message_at, due_at, sent_at, followup_kind
             FROM customer_followups
             WHERE phone_number = ?
         ''', (phone_number,)).fetchone()

@@ -150,18 +150,20 @@ def _compact_followup_context(value, limit=120):
 def schedule_product_followup(phone_number, product_name="", inquiry_text=""):
     """جدولة تذكير واحد بعد 24 ساعة عن منتج أو استفسار العميل."""
     if phone_number and phone_number != OWNER_NUMBER:
+        last_message_at = time.time()
         session_data = user_sessions.get(phone_number)
         if isinstance(session_data, dict):
             topic = _compact_followup_context(product_name or inquiry_text)
             if topic:
                 session_data["last_conversation_topic"] = topic
-                session_data["last_conversation_at"] = datetime.utcnow().isoformat(timespec="seconds")
+                session_data["last_conversation_at"] = datetime.now(YEMEN_TIMEZONE).isoformat(timespec="seconds")
                 user_sessions[phone_number] = session_data
         schedule_customer_followup(
             phone_number,
             _compact_followup_context(product_name),
             PRODUCT_FOLLOWUP_DELAY_SECONDS,
             context_text=_compact_followup_context(inquiry_text),
+            last_message_at=last_message_at,
         )
 
 
@@ -200,24 +202,56 @@ def send_next_day_recommendation(phone_number, product_name=""):
         PRODUCT_NEXT_DAY_MESSAGE_TEMPLATE.format(product_name=product_name or "المنتجات المنزلية"),
     )
 
+
+def notify_owner_unfollowed_conversation(followup):
+    """تنبيه واحد للإدارة عند مرور 24 ساعة بلا متابعة من العميل."""
+    phone_number = str(followup.get("phone_number") or "")
+    customer = get_customer(phone_number) or {}
+    customer_name = str(customer.get("name") or "").strip() or "غير مسجل"
+    topic = _compact_followup_context(
+        followup.get("product_name") or followup.get("context_text") or "استفسار العميل"
+    )
+    last_message_at = followup.get("last_message_at")
+    try:
+        last_message_time = datetime.fromtimestamp(float(last_message_at), YEMEN_TIMEZONE).strftime("%d-%m-%Y، %H:%M")
+    except (TypeError, ValueError, OSError):
+        last_message_time = "غير متاح"
+    notification = (
+        "🔔 *محادثة تحتاج متابعة*\n"
+        "━━━━━━━━━━━━\n"
+        f"👤 العميل: {customer_name}\n"
+        f"📞 الرقم: {phone_number}\n"
+        f"📝 آخر الموضوع: {topic}\n"
+        f"🕒 آخر رسالة: {last_message_time}\n"
+        "⏳ لم تصل متابعة من العميل خلال 24 ساعة.\n"
+        "━━━━━━━━━━━━"
+    )
+    return send_message(OWNER_NUMBER, notification)
+
+
+def process_due_customer_followups_once():
+    """معالجة التذكيرات المستحقة مرة واحدة، ليسهل اختبارها دون عامل دائم."""
+    for followup in get_due_customer_followups():
+        if not mark_customer_followup_sent(
+            followup["phone_number"], followup["due_at"]
+        ):
+            continue
+        # لا تُعامل توصية اليوم التالي كمحادثة متوقفة عن المتابعة.
+        if followup.get("followup_kind") == PRODUCT_RECOMMENDATION_KIND:
+            continue
+        notify_owner_unfollowed_conversation(followup)
+        if not send_product_followup(
+            followup["phone_number"],
+            followup.get("product_name", ""),
+            followup.get("context_text", ""),
+        ):
+            print(f"تعذر إرسال تذكير العميل {followup['phone_number']}")
+
 def product_followup_worker():
     """عامل خلفي يرسل التذكيرات المستحقة مرة واحدة فقط."""
     while True:
         try:
-            for followup in get_due_customer_followups():
-                if not mark_customer_followup_sent(
-                    followup["phone_number"], followup["due_at"]
-                ):
-                    continue
-                # إيقاف أي متابعة قديمة ثانية حتى يصبح لكل محادثة تذكير واحد فقط.
-                if followup.get("followup_kind") == PRODUCT_RECOMMENDATION_KIND:
-                    continue
-                if not send_product_followup(
-                    followup["phone_number"],
-                    followup.get("product_name", ""),
-                    followup.get("context_text", ""),
-                ):
-                    print(f"تعذر إرسال تذكير العميل {followup['phone_number']}")
+            process_due_customer_followups_once()
         except Exception as exc:
             print(f"خطأ في عامل تذكير العملاء: {exc}")
         time.sleep(PRODUCT_FOLLOWUP_POLL_SECONDS)
