@@ -126,6 +126,9 @@ PRODUCT_FOLLOWUP_UNSATISFIED_ID = "product_followup_unsatisfied"
 PRODUCT_FOLLOWUP_CONTINUE_ID = "product_followup_continue"
 PRODUCT_FOLLOWUP_STOP_ID = "product_followup_stop"
 PRODUCT_RECOMMENDATION_KIND = "next_day_recommendation"
+TITIZ_COMMUNITY_URL = os.environ.get(
+    "TITIZ_COMMUNITY_URL", "https://chat.whatsapp.com/DTMQmEfz9bzL7Jnwy4oOG8"
+).strip()
 PRODUCT_FOLLOWUP_SATISFIED_MESSAGE = (
     "يسعدنا رضاكِ يا غالية 😊 إذا احتجتِ أي منتج أو مساعدة، اكتبي لي في أي وقت."
 )
@@ -183,16 +186,17 @@ def _followup_subject(product_name="", context_text=""):
 
 
 def send_product_followup(phone_number, product_name="", context_text=""):
-    """إرسال متابعة واحدة مرتبطة بآخر منتج أو استفسار للعميل."""
+    """إرسال رسالة رضا واحدة مرتبطة بآخر منتج أو استفسار للعميل."""
     subject = _followup_subject(product_name, context_text)
     message = (
-        "هلا يا غالية 🌷\n"
-        f"قبل 24 ساعة تكلمنا {subject}.\n"
-        "هل ما زلتِ تحتاجين مساعدة؟"
+        "مرحبًا يا غالية 🌷\n\n"
+        f"هل أنتِ راضية عن المساعدة التي قدمناها لكِ {subject}؟ 😊\n\n"
+        "يسعدنا نساعدكِ في أي وقت، وإذا حبيتي تتابعي أحدث العروض والمنتجات انضمي لمجتمع Titiz:\n"
+        f"{TITIZ_COMMUNITY_URL}"
     )
     return send_buttons(phone_number, message, [
-        {"id": PRODUCT_FOLLOWUP_CONTINUE_ID, "title": "✅ نعم، أحتاج"},
-        {"id": PRODUCT_FOLLOWUP_STOP_ID, "title": "🙏 لا، شكراً"},
+        {"id": PRODUCT_FOLLOWUP_SATISFIED_ID, "title": "👍 راضي"},
+        {"id": PRODUCT_FOLLOWUP_UNSATISFIED_ID, "title": "👎 غير راضي"},
     ])
 
 def send_next_day_recommendation(phone_number, product_name=""):
@@ -3620,6 +3624,8 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         "طلباتي": "menu_orders",
         "العروض": "menu_offers",
         "التواصل مع المندوبة": "menu_contact",
+        "راضي": PRODUCT_FOLLOWUP_SATISFIED_ID,
+        "غير راضي": PRODUCT_FOLLOWUP_UNSATISFIED_ID,
     }
     text_button_action = button_text_aliases.get(msg_normalized)
     session_context = user_sessions.get(sender, {})

@@ -87,10 +87,25 @@ with tempfile.TemporaryDirectory() as temporary_directory:
     assert app.user_sessions["967700000001"]["last_conversation_topic"] == "طقم ملاعق"
     app.send_product_followup("967700000001", "طقم ملاعق")
     assert "طقم ملاعق" in captured["text"]
-    assert captured["buttons"][0]["id"] == app.PRODUCT_FOLLOWUP_CONTINUE_ID
-    assert captured["buttons"][1]["id"] == app.PRODUCT_FOLLOWUP_STOP_ID
+    assert app.TITIZ_COMMUNITY_URL in captured["text"]
+    assert captured["buttons"][0]["id"] == app.PRODUCT_FOLLOWUP_SATISFIED_ID
+    assert captured["buttons"][1]["id"] == app.PRODUCT_FOLLOWUP_UNSATISFIED_ID
 
     app.send_product_followup("967700000001", "", "هل يوجد توصيل إلى إب؟")
     assert "هل يوجد توصيل إلى إب؟" in captured["text"]
+
+    replies = []
+    app.restore_customer_session = lambda phone: None
+    app.cancel_customer_followup = lambda phone: None
+    app.send_message = lambda phone, text: replies.append((phone, text)) or True
+    app.user_states.clear()
+    app.handle_customer_message(
+        "967700000001", "راضي", app.normalize_text("راضي"), {"type": "text"}
+    )
+    app.handle_customer_message(
+        "967700000001", "غير راضي", app.normalize_text("غير راضي"), {"type": "text"}
+    )
+    assert replies[0][1] == app.PRODUCT_FOLLOWUP_SATISFIED_MESSAGE
+    assert replies[1][1] == app.PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE
 
 print("PASS: followup message content and session topic")
