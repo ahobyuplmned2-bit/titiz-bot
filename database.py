@@ -187,6 +187,18 @@ def init_db():
             "ON message_events(intent, created_at)"
         )
 
+        # عداد ثابت خاص بإشعارات الإدارة، منفصل عن سجل الرسائل كي لا تتخطى
+        # الأرقام بسبب الأزرار أو الأحداث التقنية أو الردود الصادرة من البوت.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS owner_notification_sequences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_event_id INTEGER UNIQUE,
+                phone_number TEXT NOT NULL,
+                sequence_number INTEGER UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         # ردود الإدارة المؤجلة حتى يراسل العميل البوت لأول مرة.
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS pending_replies (
@@ -383,6 +395,37 @@ def record_message_event(
             return event_id
     except Exception as exc:
         print(f"[سجل الرسائل] تعذر حفظ الحدث: {exc}")
+        return None
+
+
+def reserve_owner_notification_sequence(phone_number="", message_event_id=None):
+    """حجز رقم متسلسل واحد لإشعار إدارة رسالة عميل واردة."""
+    try:
+        with db_lock:
+            conn = sqlite3.connect(DB_PATH)
+            if message_event_id is not None:
+                existing = conn.execute(
+                    "SELECT sequence_number FROM owner_notification_sequences WHERE message_event_id = ?",
+                    (message_event_id,),
+                ).fetchone()
+                if existing:
+                    conn.close()
+                    return int(existing[0])
+
+            current = conn.execute(
+                "SELECT COALESCE(MAX(sequence_number), 0) FROM owner_notification_sequences"
+            ).fetchone()
+            next_sequence = int(current[0] or 0) + 1
+            conn.execute(
+                "INSERT INTO owner_notification_sequences (message_event_id, phone_number, sequence_number) "
+                "VALUES (?, ?, ?)",
+                (message_event_id, str(phone_number or ""), next_sequence),
+            )
+            conn.commit()
+            conn.close()
+            return next_sequence
+    except Exception as exc:
+        print(f"[إشعارات الإدارة] تعذر حجز رقم الرسالة: {exc}")
         return None
 
 

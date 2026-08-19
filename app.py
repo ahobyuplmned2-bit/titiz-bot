@@ -21,6 +21,7 @@ from threading import Lock, Thread
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import ContextVar
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 from PIL import Image, ImageOps
 import asyncio
 import edge_tts
@@ -40,7 +41,7 @@ from database import (
     get_pending_replies, mark_pending_reply_sent, update_product_metadata,
     update_product_fields,
     claim_processed_webhook_message, record_message_event, update_message_event,
-    get_message_events,
+    get_message_events, reserve_owner_notification_sequence,
 )
 from whatsapp_api import WhatsAppAPI, format_product_card, parse_product_price
 
@@ -55,6 +56,7 @@ PHONE_NUMBER_ID = os.environ.get("PHONE_NUMBER_ID", "").strip()
 VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN", "bot_adawat_manziliya_2026")
 APP_SECRET = os.environ.get("APP_SECRET", "").strip()
 OWNER_NUMBER = os.environ.get("OWNER_NUMBER", "967773595571")
+YEMEN_TIMEZONE = ZoneInfo("Asia/Aden")
 
 # ===== بيانات GitHub =====
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
@@ -2513,8 +2515,9 @@ def notify_owner(sender, msg_body, message_event_id=None):
     """إرسال كل رسالة عميل للإدارة في بطاقة نصية موحدة وسهلة القراءة."""
     customer = get_customer(sender) or {}
     customer_name = str(customer.get("name") or "").strip() or "غير مسجل"
-    now = datetime.now().strftime("%d-%m-%Y، %H:%M")
-    message_reference = f"{int(message_event_id):04d}" if str(message_event_id or "").isdigit() else "غير متاح"
+    now = datetime.now(YEMEN_TIMEZONE).strftime("%d-%m-%Y، %H:%M")
+    sequence_number = reserve_owner_notification_sequence(sender, message_event_id)
+    message_reference = f"{sequence_number:04d}" if sequence_number else "غير متاح"
     notification = (
         "📨 *رسالة جديدة*\n"
         "━━━━━━━━━━━━\n"
