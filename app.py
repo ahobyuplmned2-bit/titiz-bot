@@ -4751,3 +4751,105 @@ start_product_followup_worker()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+
+
+def sync_orders_to_github():
+    """حفظ جميع الطلبات الحالية على orders.json في GitHub لضمان بقائها عند إعادة تشغيل Render."""
+    try:
+        if not GITHUB_TOKEN:
+            return False
+        remote_data, sha = github_load("orders.json")
+        orders_dict = {}
+        if isinstance(remote_data, dict):
+            orders_dict = remote_data
+        elif isinstance(remote_data, list):
+            for item in remote_data:
+                if isinstance(item, dict) and item.get("order_number"):
+                    orders_dict[item["order_number"]] = item
+
+        all_orders = get_orders(limit=10000)
+        for order in all_orders:
+            num = order.get("order_number")
+            if num:
+                orders_dict[num] = {
+                    "order_number": num,
+                    "phone_number": order.get("phone_number") or "",
+                    "customer_name": order.get("customer_name") or "",
+                    "address": order.get("address") or "",
+                    "products_data": order.get("products_data") or [],
+                    "total_price": order.get("total_price") or 0,
+                    "payment_method": order.get("payment_method") or "",
+                    "order_status": order.get("order_status") or "جديد",
+                    "payment_proof_url": order.get("payment_proof_url") or "",
+                    "created_at": order.get("created_at") or "",
+                    "updated_at": order.get("updated_at") or ""
+                }
+
+        if not orders_dict:
+            return False
+
+        result = github_save("orders.json", orders_dict, sha=sha)
+        if result:
+            print(f"[GitHub] تم حفظ {len(orders_dict)} طلب بنجاح في orders.json")
+        return result
+    except Exception as e:
+        print(f"[GitHub] خطأ في حفظ الطلبات: {e}")
+        return False
+
+def load_orders_from_github():
+    """استعادة الطلبات المحفوظة في orders.json إلى قاعدة البيانات المحلية عند الإقلاع."""
+    try:
+        data, _ = github_load("orders.json")
+        records = []
+        if isinstance(data, dict):
+            records = data.values()
+        elif isinstance(data, list):
+            records = data
+
+        restored = 0
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            num = record.get("order_number")
+            phone = record.get("phone_number")
+            if not num or not phone:
+                continue
+
+            # التأكد من وجود العميل أولاً
+            cust = get_customer(phone)
+            if not cust:
+                add_customer(phone, record.get("customer_name") or "عميل واتساب", record.get("address") or "")
+                cust = get_customer(phone)
+            if not cust:
+                continue
+
+            cust_id = cust["id"]
+            existing = get_order(num)
+            if not existing:
+                with db_lock:
+                    conn = sqlite3.connect(DB_PATH)
+                    cursor = conn.cursor()
+                    cursor.execute('''
+                        INSERT OR IGNORE INTO orders 
+                        (order_number, customer_id, products_data, total_price, payment_method, order_status, payment_proof_url, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        num,
+                        cust_id,
+                        json.dumps(record.get("products_data") or [], ensure_ascii=False),
+                        record.get("total_price") or 0,
+                        record.get("payment_method") or "نقداً عند الاستلام",
+                        record.get("order_status") or "جديد",
+                        record.get("payment_proof_url") or "",
+                        record.get("created_at") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        record.get("updated_at") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    ))
+                    conn.commit()
+                    conn.close()
+                restored += 1
+        print(f"[بدء التشغيل] تم استعادة {restored} طلب من orders.json")
+    except Exception as e:
+        print(f"[بدء التشغيل] خطأ في استعادة الطلبات: {e}")
+
+# استدعاء استعادة الطلبات عند بدء التشغيل
+load_orders_from_github()
