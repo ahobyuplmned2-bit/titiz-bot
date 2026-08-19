@@ -2509,9 +2509,22 @@ def send_list(to, text, button_text, sections):
         _record_outbound_event(to, "interactive_list", text)
     return result
 
-def notify_owner(sender, msg_body):
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    notification = f"📩 *رسالة جديدة*\n\n👤 الرقم: {sender}\n💬 الرسالة: {msg_body}\n🕐 الوقت: {now}"
+def notify_owner(sender, msg_body, message_event_id=None):
+    """إرسال كل رسالة عميل للإدارة في بطاقة نصية موحدة وسهلة القراءة."""
+    customer = get_customer(sender) or {}
+    customer_name = str(customer.get("name") or "").strip() or "غير مسجل"
+    now = datetime.now().strftime("%d-%m-%Y، %H:%M")
+    message_reference = f"{int(message_event_id):04d}" if str(message_event_id or "").isdigit() else "غير متاح"
+    notification = (
+        "📨 *رسالة جديدة*\n"
+        "━━━━━━━━━━━━\n"
+        f"👤 العميل: {customer_name}\n"
+        f"📞 الرقم: {sender}\n"
+        f"💬 الرسالة:\n{msg_body}\n"
+        f"🕒 التاريخ والوقت: {now}\n"
+        f"🆔 رقم الرسالة: {message_reference}\n"
+        "━━━━━━━━━━━━"
+    )
     send_message(OWNER_NUMBER, notification)
 
 
@@ -4584,7 +4597,7 @@ def webhook():
         # إشعار المالك للرسائل الفعلية فقط. ضغطات الأزرار والقوائم تولد تفاعلات
         # تقنية وليست رسائل جديدة، وإشعار الإدارة بها كان يضاعف الإرسال لكل ضغطة.
         if sender != OWNER_NUMBER and msg_body and original_message_type != "interactive":
-            notify_owner(sender, msg_body)
+            notify_owner(sender, msg_body, message_event_id=message_event_id)
 
         # معالجة أوامر المالك
         if sender == OWNER_NUMBER:
