@@ -14,6 +14,7 @@ import difflib
 import hashlib
 import io
 import hmac
+import sqlite3
 from datetime import datetime
 import time
 import unicodedata
@@ -42,6 +43,7 @@ from database import (
     update_product_fields,
     claim_processed_webhook_message, record_message_event, update_message_event,
     get_message_events, reserve_owner_notification_sequence,
+    db_lock, DB_PATH, set_order_sync_callback,
 )
 from whatsapp_api import WhatsAppAPI, format_product_card, parse_product_price
 
@@ -4851,5 +4853,9 @@ def load_orders_from_github():
     except Exception as e:
         print(f"[بدء التشغيل] خطأ في استعادة الطلبات: {e}")
 
-# استدعاء استعادة الطلبات عند بدء التشغيل
+# تسجيل الحفظ التلقائي قبل استعادة الطلبات أو استقبال أي رسالة.
+set_order_sync_callback(sync_orders_to_github)
+
+# استدعاء استعادة الطلبات عند بدء التشغيل ثم رفع أي طلبات محلية لم تكن على GitHub.
 load_orders_from_github()
+sync_orders_to_github()

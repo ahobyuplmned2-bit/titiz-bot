@@ -14,6 +14,26 @@ from threading import Lock
 # قفل للتعامل الآمن مع قاعدة البيانات
 db_lock = Lock()
 
+# يستعمله app.py لتشغيل مزامنة orders.json بعد اكتمال كل تغيير على الطلبات.
+_order_sync_callback = None
+
+
+def set_order_sync_callback(callback):
+    """تسجيل دالة اختيارية لمزامنة الطلبات خارج قفل SQLite."""
+    global _order_sync_callback
+    _order_sync_callback = callback if callable(callback) else None
+
+
+def _notify_order_sync():
+    """إبلاغ طبقة التطبيق بتغير طلب دون تعطيل العملية إذا فشلت المزامنة."""
+    callback = _order_sync_callback
+    if not callable(callback):
+        return
+    try:
+        callback()
+    except Exception as exc:
+        print(f"[الطلبات] تعذر تشغيل مزامنة GitHub: {exc}")
+
 # اختيار نوع قاعدة البيانات. عند ضبط DATABASE_PATH على قرص دائم في Render
 # تنتقل كل بيانات البوت (المحادثات والطلبات والسلة والتذكيرات) إلى المسار نفسه.
 USE_SQLITE = True
@@ -838,8 +858,9 @@ def create_order(customer_id, products_data, total_price, payment_method):
         
         conn.commit()
         conn.close()
-        
-        return order_number, order_id
+
+    _notify_order_sync()
+    return order_number, order_id
 
 def get_order(order_number):
     """الحصول على بيانات الطلب"""
@@ -956,7 +977,11 @@ def update_order_payment_proof(order_number, proof_url):
         updated = cursor.rowcount > 0
         conn.commit()
         conn.close()
-        return updated
+
+    if updated:
+        _notify_order_sync()
+    return updated
+
 
 def update_order_status(order_number, new_status):
     """تحديث حالة الطلب"""
@@ -972,7 +997,11 @@ def update_order_status(order_number, new_status):
         updated = cursor.rowcount > 0
         conn.commit()
         conn.close()
-        return updated
+
+    if updated:
+        _notify_order_sync()
+    return updated
+
 
 def add_product(name, price, description="", image_id="", quantity=0, keywords="", image_urls="", variants=""):
     """إضافة منتج جديد"""
