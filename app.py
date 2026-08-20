@@ -3249,46 +3249,52 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                 except Exception as e:
                     print(f"[إضافة منتج] خطأ جلب الصورة: {e}")
 
-            # توليد وصف وكلمات مفتاحية ذكية عبر الذكاء الاصطناعي بناءً على اسم المنتج
-            marketing_desc = f"منتج حصري وعالي الجودة من منتجات المائدة والضيافة العصرية. {prod_name} بتصميم أنيق ومميز يضفي لمسة جمالية وفخامة لمنزلك."
-            keywords = f"{prod_name}, أواني منزلية, تيتيز, إب"
-            
+            # تحليل ذكي متقدم عبر الذكاء الاصطناعي (مع دعم رؤية الصورة إن وجدت أو اسم المنتج بدقة عالية)
+            marketing_desc = f"{prod_name} - منتج عالي الجودة متوفر لدى متجر Titiz للأدوات المنزلية والضيافة."
+            keywords = f"{prod_name}, أدوات منزلية, تيتيز"
+
             if SMART_AI_API_KEY:
                 try:
-                    ai_prompt = (
-                        f"أنت مساعد متجر أدوات منزلية في إب، اليمن. لدينا منتج جديد باسم: '{prod_name}'.\n"
-                        "قم بتوليد:\n"
-                        "1. وصف تسويقي قصير وجذاب (سطرين) بالعربية.\n"
-                        "2. كلمات مفتاحية دقيقة مفصولة بفواصل (تشمل اسم المنتج، المرادفات، اللهجة المحلية اليمنية، الاستخدام، والكلمات التي قد يكتبها العملاء عند البحث عن هذا المنتج).\n"
-                        "أجب حصرياً بصيغة JSON بالتنسيق التالي بدون أي نص إضافي:\n"
-                        "{\"description\": \"...\", \"keywords\": \"...\"}"
-                    )
+                    user_content = []
+                    if image_url:
+                        user_content.append({"type": "image_url", "image_url": {"url": image_url}})
+                    user_content.append({
+                        "type": "text",
+                        "text": (
+                            f"أنت خبير تسويق ومدير منتجات لمتجر أدوات منزلية في إب، اليمن. لدينا منتج جديد اسمه: '{prod_name}'.\n"
+                            "قم بتحليل اسم المنتج (والصورة إن وجدت) بدقة واحترافية مطلقة لتوليد ما يلي بصيغة JSON فقط:\n"
+                            "1. 'description': وصف تسويقي غني وجذاب (في حدود سطرين أو ثلاثة) يوضح ميزات المنتج واستخدامه.\n"
+                            "2. 'keywords': قائمة واسعة من الكلمات المفتاحية ومرادفات البحث باللغة العربية (شاملة الأشكال المختلفة للاسم، اللهجة اليمنية والشعبة، الاستخدام، الخامات، وأي كلمة قد يبحث بها الزبون في الواتساب)، مفصولة بفواصل.\n"
+                            "أجب بصيغة JSON الصرفة التالية دون أي مقدمات أو وسوم markdown إضافية:\n"
+                            "{\"description\": \"وصف المنتج هنا\", \"keywords\": \"كلمة1, كلمة2, كلمة3\"}"
+                        )
+                    })
+
                     ai_payload = {
                         "model": SMART_AI_MODEL,
                         "messages": [
-                            {"role": "system", "content": "أنت نظام ذكاء اصطناعي لتوليد بيانات المنتجات بصيغة JSON فقط."},
-                            {"role": "user", "content": ai_prompt}
+                            {"role": "system", "content": "أنت ذكاء اصطناعي خبير في تجارة الأواني المنزلية والتسويق وتوليد الكلمات المفتاحية. تجاوب بصيغة JSON حصرياً."},
+                            {"role": "user", "content": user_content}
                         ],
-                        "temperature": 0.3,
-                        **_llm_token_limit(300),
+                        "temperature": 0.4,
+                        **_llm_token_limit(500),
                     }
                     ai_resp = _request_with_429_retry(
                         requests.post,
-                        "توليد وصف وكلمات مفتاحية للمنتج",
+                        "تحليل وتوليد بيانات المنتج الذكية",
                         f"{SMART_AI_API_BASE}/chat/completions",
                         headers={
                             "Authorization": f"Bearer {SMART_AI_API_KEY}",
                             "Content-Type": "application/json",
                         },
                         json=ai_payload,
-                        timeout=30,
+                        timeout=35,
                         retries=1,
                         retry_base=0.2,
                     )
                     ai_resp.raise_for_status()
                     ai_json = ai_resp.json()
                     content = (ai_json.get("choices", [{}])[0].get("message", {}).get("content") or "").strip()
-                    # تنظيف محتمل لـ markdown json
                     if content.startswith("```"):
                         content = re.sub(r"^```(?:json)?\s*", "", content)
                         content = re.sub(r"\s*```$", "", content)
@@ -3298,7 +3304,11 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                     if parsed.get("keywords"):
                         keywords = parsed.get("keywords").strip()
                 except Exception as e:
-                    print(f"[توليد ذكي للمنتج] خطأ: {e}")
+                    print(f"[التحليل الذكي المتقدم للمنتج] خطأ: {e}")
+                    # في حال فشل الذكاء الاصطناعي، نولد كلمات مشتقة ذكية من اسم المنتج بدلاً من الكلمات الثابتة
+                    words = [w for w in prod_name.split() if len(w) > 2]
+                    custom_keys = [prod_name] + words + ["أدوات منزلية", "تيتيز", "إب"]
+                    keywords = ", ".join(list(dict.fromkeys(custom_keys)))
 
             try:
                 import database as db_mod
