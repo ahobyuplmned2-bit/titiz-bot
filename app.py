@@ -4706,16 +4706,20 @@ def webhook():
 
         # لا نحفظ العميل عند أول رسالة؛ يتم الحفظ بعد إدخال الاسم فقط.
 
-        # إشعار المالك للرسائل الفعلية فقط. ضغطات الأزرار والقوائم تولد تفاعلات
-        # تقنية وليست رسائل جديدة، وإشعار الإدارة بها كان يضاعف الإرسال لكل ضغطة.
-        if sender != OWNER_NUMBER and msg_body and original_message_type != "interactive":
-            notify_owner(sender, msg_body, message_event_id=message_event_id)
+        # تطبيع رقم المرسل ورقم الإدارة لمقارنة آمنة بغض النظر عن الـ + أو الفراغات
+        clean_sender = str(sender).strip().lstrip("+")
+        clean_owner = str(OWNER_NUMBER).strip().lstrip("+")
+        is_owner = (clean_sender == clean_owner or clean_sender.endswith(clean_owner) or clean_owner.endswith(clean_sender))
 
-        # معالجة أوامر المالك أو الرد المقتبس للإدارة
-        if sender == OWNER_NUMBER:
+        # معالجة أوامر المالك أو الرد المقتبس للإدارة أولاً وقبل أي شيء
+        if is_owner:
             handle_owner_command(sender, msg_body, msg_normalized, processing_message)
             active_message_events.pop(sender, None)
             return jsonify({"status": "ok"}), 200
+
+        # إشعار المالك للرسائل الفعلية للعملاء فقط
+        if msg_body and original_message_type != "interactive":
+            notify_owner(sender, msg_body, message_event_id=message_event_id)
 
         # معالجة رسائل العملاء فقط
         voice_mode_token = None
