@@ -3199,11 +3199,12 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                 send_message(OWNER_NUMBER, f"❌ لم أجد الطلب برقم: {order_number}")
         return True
 
-    # === إضافة منتج جديد مباشرة من رقم الإدارة (صورة + نص الاسم والسعر) ===
+    # === إضافة منتج جديد من رقم الإدارة بأمر «اضف» (صورة اختيارية + اسم وسعر) ===
     is_image_add = (message.get("type") == "image")
-    add_match = re.search(r"(?:اسم\s*المنتج|المنتج|اضف|إضافة)\s*[:：]?\s*([^\n,]+)(?:[\n,].*?السعر\s*[:：]?\s*(\d+))?", msg_body or "", re.IGNORECASE)
+    is_add_command = bool(re.match(r"^\s*(?:اضف|إضافة)\b", msg_body or "", re.IGNORECASE))
+    add_match = re.search(r"(?:اسم\s*المنتج|المنتج|اضف|إضافة)\s*[:：]?\s*([^\n,]+)(?:[\n,].*?السعر\s*[:：]?\s*(\d+))?", msg_body or "", re.IGNORECASE) if is_add_command else None
     
-    if is_image_add or add_match or "السعر:" in (msg_body or "") or "السعر" in (msg_body or "") or "السعر" in (msg_body or ""):
+    if is_add_command:
         prod_name = ""
         prod_price = 0
         
@@ -3249,76 +3250,14 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                 except Exception as e:
                     print(f"[إضافة منتج] خطأ جلب الصورة: {e}")
 
-            # تحليل ذكي متقدم عبر الذكاء الاصطناعي (مع جلب بايتات الصورة وتحويلها لـ base64 لضمان رؤية النموذج الحقيقية)
-            marketing_desc = f"{prod_name} - منتج عالي الجودة متوفر لدى متجر Titiz للأدوات المنزلية والضيافة."
-            keywords = f"{prod_name}, أدوات منزلية, تيتيز"
-
-            if SMART_AI_API_KEY:
-                try:
-                    user_content = []
-                    if image_url:
-                        try:
-                            img_resp = requests.get(image_url, timeout=15)
-                            if img_resp.status_code == 200:
-                                b64_data = base64.b64encode(img_resp.content).decode("utf-8")
-                                user_content.append({
-                                    "type": "image_url",
-                                    "image_url": {"url": f"data:image/jpeg;base64,{b64_data}"}
-                                })
-                        except Exception as img_err:
-                            print(f"[تحميل صورة المنتج للذكاء الاصطناعي] خطأ: {img_err}")
-
-                    user_content.append({
-                        "type": "text",
-                        "text": (
-                            f"أنت خبير تسويق ومدير منتجات لمتجر أدوات منزلية في إب، اليمن. لدينا منتج جديد اسمه: '{prod_name}'.\n"
-                            "قم بتحليل الصورة المرفقة (واسم المنتج) بدقة واحترافية مطلقة لتوليد ما يلي بصيغة JSON فقط:\n"
-                            "1. 'description': وصف تسويقي غني وجذاب ومفصل بالعربية يصف ميزات المنتج واستخدامه بناءً على ما ترسله الصورة والاسم.\n"
-                            "2. 'keywords': قائمة واسعة من الكلمات المفتاحية ومرادفات البحث باللغة العربية (شاملة الأشكال المختلفة للاسم، اللهجة اليمنية، الاستخدام، الخامات، والكلمات التي يبحث بها العملاء)، مفصولة بفواصل.\n"
-                            "أجب بصيغة JSON الصرفة التالية دون أي مقدمات أو وسوم markdown:\n"
-                            "{\"description\": \"وصف المنتج هنا\", \"keywords\": \"كلمة1, كلمة2, كلمة3\"}"
-                        )
-                    })
-
-                    ai_payload = {
-                        "model": SMART_AI_MODEL,
-                        "messages": [
-                            {"role": "system", "content": "أنت ذكاء اصطناعي خبير في تجارة الأواني المنزلية والتسويق وتوليد الكلمات المفتاحية. تجاوب بصيغة JSON حصرياً."},
-                            {"role": "user", "content": user_content}
-                        ],
-                        "temperature": 0.4,
-                        **_llm_token_limit(500),
-                    }
-                    ai_resp = _request_with_429_retry(
-                        requests.post,
-                        "تحليل وتوليد بيانات المنتج الذكية",
-                        f"{SMART_AI_API_BASE}/chat/completions",
-                        headers={
-                            "Authorization": f"Bearer {SMART_AI_API_KEY}",
-                            "Content-Type": "application/json",
-                        },
-                        json=ai_payload,
-                        timeout=35,
-                        retries=1,
-                        retry_base=0.2,
-                    )
-                    ai_resp.raise_for_status()
-                    ai_json = ai_resp.json()
-                    content = (ai_json.get("choices", [{}])[0].get("message", {}).get("content") or "").strip()
-                    if content.startswith("```"):
-                        content = re.sub(r"^```(?:json)?\s*", "", content)
-                        content = re.sub(r"\s*```$", "", content)
-                    parsed = json.loads(content)
-                    if parsed.get("description"):
-                        marketing_desc = parsed.get("description").strip()
-                    if parsed.get("keywords"):
-                        keywords = parsed.get("keywords").strip()
-                except Exception as e:
-                    print(f"[التحليل الذكي المتقدم للمنتج] خطأ: {e}")
-                    # في حال فشل الذكاء الاصطناعي، نولد كلمات مشتقة ذكية من اسم المنتج بدلاً من الكلمات الثابتة
-                    words = [w for w in prod_name.split() if len(w) > 2]
-                    custom_keys = [prod_name] + words + ["أدوات منزلية", "تيتيز", "إب"]
-                    keywords = ", ".join(list(dict.fromkeys(custom_keys)))
+            # طريقة «اضف» السابقة: وصف ثابت واضح وكلمات بحث مشتقة من اسم المنتج فقط.
+            # لا يتم استدعاء الذكاء الاصطناعي أو تحليل الصورة في هذا المسار.
+            marketing_desc = f"منتج حصري وعالي الجودة من منتجات المائدة والضيافة العصرية. {prod_name} بتصميم أنيق ومميز يضفي لمسة جمالية وفخامة لمنزلك."
+            keywords = f"{prod_name}, أواني منزلية, تجهيز مطابخ, تيتيز, إب"
+            if "ثلاجة" in prod_name or "شاي" in prod_name:
+                keywords += ", حافظات حرارة, دلال قهوة"
+            elif "قدر" in prod_name or "طباخة" in prod_name:
+                keywords += ", قدور طهي, أدوات مطبخ"
 
             try:
                 import database as db_mod
