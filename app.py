@@ -2553,7 +2553,7 @@ def send_list(to, text, button_text, sections):
     return result
 
 def notify_owner(sender, msg_body, message_event_id=None):
-    """إرسال كل رسالة عميل للإدارة في بطاقة نصية موحدة وسهلة القراءة."""
+    """إرسال كل رسالة عميل للإدارة في بطاقة نصية موحدة وسهلة القراءة، وتخزين ربط wamid الإدارة برقم العميل."""
     customer = get_customer(sender) or {}
     customer_name = str(customer.get("name") or "").strip() or "غير مسجل"
     now = datetime.now(YEMEN_TIMEZONE).strftime("%d-%m-%Y، %H:%M")
@@ -2569,7 +2569,16 @@ def notify_owner(sender, msg_body, message_event_id=None):
         f"🆔 رقم الرسالة: {message_reference}\n"
         "━━━━━━━━━━━━"
     )
-    send_message(OWNER_NUMBER, notification)
+    res = send_message(OWNER_NUMBER, notification)
+    # إذا أعادت send_message معرف رسالة واتساب (wamid) حقيقي، نسجله في الأحداث لكي يعمل الرد المقتبس 100%
+    if res and isinstance(res, str) and res.startswith("wamid."):
+        record_message_event(
+            whatsapp_message_id=res,
+            direction="outbound",
+            phone_number=sender,
+            message_type="text",
+            body=notification,
+        )
 
 
 def notify_owner_unavailable_product(sender, request_text, source="text", image_id=""):
