@@ -3203,7 +3203,7 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
     is_image_add = (message.get("type") == "image")
     add_match = re.search(r"(?:اسم\s*المنتج|المنتج|اضف|إضافة)\s*[:：]?\s*([^\n,]+)(?:[\n,].*?السعر\s*[:：]?\s*(\d+))?", msg_body or "", re.IGNORECASE)
     
-    if is_image_add or add_match or "السعر:" in (msg_body or "") or "السعر" in (msg_body or ""):
+    if is_image_add or add_match or "السعر:" in (msg_body or "") or "السعر" in (msg_body or "") or "السعر" in (msg_body or ""):
         prod_name = ""
         prod_price = 0
         
@@ -3230,13 +3230,24 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
         if not prod_name and msg_body:
             lines = [l.strip() for l in msg_body.split("\n") if l.strip()]
             if lines:
-                prod_name = lines[0].replace("اسم المنتج:", "").replace("المنتج:", "").strip()
+                prod_name = lines[0].replace("اسم المنتج:", "").replace("المنتج:", "").replace("اضف", "").strip()
 
-        if prod_name and prod_price > 0:
+        # إذا توفرت الصورة أو السعر، نبدأ المعالجة
+        if prod_name or prod_price > 0 or is_image_add:
+            if not prod_name:
+                prod_name = "منتج جديد من الإدارة"
+            if prod_price <= 0:
+                prod_price = 1000  # سعر افتراضي مؤقت إن لم يُكتب صريحاً لتجنب التوقف
+
+            send_message(OWNER_NUMBER, f"⏳ *جاري إضافة المنتج ({prod_name}) ومعالجة البيانات والصورة...*")
+
             image_id = message.get("image", {}).get("id", "") if is_image_add else ""
             image_url = ""
             if image_id:
-                image_url = get_media_url_by_id(image_id) or ""
+                try:
+                    image_url = get_media_url_by_id(image_id) or ""
+                except Exception as e:
+                    print(f"[إضافة منتج] خطأ جلب الصورة: {e}")
 
             marketing_desc = f"منتج حصري وعالي الجودة من منتجات المائدة والضيافة العصرية. {prod_name} بتصميم أنيق ومميز يضفي لمسة جمالية وفخامة لمنزلك."
             keywords = f"{prod_name}, أواني منزلية, تجهيز مطابخ, تيتيز, إب"
@@ -3245,25 +3256,28 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             elif "قدر" in prod_name or "طباخة" in prod_name:
                 keywords += ", قدور طهي, أدوات مطبخ"
 
-            # إضافة المنتج مباشرة لقاعدة البيانات
-            import database as db_mod
-            db_mod.add_product(
-                name=prod_name,
-                price=prod_price,
-                description=marketing_desc,
-                image_id=image_url,
-                keywords=keywords
-            )
+            try:
+                import database as db_mod
+                db_mod.add_product(
+                    name=prod_name,
+                    price=prod_price,
+                    description=marketing_desc,
+                    image_id=image_url,
+                    keywords=keywords
+                )
 
-            success_msg = (
-                "✅ *تمت إضافة المنتج مباشرة بنجاح!*\n\n"
-                f"☕ *الاسم:* {prod_name}\n"
-                f"💰 *السعر:* {prod_price} ريال\n"
-                f"📝 *الوصف المُنشأ:* {marketing_desc}\n"
-                f"🔑 *الكلمات المفتاحية:* {keywords}\n"
-                f"{'🖼️ مع صورة المنتج' if image_url else '⚠️ بدون صورة (نصي فقط)'}"
-            )
-            send_message(OWNER_NUMBER, success_msg)
+                success_msg = (
+                    "✅ *تمت إضافة المنتج مباشرة بنجاح!*\n\n"
+                    f"☕ *الاسم:* {prod_name}\n"
+                    f"💰 *السعر:* {prod_price} ريال\n"
+                    f"📝 *الوصف المُنشأ:* {marketing_desc}\n"
+                    f"🔑 *الكلمات المفتاحية:* {keywords}\n"
+                    f"{'🖼️ مع صورة المنتج' if image_url else '⚠️ بدون صورة (نصي فقط)'}"
+                )
+                send_message(OWNER_NUMBER, success_msg)
+            except Exception as ex:
+                send_message(OWNER_NUMBER, f"❌ حدث خطأ أثناء حفظ المنتج في قاعدة البيانات: {ex}")
+
             return True
 
     # === رد على زبون ===
