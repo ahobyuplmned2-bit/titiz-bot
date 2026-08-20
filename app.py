@@ -3266,15 +3266,22 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                     keywords=keywords
                 )
 
-                success_msg = (
-                    "✅ *تمت إضافة المنتج مباشرة بنجاح!*\n\n"
-                    f"☕ *الاسم:* {prod_name}\n"
+                # رسالة التأكيد
+                send_message(OWNER_NUMBER, f"✅ *تمت إضافة المنتج بنجاح وتم تحديث الكتالوج!*")
+
+                # إرسال بطاقة المنتج النهائية (صورة إن وجدت + النص التنسيقي الكامل)
+                card_text = (
+                    f"☕ *{prod_name}*\n\n"
+                    f"📝 *الوصف:* {marketing_desc}\n"
                     f"💰 *السعر:* {prod_price} ريال\n"
-                    f"📝 *الوصف المُنشأ:* {marketing_desc}\n"
-                    f"🔑 *الكلمات المفتاحية:* {keywords}\n"
-                    f"{'🖼️ مع صورة المنتج' if image_url else '⚠️ بدون صورة (نصي فقط)'}"
+                    f"🔑 *الكلمات المفتاحية:* {keywords}"
                 )
-                send_message(OWNER_NUMBER, success_msg)
+
+                if image_url:
+                    send_image_message(OWNER_NUMBER, image_url, card_text)
+                else:
+                    send_message(OWNER_NUMBER, card_text)
+
             except Exception as ex:
                 send_message(OWNER_NUMBER, f"❌ حدث خطأ أثناء حفظ المنتج في قاعدة البيانات: {ex}")
 
