@@ -1,0 +1,22 @@
+{
+  "ORD-000001": {
+    "order_number": "ORD-000001",
+    "phone_number": "967712282204",
+    "customer_name": "ام مالك",
+    "address": "جوله العدين بقاله المنصوب",
+    "products_data": [
+      {
+        "name": "طقم قدور هندي 5 قطع",
+        "qty": 1,
+        "price": 10500.0,
+        "total": 10500.0
+      }
+    ],
+    "total_price": 10500.0,
+    "payment_method": "الدفع عند الاستلام",
+    "order_status": "جديد",
+    "payment_proof_url": "",
+    "created_at": "2026-08-19 18:34:55",
+    "updated_at": "2026-08-19 18:34:55"
+  }
+}
