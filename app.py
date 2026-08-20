@@ -3126,47 +3126,55 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
     # === التعامل مع الرد المباشر المقتبس (الضغط مطولاً على إشعار العميل ثم الرد) ===
     context_info = message.get("context") or {}
     quoted_id = context_info.get("id", "")
-    if quoted_id and msg_body:
-        # نبحث في الأحداث أو السجلات عن الرسالة الصادرة للإدارة التي تحمل هذا wamid
-        # أو نستخرج رقم الهاتف مباشرة من النص المقتبس (إذا كان يظهر فيه الرقم 967...)
-        target_phone = ""
-        # 1. البحث في قاعدة البيانات عن رسالة صادرة للإدارة بنفس wamid
-        try:
-            with db_lock:
-                conn = sqlite3.connect(DB_PATH)
-                conn.row_factory = sqlite3.Row
-                # نفحص هل نجد الحدث المرتبط بـ quoted_id
-                row = conn.execute(
-                    "SELECT phone_number FROM message_events WHERE whatsapp_message_id = ? LIMIT 1",
-                    (quoted_id,)
-                ).fetchone()
-                if row and row["phone_number"]:
-                    target_phone = str(row["phone_number"])
-        except Exception:
-            pass
+    # بعض إصدارات واتساب تضع النص المقتبس في context.get("text") أو context.get("body")
+    quoted_text = str(context_info.get("text", "") or context_info.get("body", "") or "")
+    
+    print(f"[تشخيص الرد المقتبس] quoted_id={quoted_id}, quoted_text={quoted_text}, msg_body={msg_body}")
 
-        # 2. إن لم نجدها عبر الـ wamid المباشر، نبحث في النص المقتبس عن رقم الهاتف بجوار "الرقم:" أو أي نمط يمني صحيح
-        if not target_phone:
-            quoted_text = context_info.get("text", "") or ""
-            # البحث عن صيغة مثل الرقم: 967... أو 7...
+    if (quoted_id or quoted_text) and msg_body:
+        target_phone = ""
+        
+        # 1. البحث في النص المقتبس أولاً لأنه مضمون ويحتوي رقم العميل صراحةً (مثل: الرقم: 967712282204)
+        if quoted_text:
             phone_match = re.search(r"(?:الرقم\s*[:：]?\s*)?([+]?967\d{9}|[+]?[7]\d{8})", quoted_text)
             if phone_match:
-                # نأخذ المجموع رقم 1 أو المجموعة كاملة وننظفها
                 raw_num = phone_match.group(1) or phone_match.group(0)
                 target_phone = re.sub(r"\D", "", raw_num)
                 if target_phone.startswith("00"):
                     target_phone = target_phone[2:]
 
+        # 2. إن لم نجد الرقم في النص المقتبس، نبحث عبر wamid في قاعدة البيانات
+        if not target_phone and quoted_id:
+            try:
+                with db_lock:
+                    conn = sqlite3.connect(DB_PATH)
+                    conn.row_factory = sqlite3.Row
+                    row = conn.execute(
+                        "SELECT phone_number FROM message_events WHERE whatsapp_message_id = ? LIMIT 1",
+                        (quoted_id,)
+                    ).fetchone()
+                    if row and row["phone_number"]:
+                        target_phone = str(row["phone_number"])
+            except Exception as e:
+                print(f"[تشخيص الرد المقتبس] خطأ قاعدة البيانات عند البحث بـ wamid: {e}")
+
+        print(f"[تشخيص الرد المقتبس] target_phone المستخرج={target_phone}")
+
         if target_phone:
             reply_text = msg_body.strip()
             if reply_text:
                 sent = send_message(target_phone, reply_text)
+                print(f"[تشخيص الرد المقتبس] نتيجة send_message للعميل={sent}")
                 if sent:
                     send_message(OWNER_NUMBER, f"✅ تم إرسال الرد إلى العميل مباشرة ({target_phone})")
                 else:
                     queue_pending_reply(target_phone, reply_text)
                     send_message(OWNER_NUMBER, f"✅ تم حفظ الرد للعميل ({target_phone}) وسيصل عند تواصله.")
                 return True
+        else:
+            # تنبيه الإدارة أن الرقم لم يُستخرج لكي لا تظل صامتة
+            send_message(OWNER_NUMBER, "⚠️ لم أتمكن من معرفة رقم العميل من الرسالة المقتبسة. يرجى الرد باستخدام: رد [الرقم] [الرسالة]")
+            return True
 
     # === التعامل مع أزرار الإدارة (تم التجهيز / تم التوصيل) ===
     if msg_body.startswith("admin_prep_") or msg_body.startswith("admin_deliv_"):
@@ -3190,6 +3198,73 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             else:
                 send_message(OWNER_NUMBER, f"❌ لم أجد الطلب برقم: {order_number}")
         return True
+
+    # === إضافة منتج جديد مباشرة من رقم الإدارة (صورة + نص الاسم والسعر) ===
+    is_image_add = (message.get("type") == "image")
+    add_match = re.search(r"(?:اسم\s*المنتج|المنتج|اضف|إضافة)\s*[:：]?\s*([^\n,]+)(?:[\n,].*?السعر\s*[:：]?\s*(\d+))?", msg_body or "", re.IGNORECASE)
+    
+    if is_image_add or add_match or "السعر:" in (msg_body or "") or "السعر" in (msg_body or ""):
+        prod_name = ""
+        prod_price = 0
+        
+        if add_match:
+            prod_name = add_match.group(1).strip()
+            if add_match.group(2):
+                try:
+                    prod_price = int(add_match.group(2))
+                except ValueError:
+                    pass
+        
+        if prod_price == 0:
+            price_match = re.search(r"(?:السعر|بـ|سعرة)\s*[:：]?\s*(\d+)", msg_body or "", re.IGNORECASE)
+            if price_match:
+                try:
+                    prod_price = int(price_match.group(1))
+                except ValueError:
+                    pass
+            else:
+                nums = re.findall(r"\b\d{2,6}\b", msg_body or "")
+                if nums:
+                    prod_price = int(nums[-1])
+
+        if not prod_name and msg_body:
+            lines = [l.strip() for l in msg_body.split("\n") if l.strip()]
+            if lines:
+                prod_name = lines[0].replace("اسم المنتج:", "").replace("المنتج:", "").strip()
+
+        if prod_name and prod_price > 0:
+            image_id = message.get("image", {}).get("id", "") if is_image_add else ""
+            image_url = ""
+            if image_id:
+                image_url = get_media_url_by_id(image_id) or ""
+
+            marketing_desc = f"منتج حصري وعالي الجودة من منتجات المائدة والضيافة العصرية. {prod_name} بتصميم أنيق ومميز يضفي لمسة جمالية وفخامة لمنزلك."
+            keywords = f"{prod_name}, أواني منزلية, تجهيز مطابخ, تيتيز, إب"
+            if "ثلاجة" in prod_name or "شاي" in prod_name:
+                keywords += ", حافظات حرارة, دلال قهوة"
+            elif "قدر" in prod_name or "طباخة" in prod_name:
+                keywords += ", قدور طهي, أدوات مطبخ"
+
+            # إضافة المنتج مباشرة لقاعدة البيانات
+            import database as db_mod
+            db_mod.add_product(
+                name=prod_name,
+                price=prod_price,
+                description=marketing_desc,
+                image_id=image_url,
+                keywords=keywords
+            )
+
+            success_msg = (
+                "✅ *تمت إضافة المنتج مباشرة بنجاح!*\n\n"
+                f"☕ *الاسم:* {prod_name}\n"
+                f"💰 *السعر:* {prod_price} ريال\n"
+                f"📝 *الوصف المُنشأ:* {marketing_desc}\n"
+                f"🔑 *الكلمات المفتاحية:* {keywords}\n"
+                f"{'🖼️ مع صورة المنتج' if image_url else '⚠️ بدون صورة (نصي فقط)'}"
+            )
+            send_message(OWNER_NUMBER, success_msg)
+            return True
 
     # === رد على زبون ===
     reply_match = re.match(r"^\s*رد\s+([+]?\d{7,15})\s+([\s\S]+?)\s*$", msg_body or "")
