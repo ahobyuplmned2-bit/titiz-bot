@@ -3145,12 +3145,17 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
         except Exception:
             pass
 
-        # 2. إن لم نجدها عبر الـ wamid المباشر، نبحث في النص المقتبس عن رقم هاتف يبدأ بـ 967 أو 7
+        # 2. إن لم نجدها عبر الـ wamid المباشر، نبحث في النص المقتبس عن رقم الهاتف بجوار "الرقم:" أو أي نمط يمني صحيح
         if not target_phone:
             quoted_text = context_info.get("text", "") or ""
-            phone_match = re.search(r"(967\d{9}|[7]\d{8})", quoted_text)
+            # البحث عن صيغة مثل الرقم: 967... أو 7...
+            phone_match = re.search(r"(?:الرقم\s*[:：]?\s*)?([+]?967\d{9}|[+]?[7]\d{8})", quoted_text)
             if phone_match:
-                target_phone = phone_match.group(1).lstrip("+")
+                # نأخذ المجموع رقم 1 أو المجموعة كاملة وننظفها
+                raw_num = phone_match.group(1) or phone_match.group(0)
+                target_phone = re.sub(r"\D", "", raw_num)
+                if target_phone.startswith("00"):
+                    target_phone = target_phone[2:]
 
         if target_phone:
             reply_text = msg_body.strip()
