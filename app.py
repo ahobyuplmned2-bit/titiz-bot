@@ -4711,16 +4711,16 @@ def webhook():
         if sender != OWNER_NUMBER and msg_body and original_message_type != "interactive":
             notify_owner(sender, msg_body, message_event_id=message_event_id)
 
-        # معالجة أوامر المالك
+        # معالجة أوامر المالك أو الرد المقتبس للإدارة
         if sender == OWNER_NUMBER:
-            if handle_owner_command(sender, msg_body, msg_normalized, processing_message):
-                active_message_events.pop(sender, None)
-                return jsonify({"status": "ok"}), 200
+            handle_owner_command(sender, msg_body, msg_normalized, processing_message)
+            active_message_events.pop(sender, None)
+            return jsonify({"status": "ok"}), 200
 
-        # معالجة رسائل العملاء (والمالك للاختبار)
+        # معالجة رسائل العملاء فقط
         voice_mode_token = None
         voice_sent_token = None
-        if original_message_type == "audio" and sender != OWNER_NUMBER:
+        if original_message_type == "audio":
             voice_mode_token = voice_reply_mode.set(True)
             voice_sent_token = voice_reply_sent.set(False)
         try:
