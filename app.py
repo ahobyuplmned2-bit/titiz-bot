@@ -3114,6 +3114,46 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
     ):
         return False
 
+    # === التعامل مع الرد المباشر المقتبس (الضغط مطولاً على إشعار العميل ثم الرد) ===
+    context_info = message.get("context") or {}
+    quoted_id = context_info.get("id", "")
+    if quoted_id and msg_body:
+        # نبحث في الأحداث أو السجلات عن الرسالة الصادرة للإدارة التي تحمل هذا wamid
+        # أو نستخرج رقم الهاتف مباشرة من النص المقتبس (إذا كان يظهر فيه الرقم 967...)
+        target_phone = ""
+        # 1. البحث في قاعدة البيانات عن رسالة صادرة للإدارة بنفس wamid
+        try:
+            with db_lock:
+                conn = sqlite3.connect(DB_PATH)
+                conn.row_factory = sqlite3.Row
+                # نفحص هل نجد الحدث المرتبط بـ quoted_id
+                row = conn.execute(
+                    "SELECT phone_number FROM message_events WHERE whatsapp_message_id = ? LIMIT 1",
+                    (quoted_id,)
+                ).fetchone()
+                if row and row["phone_number"]:
+                    target_phone = str(row["phone_number"])
+        except Exception:
+            pass
+
+        # 2. إن لم نجدها عبر الـ wamid المباشر، نبحث في النص المقتبس عن رقم هاتف يبدأ بـ 967 أو 7
+        if not target_phone:
+            quoted_text = context_info.get("text", "") or ""
+            phone_match = re.search(r"(967\d{9}|[7]\d{8})", quoted_text)
+            if phone_match:
+                target_phone = phone_match.group(1).lstrip("+")
+
+        if target_phone:
+            reply_text = msg_body.strip()
+            if reply_text:
+                sent = send_message(target_phone, reply_text)
+                if sent:
+                    send_message(OWNER_NUMBER, f"✅ تم إرسال الرد إلى العميل مباشرة ({target_phone})")
+                else:
+                    queue_pending_reply(target_phone, reply_text)
+                    send_message(OWNER_NUMBER, f"✅ تم حفظ الرد للعميل ({target_phone}) وسيصل عند تواصله.")
+                return True
+
     # === التعامل مع أزرار الإدارة (تم التجهيز / تم التوصيل) ===
     if msg_body.startswith("admin_prep_") or msg_body.startswith("admin_deliv_"):
         parts = msg_body.split("_")
