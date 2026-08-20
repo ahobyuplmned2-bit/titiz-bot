@@ -2616,7 +2616,10 @@ def notify_owner_new_order(order_number, phone, name, address, items, total, pay
     for item in items:
         items_text += f"  • {item['name']} × {item.get('qty',1)} = {item.get('total',0)} ريال\n"
     msg = f"🔔 *طلب جديد!*\n\n📋 رقم الطلب: *{order_number}*\n👤 الاسم: {name}\n📱 الرقم: {phone}\n📍 العنوان: {address}\n\n🛒 *المنتجات:*\n{items_text}\n💰 *الإجمالي: {int(total)} ريال*\n💳 الدفع: {payment_method}"
-    send_message(OWNER_NUMBER, msg)
+    send_buttons(OWNER_NUMBER, msg, [
+        {"id": f"admin_prep_{order_number}", "title": "✅ تم التجهيز"},
+        {"id": f"admin_deliv_{order_number}", "title": "🚚 تم التوصيل"}
+    ])
 
 def send_response(to, response_data):
     """إرسال رد موحد (نص + صور)"""
@@ -3110,6 +3113,29 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
         and user_states.get(sender) == "awaiting_transfer_proof"
     ):
         return False
+
+    # === التعامل مع أزرار الإدارة (تم التجهيز / تم التوصيل) ===
+    if msg_body.startswith("admin_prep_") or msg_body.startswith("admin_deliv_"):
+        parts = msg_body.split("_")
+        if len(parts) >= 3:
+            action_type = parts[1] # prep or deliv
+            order_number = "_".join(parts[2:])
+            order = get_order(order_number)
+            if order:
+                customer_phone = order.get("phone_number")
+                if action_type == "prep":
+                    update_order_status(order_number, "جاري التجهيز")
+                    send_message(OWNER_NUMBER, f"✅ تم تحديث حالة الطلب {order_number} إلى: *جاري التجهيز*")
+                    if customer_phone:
+                        send_message(customer_phone, f"📦 *تحديث لطلبك {order_number}*\n\n✅ جاري تجهيز طلبك الآن وسيتم إرساله قريباً بشغف وسعادة 😊")
+                elif action_type == "deliv":
+                    update_order_status(order_number, "تم التسليم")
+                    send_message(OWNER_NUMBER, f"🚚 تم تحديث حالة الطلب {order_number} إلى: *تم التسليم*")
+                    if customer_phone:
+                        send_message(customer_phone, f"🎉 *تحديث لطلبك {order_number}*\n\n🚚 تم تسليم طلبك بنجاح! شكراً لثقتكِ الغالية بمتجر Titiz 💛✨")
+            else:
+                send_message(OWNER_NUMBER, f"❌ لم أجد الطلب برقم: {order_number}")
+        return True
 
     # === رد على زبون ===
     reply_match = re.match(r"^\s*رد\s+([+]?\d{7,15})\s+([\s\S]+?)\s*$", msg_body or "")
