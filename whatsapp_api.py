@@ -44,28 +44,41 @@ class WhatsAppAPI:
             float(os.environ.get("WHATSAPP_429_COOLDOWN_SECONDS", "8")), 1.0
         )
 
-    def _post_outbound_message(self, headers, payload, timeout=10):
-        """إرسال متسلسل بلا تكرار أعمى، مع فترة تبريد موحدة بعد 429."""
-        with self._outbound_lock:
-            now = time.monotonic()
-            if now < self._cooldown_until:
-                remaining = self._cooldown_until - now
-                print(f"[واتساب] تم حجب رد إضافي أثناء تبريد 429 ({remaining:.1f} ثانية)")
-                return None
-            wait_seconds = self._min_outbound_interval - (now - self._last_outbound_at)
-            if wait_seconds > 0:
-                time.sleep(wait_seconds)
-            response = requests.post(self.messages_url, headers=headers, json=payload, timeout=timeout)
-            self._last_outbound_at = time.monotonic()
-            if response.status_code == 429:
+    def _post_outbound_message(self, headers, payload, timeout=10, max_retries=3):
+        """إرسال متسلسل مع إعادة محاولة تلقائية (Exponential Backoff) عند خطأ 429 أو 5xx."""
+        for attempt in range(max_retries + 1):
+            with self._outbound_lock:
+                now = time.monotonic()
+                if now < self._cooldown_until:
+                    remaining = self._cooldown_until - now
+                    if attempt == 0:
+                        print(f"[واتساب] فترة تبريد نشطة ({remaining:.1f} ثانية)")
+                wait_seconds = self._min_outbound_interval - (now - self._last_outbound_at)
+                if wait_seconds > 0:
+                    time.sleep(wait_seconds)
                 try:
-                    retry_after = float(response.headers.get("Retry-After", "0") or 0)
-                except (TypeError, ValueError):
-                    retry_after = 0.0
-                cooldown = max(retry_after, self._rate_limit_cooldown)
-                self._cooldown_until = self._last_outbound_at + cooldown
-                print(f"[واتساب] 429 Too Many Requests؛ توقف إرسال مؤقتاً لمدة {cooldown:.1f} ثانية")
-            return response
+                    response = requests.post(self.messages_url, headers=headers, json=payload, timeout=timeout)
+                except Exception as ex:
+                    print(f"[واتساب] خطأ شبكة أثناء الإرسال (محاولة {attempt}): {ex}")
+                    if attempt == max_retries:
+                        return None
+                    time.sleep(1.0 * (2 ** attempt))
+                    continue
+                self._last_outbound_at = time.monotonic()
+                
+                if response.status_code == 429:
+                    try:
+                        retry_after = float(response.headers.get("Retry-After", "0") or 0)
+                    except (TypeError, ValueError):
+                        retry_after = 0.0
+                    cooldown = max(retry_after, self._rate_limit_cooldown * (1.5 ** attempt))
+                    self._cooldown_until = self._last_outbound_at + cooldown
+                    print(f"[واتساب] 429 Too Many Requests (محاولة {attempt+1}/{max_retries+1})؛ انتظار {cooldown:.1f} ثانية")
+                    if attempt < max_retries:
+                        time.sleep(min(cooldown, 5.0))
+                        continue
+                return response
+        return None
     
     def send_message(self, recipient_phone, message_text):
         """إرسال رسالة نصية وتُرجع معرف الرسالة (wamid) أو True عند النجاح"""
