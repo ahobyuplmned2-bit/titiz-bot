@@ -900,5 +900,32 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/table-stoves/table-stove-80-m80s-20500.jpg\"]",
     "variants": ""
+  },
+  "ملاعق معدن غرف كبير": {
+    "name": "ملاعق معدن غرف كبير",
+    "price": "1400",
+    "description": "ملاعق غرف كبيرة من المعدن، مناسبة لغرف الشوربة والمرق والطعام وتقديمه بسهولة. عبوة كبيرة عملية للاستخدام اليومي في المطبخ.",
+    "keywords": "ملاعق معدن غرف,ملاعق معدن غرف كبير,ملعقة غرف كبيرة,ملاعق غرف كبيرة,ملاعق شوربة معدن,ملاعق مرق,ملاعق تقديم,ملاعق مطبخ معدن,ملاعق استيل,ملاعق ستيل,ملاعق كبيرة,عبوة 60,عدد 60,1400 ريال,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/metal-ladles/large-metal-serving-ladle-1400.jpg\"]",
+    "variants": ""
+  },
+  "ملاعق مشن معدن كبير": {
+    "name": "ملاعق مشن معدن كبير",
+    "price": "1400",
+    "description": "ملاعق مشن كبيرة من المعدن، مثقبة لتصفية الطعام والزيت والماء، مناسبة للقلي والطبخ وتقديم الأطعمة. عبوة كبيرة للاستخدام المنزلي.",
+    "keywords": "ملاعق مشن,ملاعق مشن معدن,ملاعق مشن معدن كبير,ملعقة مشن كبيرة,ملاعق مثقبة,ملاعق مصفاة,ملاعق قلي,ملاعق تصفية,ملاعق تقديم معدن,ملاعق استيل,ملاعق ستيل,ملاعق كبيرة,عبوة 60,عدد 60,1400 ريال,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/metal-ladles/large-metal-slotted-ladle-1400.jpg\"]",
+    "variants": ""
+  },
+  "رف زاويه حمام عدن بلستيك الاصلي": {
+    "name": "رف زاويه حمام عدن بلستيك الاصلي",
+    "price": "700",
+    "description": "رف بلاستيك أصلي عملي لتنظيم الشامبو والصابون والمنظفات في زاوية الحمام، بتصميم خفيف وسهل التنظيف ومناسب للاستخدام اليومي.",
+    "keywords": "رف زاويه حمام,رف زاوية حمام,رف حمام عدن,رفوف حمام,رف بلاستيك,رف بلستيك,رف حمام بلاستيك,رف منظفات,رف شامبو,رف صابون,رف زاوية,منظم حمام,منظمات الحمام,رفوف منظفات الوطنية,700 ريال,أدوات حمام,مستلزمات الحمام,تنظيم الحمام",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/bathroom-corner-shelves/aden-plastic-corner-shelf-700.jpg\"]",
+    "variants": ""
   }
 }

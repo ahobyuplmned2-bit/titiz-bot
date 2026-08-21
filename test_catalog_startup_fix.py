@@ -23,6 +23,9 @@ for relative_path in (
     "assets/products/stove-trivets/square-stove-trivet-1000.jpg",
     "assets/products/vegetable-fabric-scissors/original-copper-nut-scissors-800.jpg",
     "assets/products/table-stoves/table-stove-80-m80s-20500.jpg",
+    "assets/products/metal-ladles/large-metal-serving-ladle-1400.jpg",
+    "assets/products/metal-ladles/large-metal-slotted-ladle-1400.jpg",
+    "assets/products/bathroom-corner-shelves/aden-plastic-corner-shelf-700.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"
@@ -53,5 +56,23 @@ assert isinstance(table_stove, dict), "سجل شولة المائدة رقم 80 
 assert table_stove["price"] == "20500", "سعر شولة المائدة رقم 80 يجب أن يكون 20500"
 assert "M80S" in table_stove["keywords"] and "شولة 3 عيون" in table_stove["keywords"], "كلمات شولة المائدة المفتاحية مفقودة"
 assert len(json.loads(table_stove["image_urls"])) == 1, "يجب أن يحتوي منتج شولة المائدة على صورة واحدة"
+
+serving_ladle = catalog.get("ملاعق معدن غرف كبير")
+assert isinstance(serving_ladle, dict), "سجل ملاعق معدن غرف كبير مفقود"
+assert serving_ladle["price"] == "1400", "سعر ملاعق غرف يجب أن يكون 1400"
+assert "ملاعق معدن غرف" in serving_ladle["keywords"], "كلمات ملاعق غرف المفتاحية مفقودة"
+assert len(json.loads(serving_ladle["image_urls"])) == 1, "يجب أن يحتوي منتج ملاعق غرف على صورة واحدة"
+
+slotted_ladle = catalog.get("ملاعق مشن معدن كبير")
+assert isinstance(slotted_ladle, dict), "سجل ملاعق مشن معدن كبير مفقود"
+assert slotted_ladle["price"] == "1400", "سعر ملاعق مشن يجب أن يكون 1400"
+assert "ملاعق مشن" in slotted_ladle["keywords"], "كلمات ملاعق مشن المفتاحية مفقودة"
+assert len(json.loads(slotted_ladle["image_urls"])) == 1, "يجب أن يحتوي منتج ملاعق مشن على صورة واحدة"
+
+bathroom_shelf = catalog.get("رف زاويه حمام عدن بلستيك الاصلي")
+assert isinstance(bathroom_shelf, dict), "سجل رف زاوية حمام عدن مفقود"
+assert bathroom_shelf["price"] == "700", "سعر رف الحمام يجب أن يكون 700"
+assert "رف زاويه حمام" in bathroom_shelf["keywords"] and "رف بلاستيك" in bathroom_shelf["keywords"], "كلمات رف الحمام المفتاحية مفقودة"
+assert len(json.loads(bathroom_shelf["image_urls"])) == 1, "يجب أن يحتوي رف الحمام على صورة واحدة"
 
 print("catalog startup and product image regression test passed")
