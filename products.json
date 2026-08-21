@@ -854,7 +854,7 @@
     "keywords": "يدات قدور الضغط,يد قدر الضغط,يد قدر الظغط,يدات قدر الظغط,مقابض قدر الضغط,مقبض قدر الضغط,يد طنجرة الضغط,مقبض طنجرة الضغط,يد حلّة الضغط,يد حلل الضغط,قطع غيار قدر الضغط,بديل يد قدر الضغط,يد قدر مكسورة,يد قدر كبيرة,يد قدر وسط,يد قدر صغيرة,يدات قدور أصلية",
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/handles/pressure-cooker-handles.jpg\"]",
-    "variants": "صغير: 200 ريال | وسط: 250 ريال | كبير: 300 ريال"
+    "variants": "[{\"name\": \"صغير\", \"price\": 200}, {\"name\": \"وسط\", \"price\": 250}, {\"name\": \"كبير\", \"price\": 300}]"
   },
   "قدر ضغط ألدار الأصلي": {
     "name": "قدر ضغط ألدار الأصلي (5 سنوات ضمان)",
@@ -863,6 +863,6 @@
     "keywords": "قدر ضغط,قدر ضغط الدار,قدر ضغط ألدار,ضغط,ضغاطة,طنجرة ضغط,طناجر ضغط,قدر ألومنيوم,قدر المنيوم,قدر ضغط 3 لتر,قدر ضغط 4 لتر,قدر ضغط 5 لتر,قدر ضغط 7 لتر,قدر ضغط 9 لتر,أدوات مطبخ,مستلزمات الطبخ,قدر أصلي,ضمان 5 سنوات",
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/pressure-cookers/aldar-cooker-3-4-5l.jpg\", \"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/pressure-cookers/aldar-cooker-5-7-9l.jpg\"]",
-    "variants": "3 لتر: 5800 ريال | 4 لتر: 6800 ريال | 5 لتر: 7800 ريال | 7 لتر: 9000 ريال | 9 لتر: 11500 ريال"
+    "variants": "[{\"name\": \"3 لتر\", \"price\": 5800}, {\"name\": \"4 لتر\", \"price\": 6800}, {\"name\": \"5 لتر\", \"price\": 7800}, {\"name\": \"7 لتر\", \"price\": 9000}, {\"name\": \"9 لتر\", \"price\": 11500}]"
   }
 }
