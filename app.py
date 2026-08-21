@@ -971,18 +971,31 @@ def sync_qa_to_github():
         pass
 
 def load_products_from_github():
-    """تحميل المنتجات من GitHub عند بدء التشغيل"""
+    """تحميل المنتجات عند بدء التشغيل من GitHub، مع fallback للنسخة المرفقة."""
     try:
         data, sha = github_load("products.json")
+        source = "GitHub"
+        if not isinstance(data, dict) or not data:
+            local_path = os.path.join(os.path.dirname(__file__), "products.json")
+            try:
+                with open(local_path, "r", encoding="utf-8") as catalog_file:
+                    local_data = json.load(catalog_file)
+                if isinstance(local_data, dict) and local_data:
+                    data = local_data
+                    source = "النسخة المحلية"
+            except Exception as local_error:
+                print(f"[بدء التشغيل] تعذر قراءة النسخة المحلية من products.json: {local_error}")
         if data:
             count = 0
             existing = get_all_products()
-            existing_names = [normalize_text(p["name"]) for p in existing]
+            existing_names = {normalize_text(p["name"]) for p in existing}
             for name, info in data.items():
+                if not isinstance(info, dict):
+                    continue
                 price = 0
                 try:
                     price = float(info.get("price", "0"))
-                except:
+                except (TypeError, ValueError):
                     pass
                 desc = info.get("description", "")
                 image_id = info.get("image_id", "")
@@ -995,14 +1008,17 @@ def load_products_from_github():
                 keywords = info.get("keywords", "")
                 if isinstance(keywords, list):
                     keywords = ",".join(keywords)
-                if normalize_text(name) not in existing_names:
-                    add_product(name, price, desc, image_id, 100, keywords, image_urls, variants)
-                    count += 1
+                normalized_name = normalize_text(name)
+                if normalized_name not in existing_names:
+                    product_id = add_product(name, price, desc, image_id, 100, keywords, image_urls, variants)
+                    if product_id:
+                        existing_names.add(normalized_name)
+                        count += 1
                 else:
                     update_product_metadata(name, price, desc, image_id, keywords, image_urls, variants)
-            print(f"[بدء التشغيل] تم تحميل {count} منتج من GitHub (إجمالي: {len(data)})")
+            print(f"[بدء التشغيل] تم تحميل {count} منتج من {source} (إجمالي: {len(data)})")
         else:
-            print("[بدء التشغيل] لا توجد منتجات على GitHub")
+            print("[بدء التشغيل] لا توجد منتجات في GitHub أو النسخة المحلية")
     except Exception as e:
         print(f"[بدء التشغيل] خطأ في تحميل المنتجات: {e}")
 
