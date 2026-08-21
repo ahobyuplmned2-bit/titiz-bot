@@ -21,6 +21,7 @@ for relative_path in (
     "assets/products/floor-mops/floor-mop-large-with-handle.jpg",
     "assets/products/floor-mops/floor-mop-medium-with-handle.jpg",
     "assets/products/stove-trivets/square-stove-trivet-1000.jpg",
+    "assets/products/vegetable-fabric-scissors/original-copper-nut-scissors-800.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"
@@ -39,5 +40,11 @@ assert isinstance(trivet, dict), "سجل جلاس شول المربع مفقود
 assert trivet["price"] == "1000", "سعر جلاس شول المربع يجب أن يكون 1000"
 assert "كرسي شول" in trivet["keywords"], "الكلمة المفتاحية كرسي شول مفقودة"
 assert len(json.loads(trivet["image_urls"])) == 1, "يجب أن يحتوي جلاس شول على صورة واحدة"
+
+scissors = catalog.get("مقصات خضار وقماش الأصلي ضمان نحاس")
+assert isinstance(scissors, dict), "سجل المقصات مفقود"
+assert scissors["price"] == "800", "سعر المقصات يجب أن يكون 800"
+assert "مقصات خضار" in scissors["keywords"] and "مقصات قماش" in scissors["keywords"], "كلمات المقصات المفتاحية مفقودة"
+assert len(json.loads(scissors["image_urls"])) == 1, "يجب أن يحتوي منتج المقصات على صورة واحدة"
 
 print("catalog startup and product image regression test passed")
