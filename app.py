@@ -3767,8 +3767,25 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
 # ║                 معالجة رسائل العملاء                         ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+_last_outbound_customer_reply = {}
+_outbound_reply_lock = __import__("threading").Lock()
+
 def handle_customer_message(sender, msg_body, msg_normalized, message):
-    """معالجة رسائل العملاء"""
+    """معالجة رسائل العملاء مع حماية صارمة ضد تكرار الرد للرسالة الواحدة"""
+    with _outbound_reply_lock:
+        now = __import__("time").time()
+        reply_key = (str(sender), str(msg_normalized or "").strip())
+        last_t = _last_outbound_customer_reply.get(reply_key, 0.0)
+        if now - last_t < 4.0:
+            print(f"[حماية التكرار] تم تجاهل معالجة رسالة مكررة للعميل {sender} خلال {now - last_t:.2f} ثانية")
+            return
+        _last_outbound_customer_reply[reply_key] = now
+        # تنظيف الذاكرة المؤقتة القديمة
+        expired = [k for k, t in _last_outbound_customer_reply.items() if now - t > 15.0]
+        for k in expired:
+            _last_outbound_customer_reply.pop(k, None)
+
+    restore_customer_session(sender)
     restore_customer_session(sender)
     state = user_states.get(sender, "")
     raw_action = (msg_body or "").strip().lower()
