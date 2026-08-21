@@ -855,5 +855,14 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/handles/pressure-cooker-handles.jpg\"]",
     "variants": "صغير: 200 ريال | وسط: 250 ريال | كبير: 300 ريال"
+  },
+  "قدر ضغط ألدار الأصلي": {
+    "name": "قدر ضغط ألدار الأصلي (5 سنوات ضمان)",
+    "price": "5800",
+    "description": "قدر ضغط ألومنيوم أصلي من مؤسسة الدار للتجارة والتوكيلات، بضمان لمدة 5 سنوات، متوفر بعدة سعات لتناسب كافة احتياجات الطبخ المنزلي.",
+    "keywords": "قدر ضغط,قدر ضغط الدار,قدر ضغط ألدار,ضغط,ضغاطة,طنجرة ضغط,طناجر ضغط,قدر ألومنيوم,قدر المنيوم,قدر ضغط 3 لتر,قدر ضغط 4 لتر,قدر ضغط 5 لتر,قدر ضغط 7 لتر,قدر ضغط 9 لتر,أدوات مطبخ,مستلزمات الطبخ,قدر أصلي,ضمان 5 سنوات",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/pressure-cookers/aldar-cooker-3-4-5l.jpg\", \"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/pressure-cookers/aldar-cooker-5-7-9l.jpg\"]",
+    "variants": "3 لتر: 5800 ريال | 4 لتر: 6800 ريال | 5 لتر: 7800 ريال | 7 لتر: 9000 ريال | 9 لتر: 11500 ريال"
   }
 }
