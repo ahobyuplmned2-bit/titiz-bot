@@ -5056,6 +5056,8 @@ def load_orders_from_github():
 # تسجيل الحفظ التلقائي قبل استعادة الطلبات أو استقبال أي رسالة.
 set_order_sync_callback(sync_orders_to_github)
 
-# استدعاء استعادة الطلبات عند بدء التشغيل ثم رفع أي طلبات محلية لم تكن على GitHub.
+# استعادة الكتالوج أولاً حتى لا تبقى منتجات GitHub الجديدة غير موجودة في SQLite بعد إعادة التشغيل.
+# بعدها تُستعاد الطلبات وتُرفع أي تغييرات محلية لم تكن على GitHub.
+load_products_from_github()
 load_orders_from_github()
 sync_orders_to_github()
