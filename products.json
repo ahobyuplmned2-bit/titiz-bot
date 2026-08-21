@@ -927,5 +927,23 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/bathroom-corner-shelves/aden-plastic-corner-shelf-700.jpg\"]",
     "variants": ""
+  },
+  "اقلاص استيل غير طويل": {
+    "name": "اقلاص استيل غير طويل",
+    "price": "300",
+    "description": "اقلاص استيل أصلي من التاج الملكي، تصميم غير طويل ومتين مناسب للماء والعصائر والاستخدام اليومي. متوفر بأربعة أرقام وأحجام مختلفة.",
+    "keywords": "اقلاص استيل,أقلاص استيل,كاسات استيل,كاسات ستيل,اقلاص غير طويل,أقلاص غير طويل,كاسات غير طويلة,اقلاص التاج الملكي,أقلاص التاج الملكي,التاج الملكي,اقلاص رقم 1,اقلاص رقم1,اقلاص رقم 2,اقلاص رقم2,اقلاص رقم 3,اقلاص رقم3,اقلاص رقم 4,اقلاص رقم4,كبير,وسط,صغير,أكواب استيل,أكواب ستيل,300 ريال,250 ريال,200 ريال,150 ريال,أدوات مائدة,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/steel-cups/royal-crown-short-steel-cups.jpg\"]",
+    "variants": "[{\"name\": \"رقم 1 الكبير\", \"price\": 300}, {\"name\": \"رقم 2\", \"price\": 250}, {\"name\": \"رقم 3\", \"price\": 200}, {\"name\": \"رقم 4\", \"price\": 150}]"
+  },
+  "علب بهارات سلم طويل": {
+    "name": "علب بهارات سلم طويل",
+    "price": "1700",
+    "description": "طقم علب بهارات سلم طويل بتصميم مرتب وألوان عملية لحفظ البهارات والتوابل، مع ملاعق خاصة لكل علبة وقاعدة ثابتة للاستخدام المنزلي الراقي.",
+    "keywords": "علب بهارات,علب بهارات سلم,علب بهارات سلم طويل,طقم بهارات,علب توابل,منظم بهارات,علب بهارات بلاستيك,علب بهارات مع قاعدة,علب بهارات ملونة,علب بهارات 6 حبات,1700 ريال,أدوات المطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/spice-jars/long-spice-jars-clean.png\"]",
+    "variants": ""
   }
 }

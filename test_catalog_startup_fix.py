@@ -26,6 +26,8 @@ for relative_path in (
     "assets/products/metal-ladles/large-metal-serving-ladle-1400.jpg",
     "assets/products/metal-ladles/large-metal-slotted-ladle-1400.jpg",
     "assets/products/bathroom-corner-shelves/aden-plastic-corner-shelf-700.jpg",
+    "assets/products/steel-cups/royal-crown-short-steel-cups.jpg",
+    "assets/products/spice-jars/long-spice-jars-clean.png",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"
@@ -74,5 +76,24 @@ assert isinstance(bathroom_shelf, dict), "سجل رف زاوية حمام عدن
 assert bathroom_shelf["price"] == "700", "سعر رف الحمام يجب أن يكون 700"
 assert "رف زاويه حمام" in bathroom_shelf["keywords"] and "رف بلاستيك" in bathroom_shelf["keywords"], "كلمات رف الحمام المفتاحية مفقودة"
 assert len(json.loads(bathroom_shelf["image_urls"])) == 1, "يجب أن يحتوي رف الحمام على صورة واحدة"
+
+steel_cups = catalog.get("اقلاص استيل غير طويل")
+assert isinstance(steel_cups, dict), "سجل اقلاص الاستيل غير الطويل مفقود"
+assert steel_cups["price"] == "300", "السعر الأساسي لاقلاص الاستيل يجب أن يكون سعر الرقم 1 الكبير"
+assert "اقلاص استيل" in steel_cups["keywords"] and "التاج الملكي" in steel_cups["keywords"], "كلمات اقلاص الاستيل المفتاحية مفقودة"
+steel_cup_variants = json.loads(steel_cups["variants"])
+assert steel_cup_variants == [
+    {"name": "رقم 1 الكبير", "price": 300},
+    {"name": "رقم 2", "price": 250},
+    {"name": "رقم 3", "price": 200},
+    {"name": "رقم 4", "price": 150},
+], "أحجام اقلاص الاستيل أو أسعارها غير صحيحة"
+assert len(json.loads(steel_cups["image_urls"])) == 1, "يجب أن يحتوي اقلاص الاستيل على صورة واحدة"
+
+spice_jars = catalog.get("علب بهارات سلم طويل")
+assert isinstance(spice_jars, dict), "سجل علب بهارات سلم طويل مفقود"
+assert spice_jars["price"] == "1700", "سعر علب بهارات سلم طويل يجب أن يكون 1700"
+assert "علب بهارات" in spice_jars["keywords"] and "علب بهارات سلم طويل" in spice_jars["keywords"], "كلمات علب البهارات المفتاحية مفقودة"
+assert len(json.loads(spice_jars["image_urls"])) == 1, "يجب أن تحتوي علب البهارات على صورة واحدة"
 
 print("catalog startup and product image regression test passed")
