@@ -28,6 +28,7 @@ for relative_path in (
     "assets/products/bathroom-corner-shelves/aden-plastic-corner-shelf-700.jpg",
     "assets/products/steel-cups/royal-crown-short-steel-cups.jpg",
     "assets/products/spice-jars/long-spice-jars-clean.png",
+    "assets/products/juice-strainers/steel-juice-strainers-with-handles.png",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"
@@ -95,5 +96,17 @@ assert isinstance(spice_jars, dict), "سجل علب بهارات سلم طويل
 assert spice_jars["price"] == "1700", "سعر علب بهارات سلم طويل يجب أن يكون 1700"
 assert "علب بهارات" in spice_jars["keywords"] and "علب بهارات سلم طويل" in spice_jars["keywords"], "كلمات علب البهارات المفتاحية مفقودة"
 assert len(json.loads(spice_jars["image_urls"])) == 1, "يجب أن تحتوي علب البهارات على صورة واحدة"
+
+juice_strainers = catalog.get("مشنات استيل عصاير")
+assert isinstance(juice_strainers, dict), "سجل مشنات استيل عصاير مفقود"
+assert juice_strainers["price"] == "1000", "السعر الأساسي لمشنات العصاير يجب أن يكون سعر الرقم 1 الكبير"
+assert "مشنات استيل عصاير" in juice_strainers["keywords"] and "مصفاة عصير" in juice_strainers["keywords"], "كلمات مشنات العصاير المفتاحية مفقودة"
+juice_strainer_variants = json.loads(juice_strainers["variants"])
+assert juice_strainer_variants == [
+    {"name": "رقم 1 الكبير", "price": 1000},
+    {"name": "رقم 2 الوسط", "price": 800},
+    {"name": "رقم 3 الصغير", "price": 700},
+], "أحجام مشنات العصاير أو أسعارها غير صحيحة"
+assert len(json.loads(juice_strainers["image_urls"])) == 1, "يجب أن تحتوي مشنات العصاير على صورة واحدة"
 
 print("catalog startup and product image regression test passed")
