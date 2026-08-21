@@ -18,8 +18,19 @@ for relative_path in (
     "assets/products/handles/pressure-cooker-handles.jpg",
     "assets/products/pressure-cookers/aldar-cooker-3-4-5l.jpg",
     "assets/products/pressure-cookers/aldar-cooker-5-7-9l.jpg",
+    "assets/products/floor-mops/floor-mop-large-with-handle.jpg",
+    "assets/products/floor-mops/floor-mop-medium-with-handle.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"
+
+mop = catalog.get("موب بلاط مع العصا")
+assert isinstance(mop, dict), "سجل موب البلاط مفقود"
+assert mop["price"] == "1000", "السعر الأساسي لموب البلاط يجب أن يكون سعر الوسط"
+assert "مجنونه مساحه بلاط" in mop["keywords"], "الكلمة المفتاحية باللهجة اليمنية مفقودة"
+variants = json.loads(mop["variants"])
+assert variants == [{"name": "وسط", "price": 1000}, {"name": "كبير", "price": 1300}], "أحجام موب البلاط أو أسعارها غير صحيحة"
+image_urls = json.loads(mop["image_urls"])
+assert len(image_urls) == 2, "يجب أن يحتوي موب البلاط على صورتين"
 
 print("catalog startup and product image regression test passed")

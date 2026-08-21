@@ -864,5 +864,14 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/pressure-cookers/aldar-cooker-3-4-5l.jpg\", \"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/pressure-cookers/aldar-cooker-5-7-9l.jpg\"]",
     "variants": "[{\"name\": \"3 لتر\", \"price\": 5800}, {\"name\": \"4 لتر\", \"price\": 6800}, {\"name\": \"5 لتر\", \"price\": 7800}, {\"name\": \"7 لتر\", \"price\": 9000}, {\"name\": \"9 لتر\", \"price\": 11500}]"
+  },
+  "موب بلاط مع العصا": {
+    "name": "موب بلاط مع العصا",
+    "price": "1000",
+    "description": "ممسحة بلاط عملية مع عصا، مناسبة لتنظيف الأرضيات والبلاط وإزالة الماء والأوساخ بسهولة. متوفرة بحجم وسط وكبير للاستخدام المنزلي.",
+    "keywords": "موب بلاط,موب بلاط مع العصا,موب بلاط كبير,موب بلاط وسط,ممسحة بلاط,مساحة بلاط,مجنونه مساحه بلاط,ممسحة أرضيات,مساحة أرضيات,ممسحة تنظيف,مساحة تنظيف,تنظيف البلاط,تنظيف الأرضيات,مسح البلاط,مسح الأرض,عصا موب,موب بعصا,ممسحة مع عصا,كبير,وسط,1000 ريال,1300 ريال,أدوات تنظيف,مستلزمات المنزل",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/floor-mops/floor-mop-large-with-handle.jpg\", \"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/floor-mops/floor-mop-medium-with-handle.jpg\"]",
+    "variants": "[{\"name\": \"وسط\", \"price\": 1000}, {\"name\": \"كبير\", \"price\": 1300}]"
   }
 }
