@@ -22,6 +22,7 @@ for relative_path in (
     "assets/products/floor-mops/floor-mop-medium-with-handle.jpg",
     "assets/products/stove-trivets/square-stove-trivet-1000.jpg",
     "assets/products/vegetable-fabric-scissors/original-copper-nut-scissors-800.jpg",
+    "assets/products/table-stoves/table-stove-80-m80s-20500.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"
@@ -46,5 +47,11 @@ assert isinstance(scissors, dict), "سجل المقصات مفقود"
 assert scissors["price"] == "800", "سعر المقصات يجب أن يكون 800"
 assert "مقصات خضار" in scissors["keywords"] and "مقصات قماش" in scissors["keywords"], "كلمات المقصات المفتاحية مفقودة"
 assert len(json.loads(scissors["image_urls"])) == 1, "يجب أن يحتوي منتج المقصات على صورة واحدة"
+
+table_stove = catalog.get("شوله المائده رقم80")
+assert isinstance(table_stove, dict), "سجل شولة المائدة رقم 80 مفقود"
+assert table_stove["price"] == "20500", "سعر شولة المائدة رقم 80 يجب أن يكون 20500"
+assert "M80S" in table_stove["keywords"] and "شولة 3 عيون" in table_stove["keywords"], "كلمات شولة المائدة المفتاحية مفقودة"
+assert len(json.loads(table_stove["image_urls"])) == 1, "يجب أن يحتوي منتج شولة المائدة على صورة واحدة"
 
 print("catalog startup and product image regression test passed")
