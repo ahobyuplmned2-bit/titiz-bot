@@ -12,4 +12,14 @@ catalog_names = {str(item.get("name", "")) for item in catalog.values() if isins
 for name in ("كفوف غسل", "كفوف صابون", "يدات قدور الضغط", "قدر ضغط ألدار الأصلي (5 سنوات ضمان)"):
     assert name in catalog_names, f"المنتج مفقود من products.json: {name}"
 
-print("catalog startup regression test passed")
+for relative_path in (
+    "assets/products/gloves/washing-gloves.jpg",
+    "assets/products/gloves/soap-gloves.jpg",
+    "assets/products/handles/pressure-cooker-handles.jpg",
+    "assets/products/pressure-cookers/aldar-cooker-3-4-5l.jpg",
+    "assets/products/pressure-cookers/aldar-cooker-5-7-9l.jpg",
+):
+    image_path = Path(relative_path)
+    assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"
+
+print("catalog startup and product image regression test passed")
