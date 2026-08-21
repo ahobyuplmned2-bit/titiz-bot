@@ -112,7 +112,7 @@ SEMANTIC_INTENTS = {
 
 # ===== تذكير استفسار المنتج وتقييم الرضا =====
 PRODUCT_FOLLOWUP_DELAY_SECONDS = max(
-    int(os.environ.get("PRODUCT_FOLLOWUP_DELAY_SECONDS", "86400")), 60
+    int(os.environ.get("PRODUCT_FOLLOWUP_DELAY_SECONDS", "43200")), 60
 )
 PRODUCT_FOLLOWUP_POLL_SECONDS = max(
     int(os.environ.get("PRODUCT_FOLLOWUP_POLL_SECONDS", "30")), 10
@@ -121,7 +121,7 @@ FOLLOWUP_WORKER_ENABLED = os.environ.get("FOLLOWUP_WORKER_ENABLED", "true").stri
     "0", "false", "no", "off"
 }
 PRODUCT_NEXT_DAY_DELAY_SECONDS = max(
-    int(os.environ.get("PRODUCT_NEXT_DAY_DELAY_SECONDS", "86400")), 60
+    int(os.environ.get("PRODUCT_NEXT_DAY_DELAY_SECONDS", "43200")), 60
 )
 PRODUCT_FOLLOWUP_SATISFIED_ID = "product_followup_satisfied"
 PRODUCT_FOLLOWUP_UNSATISFIED_ID = "product_followup_unsatisfied"
