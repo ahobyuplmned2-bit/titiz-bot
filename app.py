@@ -4280,11 +4280,19 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     if message.get("type") == "image":
         image_id = message.get("image", {}).get("id", "")
         caption = message.get("image", {}).get("caption", "").strip()
+        image_result = None
         try:
             image_result = analyze_product_image(sender, message, caption)
         except Exception as exc:
             print(f"[الصورة] تعذر تحليل صورة المنتج: {exc}")
             image_result = None
+
+        # إذا فشل التحليل أو لم يتوفر مفتاح الذكاء الاصطناعي، نحاول مطابقة الكابشن أو اسم المنتج مباشرة
+        if (not image_result or image_result.get("kind") == "unknown") and caption:
+            text_matches = match_products_from_text(caption, get_all_products())
+            if text_matches:
+                image_result = {"kind": "product_family", "products": text_matches}
+
         if image_result and image_result.get("kind") == "product":
             matched_product = image_result["product"]
             variant_match = image_result.get("variant_match")
@@ -4315,18 +4323,11 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if image_result and image_result.get("kind") == "payment_proof":
             send_message(sender, image_result["reply"])
             return
-        if not image_result or image_result.get("kind") == "unknown":
-            notify_owner_unavailable_product(
-                sender,
-                caption or (image_result.get("reply") if image_result else "صورة منتج غير مطابقة للكتالوج"),
-                source="image",
-                image_id=image_id,
-            )
-            send_unavailable_image_response(sender)
-            return
+
+        # أي حالة أخرى غير مطابقة صريحة تعامل كمنتج غير متوفر وتُرسل للإدارة مع الرد الفوري للعميل
         notify_owner_unavailable_product(
             sender,
-            caption or "صورة منتج غير مطابقة للكتالوج",
+            caption or (image_result.get("reply") if image_result else "صورة منتج غير مطابقة للكتالوج"),
             source="image",
             image_id=image_id,
         )

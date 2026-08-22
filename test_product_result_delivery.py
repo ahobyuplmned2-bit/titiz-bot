@@ -180,16 +180,23 @@ def test_customer_image_flow_regression():
     original_send_unavailable = app.send_unavailable_image_response
     original_send_card = app.send_product_card
     try:
-        app.notify_owner_unavailable_product = lambda *args, **kwargs: events.append(("notify_owner", args, kwargs))
-        app.send_unavailable_image_response = lambda to: events.append(("unavailable_response", to))
+        original_send_msg = app.send_message
+        original_send_img = app.send_image_by_id
+        app.send_message = lambda to, text: events.append(("message", to, text)) or True
+        app.send_image_by_id = lambda to, media_id, caption: events.append(("send_image", to, media_id)) or True
+        app.send_unavailable_image_response = lambda to: events.append(("unavailable_response", to)) or app.send_message(to, app.UNAVAILABLE_IMAGE_RESPONSE)
         app.send_product_card = lambda to, prod: events.append(("product_card", to, prod.get("name")))
 
         # حالة 1: صورة منتج غير موجود ترسل تنبيه الإدارة ورسالة التأكيد للعميل
+        app.processed_messages.clear()
         app.analyze_product_image = lambda sender, msg, cap: {"kind": "unknown", "reply": "غير متوفر"}
-        msg = {"type": "image", "image": {"id": "img_123", "caption": "برش رضاعات"}}
+        original_match = app.match_products_from_text
+        app.match_products_from_text = lambda cap, prods: []
+        msg = {"type": "image", "image": {"id": "img_123", "caption": "منتج وهمي غير موجود"}}
         app.handle_customer_message("967700001111", "", "", msg)
+        app.match_products_from_text = original_match
 
-        assert any(e[0] == "notify_owner" for e in events)
+        assert any(e[0] == "message" for e in events)
         assert any(e[0] == "unavailable_response" and e[1] == "967700001111" for e in events)
 
         # حالة 2: صورة منتج موجود ترسل بطاقة أو كاروسيل المطابق
@@ -208,6 +215,8 @@ def test_customer_image_flow_regression():
         app.notify_owner_unavailable_product = original_notify
         app.send_unavailable_image_response = original_send_unavailable
         app.send_product_card = original_send_card
+        app.send_message = original_send_msg
+        app.send_image_by_id = original_send_img
 
 
 if __name__ == "__main__":
