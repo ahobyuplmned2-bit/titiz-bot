@@ -406,6 +406,17 @@ SEARCH_STOPWORDS = {
     "هاذي", "المنتج", "منتج", "شيء", "شي", "حق", "حقكم", "مع", "عن", "في", "منكم",
 }
 
+# هذه ألفاظ وصفية مشتركة بين منتجات كثيرة. استبعادها من مطابقة الكابشن
+# يمنع ظهور فئات غير مرتبطة بسبب كلمات مثل «أصلي» أو «المائدة» أو «6 حبات».
+PRODUCT_MATCH_GENERIC_TERMS = {
+    *SEARCH_STOPWORDS,
+    "اصلي", "الاصلي", "اصلية", "الاصلية", "ضمان", "المائدة", "المائده",
+    "الدار", "التاج", "الملكي", "الملكية", "ابو", "حبة", "حبه", "حبات",
+    "قطعة", "قطعه", "قطع", "طقم", "كبير", "صغير", "وسط", "استيل", "ستانلس",
+    "ستيل", "معدن", "حديد", "بلاستيك", "تركي", "مناسب", "مناسبة", "للاستخدام",
+    "يومي", "منزلي", "مطبخ", "مطبخي", "سنوات", "سنة", "سنه",
+}
+
 
 def correct_search_spelling(normalized_text):
     """تصحيح أخطاء شائعة في سؤال المنتج دون تعديل الاسم المحفوظ في الكتالوج."""
@@ -471,10 +482,11 @@ def match_products_from_text(query, products):
     if not normalized_query or is_low_information_query(normalized_query):
         return []
     corrected_query = correct_search_spelling(normalized_query)
-    precise_phrase = " ".join(
+    significant_tokens = [
         token for token in corrected_query.split()
-        if len(token) >= 2 and token not in SEARCH_STOPWORDS
-    )
+        if len(token) >= 3 and token not in PRODUCT_MATCH_GENERIC_TERMS and not token.isdigit()
+    ]
+    precise_phrase = " ".join(significant_tokens)
     if len(precise_phrase) >= 5:
         exact_phrase_matches = [
             product for product in products or []
@@ -482,20 +494,23 @@ def match_products_from_text(query, products):
         ]
         if exact_phrase_matches:
             return exact_phrase_matches
-    search_terms = product_search_terms(normalized_query)
-    query_tokens = {
-        token for token in corrected_query.split()
-        if len(token) >= 3 and token not in SEARCH_STOPWORDS
-    }
+    search_terms = list(dict.fromkeys([precise_phrase, *significant_tokens]))
+    query_tokens = set(significant_tokens)
+    if not query_tokens:
+        return []
+    minimum_hits = 1 if len(query_tokens) == 1 else max(2, (len(query_tokens) + 1) // 2)
     matches = []
     for product in products or []:
         searchable_text = _searchable_product_text(product)
-        if any(term in searchable_text for term in search_terms if len(term) >= 3):
+        direct_hits = sum(term in searchable_text for term in search_terms if len(term) >= 3)
+        # وجود كلمة منتج محددة واحدة يكفي للمطابقة المباشرة؛ أما الكلمات العامة
+        # فقد أزيلت مسبقاً من significant_tokens، لذلك لا تعيد خلط الفئات.
+        if direct_hits >= 1:
             matches.append(product)
             continue
         product_tokens = set(searchable_text.split())
         fuzzy_hits = sum(_fuzzy_token_match(token, product_tokens) for token in query_tokens)
-        if fuzzy_hits >= 1 and (len(query_tokens) == 1 or fuzzy_hits >= 2):
+        if fuzzy_hits >= minimum_hits:
             matches.append(product)
     return matches
 
@@ -4607,35 +4622,11 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_response(sender, response_data)
         return
 
-    # === البحث في المنتجات (قاعدة البيانات) أولاً لضمان عدم ضياع أي منتج جديد في الفهم الدلالي ===
+    # === البحث في المنتجات ===
+    # نستخدم خوارزمية المطابقة الموحدة نفسها للنصوص وكابشنات الصور حتى لا
+    # تُظهر الكلمات العامة منتجات من فئات غير مرتبطة.
     products = get_all_products()
-    matching = []
-    search_terms = product_search_terms(msg_normalized)
-    corrected_query = correct_search_spelling(msg_normalized)
-    query_tokens = {
-        token for token in corrected_query.split()
-        if len(token) >= 3 and token not in SEARCH_STOPWORDS
-    }
-    for p in products:
-        p_name = normalize_text(p['name'])
-        p_keywords = normalize_text(p.get('keywords', '') or '')
-        p_description = normalize_text(p.get('description', '') or '')
-        searchable_text = _searchable_product_text(p)
-        if any(term in p_name or p_name in term for term in search_terms):
-            matching.append(p)
-        elif any(term in searchable_text for term in search_terms if len(term) >= 3):
-            matching.append(p)
-        elif p_keywords:
-            kw_list = [normalize_text(k.strip()) for k in p_keywords.split(",")]
-            for kw in kw_list:
-                if kw and any(term in kw or kw in term for term in search_terms):
-                    matching.append(p)
-                    break
-        if p not in matching and query_tokens:
-            product_tokens = set(searchable_text.split())
-            fuzzy_hits = sum(_fuzzy_token_match(token, product_tokens) for token in query_tokens)
-            if fuzzy_hits >= 1 and (len(query_tokens) == 1 or fuzzy_hits >= 2):
-                matching.append(p)
+    matching = match_products_from_text(msg_body, products)
 
     if len(matching) == 1:
         found = matching[0]

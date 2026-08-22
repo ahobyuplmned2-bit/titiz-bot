@@ -9,7 +9,7 @@ import json
 catalog = json.loads(Path("products.json").read_text(encoding="utf-8"))
 assert isinstance(catalog, dict) and catalog, "products.json يجب أن يبقى قاموساً غير فارغ"
 catalog_names = {str(item.get("name", "")) for item in catalog.values() if isinstance(item, dict)}
-for name in ("كفوف غسل", "كفوف صابون", "يدات قدور الضغط", "قدر ضغط ألدار الأصلي (5 سنوات ضمان)"):
+for name in ("كفوف غسل", "كفوف صابون", "يدات قدور الضغط", "قدر ضغط ألدار الأصلي"):
     assert name in catalog_names, f"المنتج مفقود من products.json: {name}"
 
 for relative_path in (
@@ -18,6 +18,7 @@ for relative_path in (
     "assets/products/handles/pressure-cooker-handles.jpg",
     "assets/products/pressure-cookers/aldar-cooker-3-4-5l.jpg",
     "assets/products/pressure-cookers/aldar-cooker-5-7-9l.jpg",
+    "assets/products/hindi-storage-containers/dakar-lux-hindi-storage-containers-7pcs.jpg",
     "assets/products/floor-mops/floor-mop-large-with-handle.jpg",
     "assets/products/floor-mops/floor-mop-medium-with-handle.jpg",
     "assets/products/stove-trivets/square-stove-trivet-1000.jpg",
@@ -90,6 +91,12 @@ assert steel_cup_variants == [
     {"name": "رقم 4", "price": 150},
 ], "أحجام اقلاص الاستيل أو أسعارها غير صحيحة"
 assert len(json.loads(steel_cups["image_urls"])) == 1, "يجب أن يحتوي اقلاص الاستيل على صورة واحدة"
+
+hindi_storage = catalog.get("علب حافظات هندي ابو 7 طقم")
+assert isinstance(hindi_storage, dict), "سجل علب حافظات هندي أبو 7 مفقود"
+assert hindi_storage["price"] == "1600", "سعر علب حافظات هندي أبو 7 يجب أن يبقى 1600"
+assert hindi_storage["image_id"] == "", "يجب إزالة معرّف صورة واتساب المتغير من علب الحافظات"
+assert len(json.loads(hindi_storage["image_urls"])) == 1, "يجب أن تحتوي علب الحافظات على رابط صورة ثابت"
 
 spice_jars = catalog.get("علب بهارات سلم طويل")
 assert isinstance(spice_jars, dict), "سجل علب بهارات سلم طويل مفقود"

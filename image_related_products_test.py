@@ -35,5 +35,10 @@ assert "اقلاص استيل طويل" in related_names
 assert "جاك استيل" not in related_names
 assert "قدور استيل" not in related_names
 
-print("image_related_products_test: OK")
+search_matches = app.match_products_from_text("اقلاص عصير المائدة 6 حبات", catalog)
+search_names = {product["name"] for product in search_matches}
+assert "اقلاص استيل غير طويل" in search_names
+assert "قدور استيل" not in search_names
+assert "جاك استيل" not in search_names
 
+print("image_related_products_test: OK")
