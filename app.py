@@ -4589,6 +4589,12 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_search_examples(sender)
         return
 
+    # التحقق من التحيات والكلمات القصيرة قبل البحث المباشر في المنتجات حتى لا تُعامل كلمة "هلا" أو التحيات كبحث عن منتج
+    response_data = find_response(msg_normalized)
+    if response_data:
+        send_response(sender, response_data)
+        return
+
     # === البحث في المنتجات (قاعدة البيانات) أولاً لضمان عدم ضياع أي منتج جديد في الفهم الدلالي ===
     products = get_all_products()
     matching = []
@@ -4636,11 +4642,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     if route_semantic_intent(sender, msg_body, semantic_result, products):
         return
 
-    # المسار الثابت احتياطي فقط عندما لا ينجح الفهم الدلالي في اختيار نية آمنة.
-    response_data = find_response(msg_normalized)
-    if response_data:
-        send_response(sender, response_data)
-        return
+    # (تم التحقق مسبقاً من find_response أولاً لمنع الخلط مع التحيات)
 
     # لا نعيد سؤال التوضيح الطويل مع كل رسالة غير مطابقة؛ نرد مرة واحدة
     # حسب نية الرسالة ثم نفتح إجراءً واضحاً للعميل.
