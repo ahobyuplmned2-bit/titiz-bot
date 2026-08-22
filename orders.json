@@ -94,9 +94,9 @@
     ],
     "total_price": 500.0,
     "payment_method": "الدفع عند الاستلام",
-    "order_status": "جديد",
+    "order_status": "تم التسليم",
     "payment_proof_url": "",
     "created_at": "2026-08-22 16:02:59",
-    "updated_at": "2026-08-22 16:02:59"
+    "updated_at": "2026-08-22 16:15:44"
   }
 }
