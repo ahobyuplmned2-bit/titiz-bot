@@ -170,3 +170,50 @@ if __name__ == "__main__":
     test_whatsapp_carousel_payload_shape()
     test_admin_order_buttons_regression()
     print("all product result delivery and admin buttons tests passed")
+
+
+
+def test_customer_image_flow_regression():
+    events = []
+    original_analyze = app.analyze_product_image
+    original_notify = app.notify_owner_unavailable_product
+    original_send_unavailable = app.send_unavailable_image_response
+    original_send_card = app.send_product_card
+    try:
+        app.notify_owner_unavailable_product = lambda *args, **kwargs: events.append(("notify_owner", args, kwargs))
+        app.send_unavailable_image_response = lambda to: events.append(("unavailable_response", to))
+        app.send_product_card = lambda to, prod: events.append(("product_card", to, prod.get("name")))
+
+        # حالة 1: صورة منتج غير موجود ترسل تنبيه الإدارة ورسالة التأكيد للعميل
+        app.analyze_product_image = lambda sender, msg, cap: {"kind": "unknown", "reply": "غير متوفر"}
+        msg = {"type": "image", "image": {"id": "img_123", "caption": "برش رضاعات"}}
+        app.handle_customer_message("967700001111", "", "", msg)
+
+        assert any(e[0] == "notify_owner" for e in events)
+        assert any(e[0] == "unavailable_response" and e[1] == "967700001111" for e in events)
+
+        # حالة 2: صورة منتج موجود ترسل بطاقة أو كاروسيل المطابق
+        events.clear()
+        app.processed_messages.clear()
+        sample_prod = {"id": 999, "name": "برش رضاعات كبير", "price": "500", "image_urls": '["https://example.test/img.jpg"]'}
+        original_related = app.products_related_to_image
+        app.products_related_to_image = lambda prod, all_prods: [prod]
+        app.analyze_product_image = lambda sender, msg, cap: {"kind": "product", "product": sample_prod, "variant_match": None}
+        app.handle_customer_message("967700002222", "", "", msg)
+
+        assert any(e[0] == "product_card" and e[2] == "برش رضاعات كبير" for e in events)
+        app.products_related_to_image = original_related
+    finally:
+        app.analyze_product_image = original_analyze
+        app.notify_owner_unavailable_product = original_notify
+        app.send_unavailable_image_response = original_send_unavailable
+        app.send_product_card = original_send_card
+
+
+if __name__ == "__main__":
+    test_search_result_uses_carousel()
+    test_search_result_falls_back_only_when_carousel_fails()
+    test_whatsapp_carousel_payload_shape()
+    test_admin_order_buttons_regression()
+    test_customer_image_flow_regression()
+    print("all product result delivery, admin buttons, and image flow tests passed")

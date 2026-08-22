@@ -2025,6 +2025,15 @@ def analyze_product_image(sender, message, caption=""):
     if product:
         variant_match = resolve_image_variant_match(result, product)
         return {"kind": "product", "product": product, "variant_match": variant_match}
+    
+    # حماية إضافية: إذا كان النموذج قد طابق اسماً في الرد أو الملاحظات ولكن لم يمر عبر المعرف
+    reply_text = str(result.get("reply") or "")
+    matched_name = str(result.get("matched_product_name") or "")
+    for candidate in products:
+        name_norm = normalize_text(candidate.get("name", ""))
+        if (matched_name and name_norm in normalize_text(matched_name)) or (reply_text and name_norm in normalize_text(reply_text)):
+            return {"kind": "product", "product": candidate, "variant_match": None}
+
     return {"kind": "unknown", "reply": result.get("reply") or "🔍 لم أتمكن من تحديد المنتج بدقة. أرسلي صورة أوضح أو اكتبي اسم المنتج من فضلكِ 😊"}
 
 def deliver_pending_replies(to):
@@ -4305,6 +4314,15 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             return
         if image_result and image_result.get("kind") == "payment_proof":
             send_message(sender, image_result["reply"])
+            return
+        if not image_result or image_result.get("kind") == "unknown":
+            notify_owner_unavailable_product(
+                sender,
+                caption or (image_result.get("reply") if image_result else "صورة منتج غير مطابقة للكتالوج"),
+                source="image",
+                image_id=image_id,
+            )
+            send_unavailable_image_response(sender)
             return
         notify_owner_unavailable_product(
             sender,
