@@ -4579,43 +4579,8 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_search_examples(sender)
         return
 
-    # المحادثة العامة تمر أولاً على فهم السياق؛ هذا يمنع أن تلتقط كلمة داخل
-    # عبارة طويلة ردّاً ثابتاً غير مناسب مثل رد الخصم لكلمة «طيب».
+    # === البحث في المنتجات (قاعدة البيانات) أولاً لضمان عدم ضياع أي منتج جديد في الفهم الدلالي ===
     products = get_all_products()
-    semantic_result = None
-    try:
-        semantic_result = interpret_customer_message(sender, msg_body)
-    except Exception as exc:
-        print(f"[الذكاء] تعذر فهم رسالة العميل دلالياً: {exc}")
-    if route_semantic_intent(sender, msg_body, semantic_result, products):
-        return
-
-    # المسار الثابت احتياطي فقط عندما لا ينجح الفهم الدلالي في اختيار نية آمنة.
-    response_data = find_response(msg_normalized)
-    if response_data:
-        send_response(sender, response_data)
-        return
-
-    # === البحث في المنتجات (قاعدة البيانات) ===
-    if is_low_information_query(msg_normalized):
-        exact_product = next(
-            (
-                p for p in products
-                if msg_normalized == normalize_text(p.get("name", ""))
-                or msg_normalized in {
-                    normalize_text(k.strip())
-                    for k in (p.get("keywords", "") or "").split(",")
-                    if k.strip()
-                }
-            ),
-            None,
-        )
-        if exact_product:
-            send_product_card(sender, exact_product)
-        else:
-            send_conversational_recovery(sender, msg_normalized, semantic_result)
-        return
-
     matching = []
     search_terms = product_search_terms(msg_normalized)
     corrected_query = correct_search_spelling(msg_normalized)
@@ -4650,6 +4615,21 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
     elif len(matching) > 1:
         send_matching_products_carousel(sender, matching, msg_normalized)
+        return
+
+    # المحادثة العامة وفهم السياق والفهم الدلالي للاستفسارات العامة التي ليست بحثاً مباشراً عن منتج
+    semantic_result = None
+    try:
+        semantic_result = interpret_customer_message(sender, msg_body)
+    except Exception as exc:
+        print(f"[الذكاء] تعذر فهم رسالة العميل دلالياً: {exc}")
+    if route_semantic_intent(sender, msg_body, semantic_result, products):
+        return
+
+    # المسار الثابت احتياطي فقط عندما لا ينجح الفهم الدلالي في اختيار نية آمنة.
+    response_data = find_response(msg_normalized)
+    if response_data:
+        send_response(sender, response_data)
         return
 
     # لا نعيد سؤال التوضيح الطويل مع كل رسالة غير مطابقة؛ نرد مرة واحدة
