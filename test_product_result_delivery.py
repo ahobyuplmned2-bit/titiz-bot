@@ -141,8 +141,32 @@ def test_whatsapp_carousel_payload_shape():
         whatsapp_api.time.sleep = original_sleep
 
 
+def test_admin_order_buttons_regression():
+    events = []
+    original_send_message = app.send_message
+    original_get_order = app.get_order
+    original_update_status = app.update_order_status
+    try:
+        app.send_message = lambda to, text: events.append(("message", to, text)) or True
+        app.get_order = lambda num: {"order_number": num, "phone_number": "967700009999"} if num == "ORD-00003" else None
+        updated_statuses = []
+        app.update_order_status = lambda num, status: updated_statuses.append((num, status))
+
+        owner_phone = app.OWNER_NUMBER
+        app.handle_owner_command(owner_phone, "admin_prep_ORD-00003", "admin_prep_ORD-00003", {"type": "text"})
+
+        assert not any("لم أتمكن من معرفة رقم العميل" in text for _, _, text in events if _ == "message")
+        assert ("ORD-00003", "جاري التجهيز") in updated_statuses
+        assert ("967700009999", "📦 *تحديث لطلبك ORD-00003*\n\n✅ جاري تجهيز طلبك الآن وسيتم إرساله قريباً بشغف وسعادة 😊") in [(to, text) for _, to, text in events]
+    finally:
+        app.send_message = original_send_message
+        app.get_order = original_get_order
+        app.update_order_status = original_update_status
+
+
 if __name__ == "__main__":
     test_search_result_uses_carousel()
     test_search_result_falls_back_only_when_carousel_fails()
     test_whatsapp_carousel_payload_shape()
-    print("product result delivery test passed")
+    test_admin_order_buttons_regression()
+    print("all product result delivery and admin buttons tests passed")
