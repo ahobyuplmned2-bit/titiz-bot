@@ -498,14 +498,16 @@ def match_products_from_text(query, products):
     query_tokens = set(significant_tokens)
     if not query_tokens:
         return []
-    minimum_hits = 1 if len(query_tokens) == 1 else max(2, (len(query_tokens) + 1) // 2)
+    # كلمتان محددتان تتطلبان تطابقهما معاً، أما الاستعلامات الأطول فتتطلب
+    # ثلاثة مصطلحات على الأقل كي لا تدخل فئات تشترك فقط في «اقلاص» و«شاي».
+    minimum_hits = 1 if len(query_tokens) == 1 else (2 if len(query_tokens) == 2 else 3)
     matches = []
     for product in products or []:
         searchable_text = _searchable_product_text(product)
         direct_hits = sum(term in searchable_text for term in search_terms if len(term) >= 3)
-        # وجود كلمة منتج محددة واحدة يكفي للمطابقة المباشرة؛ أما الكلمات العامة
-        # فقد أزيلت مسبقاً من significant_tokens، لذلك لا تعيد خلط الفئات.
-        if direct_hits >= 1:
+        # للاستعلام متعدد الكلمات نطلب أكثر من كلمة محددة؛ وبذلك لا تتحول
+        # «اقلاص شاي صيفي ستار» إلى كل المنتجات التي تحتوي كلمة شاي أو اقلاص.
+        if direct_hits >= minimum_hits:
             matches.append(product)
             continue
         product_tokens = set(searchable_text.split())

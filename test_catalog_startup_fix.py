@@ -12,6 +12,18 @@ catalog_names = {str(item.get("name", "")) for item in catalog.values() if isins
 for name in ("كفوف غسل", "كفوف صابون", "يدات قدور الضغط", "قدر ضغط ألدار الأصلي"):
     assert name in catalog_names, f"المنتج مفقود من products.json: {name}"
 
+saifi_star_names = {
+    "قلص شاي صيفي ستار الاصلي 6 قطع",
+    "قلص شاي صيفي ستار موديل SS-49 6 قطع",
+    "قلص شاي صيفي ستار موديل SS-47 6 قطع",
+    "قلص شاي صيفي ستار تشكيلة العلبة 6 قطع",
+}
+assert saifi_star_names <= catalog_names, "يجب أن تبقى تشكيلات صيفي ستار الأربع كسجلات مستقلة"
+for name in saifi_star_names:
+    product = next(item for item in catalog.values() if item.get("name") == name)
+    assert product["price"] == "1400", f"سعر {name} يجب أن يبقى 1400"
+    assert len(json.loads(product["image_urls"])) == 1, f"يجب أن يكون لكل تشكيلة صيفي ستار صورة مستقلة"
+
 for relative_path in (
     "assets/products/gloves/washing-gloves.jpg",
     "assets/products/gloves/soap-gloves.jpg",
