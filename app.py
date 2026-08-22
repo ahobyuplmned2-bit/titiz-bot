@@ -4828,7 +4828,7 @@ def webhook():
         clean_owner = str(OWNER_NUMBER).strip().lstrip("+")
         is_owner = (clean_sender == clean_owner or clean_sender.endswith(clean_owner) or clean_owner.endswith(clean_sender))
 
-        # معالجة أوامر المالك أو الرد المقتبس للإدارة أولاً وقبل أي شيء
+        # معالجة أزرار الإدارة أوامر المالك أو الرد المقتبس للإدارة أولاً وقبل أي شيء
         if is_owner:
             handle_owner_command(sender, msg_body, msg_normalized, processing_message)
             active_message_events.pop(sender, None)
