@@ -158,6 +158,20 @@ def test_admin_order_buttons_regression():
         assert not any("لم أتمكن من معرفة رقم العميل" in text for _, _, text in events if _ == "message")
         assert ("ORD-00003", "جاري التجهيز") in updated_statuses
         assert ("967700009999", "📦 *تحديث لطلبك ORD-00003*\n\n✅ جاري تجهيز طلبك الآن وسيتم إرساله قريباً بشغف وسعادة 😊") in [(to, text) for _, to, text in events]
+
+        # حماية: بعض أزرار الإدارة تصل ومعها context مقتبس من إشعار الطلب.
+        # يجب أن يأخذ المعرّف admin_deliv_ الأولوية ولا يطلب رقم العميل.
+        events.clear()
+        updated_statuses.clear()
+        quoted_button_message = {
+            "type": "interactive",
+            "context": {"id": "wamid.fake-order-card", "text": "طلب جديد بدون رقم ظاهر"},
+        }
+        app.handle_owner_command(owner_phone, "admin_deliv_ORD-00003", "admin_deliv_ORD-00003", quoted_button_message)
+
+        assert not any("لم أتمكن من معرفة رقم العميل" in text for kind, _, text in events if kind == "message")
+        assert ("ORD-00003", "تم التسليم") in updated_statuses
+        assert any(to == "967700009999" and "تم تسليم طلبك بنجاح" in text for kind, to, text in events if kind == "message")
     finally:
         app.send_message = original_send_message
         app.get_order = original_get_order

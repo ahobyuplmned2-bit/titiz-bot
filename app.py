@@ -3168,6 +3168,31 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
     ):
         return False
 
+    # === أولوية أزرار الإدارة (تم التجهيز / تم التوصيل) ===
+    # بعض رسائل واتساب التفاعلية قد تحمل context من إشعار الطلب الأصلي. يجب
+    # التعامل مع المعرّف أولاً حتى لا يقع الزر في مسار الرد المقتبس ويطلب رقم العميل.
+    if msg_body.startswith("admin_prep_") or msg_body.startswith("admin_deliv_"):
+        parts = msg_body.split("_")
+        if len(parts) >= 3:
+            action_type = parts[1]  # prep or deliv
+            order_number = "_".join(parts[2:])
+            order = get_order(order_number)
+            if order:
+                customer_phone = order.get("phone_number")
+                if action_type == "prep":
+                    update_order_status(order_number, "جاري التجهيز")
+                    send_message(OWNER_NUMBER, f"✅ تم تحديث حالة الطلب {order_number} إلى: *جاري التجهيز*")
+                    if customer_phone:
+                        send_message(customer_phone, f"📦 *تحديث لطلبك {order_number}*\n\n✅ جاري تجهيز طلبك الآن وسيتم إرساله قريباً بشغف وسعادة 😊")
+                elif action_type == "deliv":
+                    update_order_status(order_number, "تم التسليم")
+                    send_message(OWNER_NUMBER, f"🚚 تم تحديث حالة الطلب {order_number} إلى: *تم التسليم*")
+                    if customer_phone:
+                        send_message(customer_phone, f"🎉 *تحديث لطلبك {order_number}*\n\n🚚 تم تسليم طلبك بنجاح! شكراً لثقتكِ الغالية بمتجر Titiz 💛✨")
+            else:
+                send_message(OWNER_NUMBER, f"❌ لم أجد الطلب برقم: {order_number}")
+        return True
+
     # === التعامل مع الرد المباشر المقتبس (الضغط مطولاً على إشعار العميل ثم الرد) ===
     context_info = message.get("context") or {}
     quoted_id = context_info.get("id", "")
@@ -3220,29 +3245,6 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             # تنبيه الإدارة أن الرقم لم يُستخرج لكي لا تظل صامتة
             send_message(OWNER_NUMBER, "⚠️ لم أتمكن من معرفة رقم العميل من الرسالة المقتبسة. يرجى الرد باستخدام: رد [الرقم] [الرسالة]")
             return True
-
-    # === التعامل مع أزرار الإدارة (تم التجهيز / تم التوصيل) ===
-    if msg_body.startswith("admin_prep_") or msg_body.startswith("admin_deliv_"):
-        parts = msg_body.split("_")
-        if len(parts) >= 3:
-            action_type = parts[1] # prep or deliv
-            order_number = "_".join(parts[2:])
-            order = get_order(order_number)
-            if order:
-                customer_phone = order.get("phone_number")
-                if action_type == "prep":
-                    update_order_status(order_number, "جاري التجهيز")
-                    send_message(OWNER_NUMBER, f"✅ تم تحديث حالة الطلب {order_number} إلى: *جاري التجهيز*")
-                    if customer_phone:
-                        send_message(customer_phone, f"📦 *تحديث لطلبك {order_number}*\n\n✅ جاري تجهيز طلبك الآن وسيتم إرساله قريباً بشغف وسعادة 😊")
-                elif action_type == "deliv":
-                    update_order_status(order_number, "تم التسليم")
-                    send_message(OWNER_NUMBER, f"🚚 تم تحديث حالة الطلب {order_number} إلى: *تم التسليم*")
-                    if customer_phone:
-                        send_message(customer_phone, f"🎉 *تحديث لطلبك {order_number}*\n\n🚚 تم تسليم طلبك بنجاح! شكراً لثقتكِ الغالية بمتجر Titiz 💛✨")
-            else:
-                send_message(OWNER_NUMBER, f"❌ لم أجد الطلب برقم: {order_number}")
-        return True
 
     # === إضافة منتج جديد من رقم الإدارة بأمر «اضف» (صورة اختيارية + اسم وسعر) ===
     is_image_add = (message.get("type") == "image")
