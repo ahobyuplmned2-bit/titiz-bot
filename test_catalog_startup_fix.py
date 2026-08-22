@@ -28,7 +28,7 @@ for relative_path in (
     "assets/products/bathroom-corner-shelves/aden-plastic-corner-shelf-700.jpg",
     "assets/products/steel-cups/royal-crown-short-steel-cups.jpg",
     "assets/products/spice-jars/long-spice-jars-clean.png",
-    "assets/products/juice-strainers/steel-juice-strainers-with-handles.png",
+    "assets/products/juice-strainers/steel-juice-strainers-with-handles.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"
