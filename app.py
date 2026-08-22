@@ -2396,11 +2396,14 @@ RELATED_PRODUCT_STOPWORDS = {
     "اصلي", "الاصلي", "اصلية", "الاصلية", "ضمان", "منتجات", "المائدة", "المائده",
     "الدار", "التاج", "الملكي", "الملكية", "ملك", "ابو", "كبير", "صغير", "وسط",
     "مدور", "مربع", "هندي", "مفتوح", "برمه", "حجم", "حبات", "قطعة", "قطع",
+    "استيل", "ستانلس", "ستيل", "معدن", "حديد", "بلاستيك", "تركي", "استخدام",
+    "يومي", "مطبخ", "مطبخي", "منزلي", "منزل", "مناسب", "مناسبة", "متوفر",
 }
 
 PRODUCT_FAMILY_HINTS = {
     "tea_cooler": {"ثلاجة", "ثلاجات", "ثلاجه", "تبريد", "ثلاجات شاي"},
     "juicer": {"عصارة", "عصارات", "عصير", "حمضيات"},
+    "cups": {"اقلاص", "أقلاص", "كاس", "كاسات", "كوب", "اكواب", "جلاس", "كلاص", "قلص"},
     "peeler": {"مقشرة", "مقرشة", "بطاط", "تقشير"},
     "pots": {"قدر", "قدور", "حلل", "طنجرة", "طناجر", "برمة"},
     "scrubber": {"سلك", "مواعين", "جلي", "ليفة"},
@@ -2438,6 +2441,11 @@ def products_related_to_image(product, products):
         if len(token) >= 3 and token not in RELATED_PRODUCT_STOPWORDS
     }
     seed_family = _product_family(seed_text)
+    seed_name_tokens = {
+        _family_token(token)
+        for token in normalize_text(str(product.get("name") or "")).split()
+        if len(token) >= 3 and token not in RELATED_PRODUCT_STOPWORDS
+    }
     if not seed_tokens:
         return [product]
     scored = []
@@ -2455,6 +2463,10 @@ def products_related_to_image(product, products):
             for token in normalize_text(candidate_text).replace(",", " ").split()
             if len(token) >= 3 and token not in RELATED_PRODUCT_STOPWORDS
         }
+        # عندما لا توجد فئة معروفة، لا يكفي الاشتراك في كلمة مادة أو وصف عام.
+        # يشترط وجود كلمة محددة من اسم المنتج المطابق نفسه حتى لا تختلط منتجات مختلفة.
+        if not seed_family and seed_name_tokens and not (seed_name_tokens & candidate_tokens):
+            continue
         overlap = len(seed_tokens & candidate_tokens)
         if overlap:
             scored.append((overlap, candidate))
