@@ -2455,7 +2455,7 @@ def products_related_to_image(product, products):
 
 
 def send_matching_products_carousel(to, products, query_key=""):
-    """إرسال نتائج البحث كبطاقات فردية مضمونة بدلاً من كاروسيل قد لا يظهر في واتساب."""
+    """إرسال نتائج البحث في بطاقات واتساب أفقية، مع fallback آمن عند رفض الكاروسيل."""
     guard_key = (to, normalize_text(query_key or ""))
     now = time.time()
     if query_key and now - matching_send_guard.get(guard_key, 0) < MATCHING_SEND_WINDOW:
@@ -2475,7 +2475,6 @@ def send_matching_products_carousel(to, products, query_key=""):
     if not unique_products:
         return False
 
-    # يبقى أول منتج كسياق للكتابة مثل «أضف»، وتبقى أزرار كل بطاقة هي الأدق.
     current_session = user_sessions.get(to, {})
     current_session = current_session if isinstance(current_session, dict) else {}
     user_sessions[to] = {**current_session, "last_product": unique_products[0]}
@@ -2488,6 +2487,28 @@ def send_matching_products_carousel(to, products, query_key=""):
     if len(variant_products) == 1:
         remember_variant_context(to, variant_products[0])
 
+    cards = []
+    for product in unique_products[:10]:
+        image_urls = _product_image_urls(product)
+        if not image_urls:
+            continue
+        valid_variants = [
+            v for v in product_variants(product)
+            if parse_product_price(v.get("price")) is not None
+        ]
+        if not valid_variants and parse_product_price(product.get("price")) is None:
+            continue
+        buttons = [{"id": f"det_{product['id']}", "title": "📋 التفاصيل"}]
+        if valid_variants:
+            buttons.insert(0, {"id": f"variants_{product['id']}", "title": "📏 اختيار الحجم"})
+        else:
+            buttons.insert(0, {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"})
+        cards.append({
+            "image_url": image_urls[0],
+            "body": format_product_card(product, compact=True),
+            "buttons": buttons,
+        })
+
     query_label = " ".join(str(query_key or "المنتجات").split())[:45] or "المنتجات"
     intro_text = (
         f"🔍 لقيت لكِ خيارات مشابهة من *{query_label}* 😊\n\n"
@@ -2499,10 +2520,23 @@ def send_matching_products_carousel(to, products, query_key=""):
         "مع مندوبة Titiz إذا أعجبك عرضها."
     )
 
-    # لا نعتمد على interactive carousel؛ بعض حسابات/إصدارات واتساب تقبل الطلب
-    # ثم لا تعرض البطاقات للعميل. البطاقة الفردية ترسل الصورة والبيانات والقائمة
-    # بنفس المسار الموثوق المستخدم عند اختيار منتج واحد.
     send_message(to, intro_text)
+    # الكاروسيل يحتاج من بطاقتين إلى عشر بطاقات، وكل بطاقة يجب أن تحمل نفس نوع
+    # وعدد أزرار الرد السريع. send_carousel يطبق هذه البنية الرسمية.
+    if len(cards) >= 2 and send_carousel(to, "🛍️ اسحبي لمشاهدة المنتجات:", cards[:10]):
+        matching_send_guard[guard_key] = now
+        schedule_product_followup(to, unique_products[0].get("name", ""))
+        if not whatsapp.send_url_button(
+            to,
+            delegate_text,
+            "📞 التواصل مع المندوبة",
+            DELEGATE_WHATSAPP_URL,
+        ):
+            send_message(to, delegate_text + f"\n\n📞 {DELEGATE_WHATSAPP_URL}")
+        return True
+
+    # إذا رفض واتساب الكاروسيل أو بقيت نتيجة واحدة، نستخدم البطاقة الفردية
+    # الموثوقة، لكن لا نرسل رسالة التواصل إلا بعد نجاح بطاقة واحدة على الأقل.
     sent_cards = 0
     for product in unique_products[:10]:
         if send_product_card(to, product):
