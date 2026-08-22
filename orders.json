@@ -38,5 +38,25 @@
     "payment_proof_url": "",
     "created_at": "2026-08-20 10:21:05",
     "updated_at": "2026-08-20 10:23:07"
+  },
+  "ORD-000003": {
+    "order_number": "ORD-000003",
+    "phone_number": "967712282204",
+    "customer_name": "ام مالك",
+    "address": "جوله العدين بقاله المنصوب",
+    "products_data": [
+      {
+        "name": "مشنات عصاير أصلية بطن واحد",
+        "qty": 1,
+        "price": 500.0,
+        "total": 500.0
+      }
+    ],
+    "total_price": 500.0,
+    "payment_method": "الدفع عند الاستلام",
+    "order_status": "جديد",
+    "payment_proof_url": "",
+    "created_at": "2026-08-22 11:24:23",
+    "updated_at": "2026-08-22 11:24:23"
   }
 }
