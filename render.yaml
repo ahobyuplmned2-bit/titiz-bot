@@ -3,7 +3,7 @@ services:
     name: whatsapp-bot-titiz
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:10000
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5
     envVars:
       - key: PORT
         value: "10000"

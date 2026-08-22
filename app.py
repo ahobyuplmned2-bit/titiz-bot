@@ -4671,6 +4671,32 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
 # ║                    Webhook Routes                           ║
 # ╚══════════════════════════════════════════════════════════════╝
 
+def process_customer_image_in_background(sender, msg_body, msg_normalized, message, message_id, message_event_id):
+    """معالجة صورة العميل خارج طلب webhook حتى لا ينتهي عامل Render أثناء التحليل."""
+    try:
+        whatsapp.mark_as_read(message_id)
+        whatsapp.send_typing_indicator(message_id)
+        if msg_body:
+            notify_owner(sender, msg_body, message_event_id=message_event_id)
+        deliver_pending_replies(sender)
+        handle_customer_message(sender, msg_body, msg_normalized, message)
+    except Exception as exc:
+        print(f"[الصورة] خطأ في العامل الخلفي لمعالجة الصورة: {exc}")
+        try:
+            image_id = (message.get("image") or {}).get("id", "")
+            notify_owner_unavailable_product(
+                sender,
+                msg_body or "تعذر تحليل صورة المنتج",
+                source="image",
+                image_id=image_id,
+            )
+            send_unavailable_image_response(sender)
+        except Exception as fallback_exc:
+            print(f"[الصورة] تعذر إرسال الرد الاحتياطي للصورة: {fallback_exc}")
+    finally:
+        persist_customer_session(sender)
+        active_message_events.pop(sender, None)
+
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
     mode = request.args.get("hub.mode")
@@ -4714,9 +4740,6 @@ def webhook():
             del processed_messages[k]
 
         record_contact(sender)
-
-        # Mark as Read (صحين أخضر)
-        whatsapp.mark_as_read(message_id)
 
         # استخراج النص
         msg_body = ""
@@ -4838,16 +4861,26 @@ def webhook():
         )
         active_message_events[sender] = message_event_id
 
-        # جاري الكتابة (Typing Indicator)
-        whatsapp.send_typing_indicator(message_id)
-        time.sleep(2)
-
-        # لا نحفظ العميل عند أول رسالة؛ يتم الحفظ بعد إدخال الاسم فقط.
-
         # تطبيع رقم المرسل ورقم الإدارة لمقارنة آمنة بغض النظر عن الـ + أو الفراغات
         clean_sender = str(sender).strip().lstrip("+")
         clean_owner = str(OWNER_NUMBER).strip().lstrip("+")
         is_owner = (clean_sender == clean_owner or clean_sender.endswith(clean_owner) or clean_owner.endswith(clean_sender))
+
+        # تحليل صورة المنتج قد يتجاوز مهلة عامل Gunicorn بسبب تنزيل الصورة ومطابقة
+        # الكتالوج وطلب التحليل الذكي. لذلك نعيد 200 لواتساب فوراً ثم نعالج الصورة
+        # في عامل خلفي، فلا تتكرر الرسالة ولا يُقتل عامل البوت أثناء المعالجة.
+        if processing_message.get("type") == "image" and not is_owner:
+            Thread(
+                target=process_customer_image_in_background,
+                args=(sender, msg_body, msg_normalized, processing_message, message_id, message_event_id),
+                daemon=True,
+                name=f"image-{message_id[-8:]}",
+            ).start()
+            return jsonify({"status": "ok"}), 200
+
+        # جاري القراءة والكتابة للرسائل الخفيفة فقط؛ معالجة الصورة تتم في العامل الخلفي.
+        whatsapp.mark_as_read(message_id)
+        whatsapp.send_typing_indicator(message_id)
 
         # معالجة أزرار الإدارة أوامر المالك أو الرد المقتبس للإدارة أولاً وقبل أي شيء
         if is_owner:

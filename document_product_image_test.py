@@ -29,6 +29,20 @@ app.analyze_product_image = lambda sender, message, caption="": {
 }
 app.products_related_to_image = lambda product, products: [product]
 
+queued_tasks = []
+
+class CapturedThread:
+    def __init__(self, target, args=(), daemon=False, name=None):
+        self.target = target
+        self.args = args
+        self.daemon = daemon
+        self.name = name
+
+    def start(self):
+        queued_tasks.append(self)
+
+app.Thread = CapturedThread
+
 payload = {
     "entry": [{"changes": [{"value": {"messages": [{
         "id": "document-image-message",
@@ -47,6 +61,9 @@ response = app.app.test_client().post(
 )
 
 assert response.status_code == 200
+assert queued_tasks, "يجب أن يعيد webhook الاستجابة قبل معالجة صورة العميل الطويلة"
+assert not sent_cards, "لا ينبغي معالجة الصورة داخل طلب webhook نفسه"
+queued_tasks[0].target(*queued_tasks[0].args)
 assert sent_cards and sent_cards[0][1]["id"] == 501
 assert not any("النصوص والصور والرسائل الصوتية" in text for _, text in sent_messages)
-print("document_product_image_test: OK")
+print("document_product_image_test: OK (webhook returns immediately and image is processed in background)")
