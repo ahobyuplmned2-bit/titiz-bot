@@ -2333,12 +2333,13 @@ def send_product_card(to, product):
         send_variant_list(to, product)
         schedule_product_followup(to, product.get("name", ""))
         return True
-    send_buttons(to, product_reply, [
+    sent = send_buttons(to, product_reply, [
         {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
         {"id": f"det_{product['id']}", "title": "📋 تفاصيل المنتج"},
         {"id": "shopping_assistant", "title": "🔙 متابعة التسوق"},
     ])
     schedule_product_followup(to, product.get("name", ""))
+    return bool(sent)
 
 
 def send_matched_product_variant_card(to, product, variant_match):
@@ -2454,7 +2455,7 @@ def products_related_to_image(product, products):
 
 
 def send_matching_products_carousel(to, products, query_key=""):
-    """إرسال نتائج متشابهة: تمهيد، بطاقات متجاورة، ثم تواصل مندوبة منفصل."""
+    """إرسال نتائج البحث كبطاقات فردية مضمونة بدلاً من كاروسيل قد لا يظهر في واتساب."""
     guard_key = (to, normalize_text(query_key or ""))
     now = time.time()
     if query_key and now - matching_send_guard.get(guard_key, 0) < MATCHING_SEND_WINDOW:
@@ -2471,12 +2472,14 @@ def send_matching_products_carousel(to, products, query_key=""):
         seen_product_keys.add(product_key)
         unique_products.append(product)
 
+    if not unique_products:
+        return False
+
     # يبقى أول منتج كسياق للكتابة مثل «أضف»، وتبقى أزرار كل بطاقة هي الأدق.
     current_session = user_sessions.get(to, {})
     current_session = current_session if isinstance(current_session, dict) else {}
-    if unique_products:
-        user_sessions[to] = {**current_session, "last_product": unique_products[0]}
-        user_states[to] = "product_context"
+    user_sessions[to] = {**current_session, "last_product": unique_products[0]}
+    user_states[to] = "product_context"
 
     variant_products = [
         product for product in unique_products
@@ -2484,38 +2487,6 @@ def send_matching_products_carousel(to, products, query_key=""):
     ]
     if len(variant_products) == 1:
         remember_variant_context(to, variant_products[0])
-
-    cards = []
-    scheduled_names = []
-    seen_card_keys = set()
-    for product in unique_products[:10]:
-        raw_urls = product.get("image_urls", "")
-        if isinstance(raw_urls, str):
-            try:
-                image_urls = json.loads(raw_urls) if raw_urls.startswith("[") else []
-            except json.JSONDecodeError:
-                image_urls = []
-        else:
-            image_urls = raw_urls or []
-        valid_urls = [url for url in image_urls if isinstance(url, str) and url.startswith("http")]
-        if not valid_urls:
-            continue
-        scheduled_names.append(product.get("name", ""))
-        body = format_product_card(product, compact=True)
-        for url in valid_urls:
-            card_key = (product.get("id") or product.get("name", ""), url)
-            if card_key in seen_card_keys:
-                continue
-            seen_card_keys.add(card_key)
-            valid_variants = [v for v in product_variants(product) if parse_product_price(v.get("price")) is not None]
-            if not valid_variants and parse_product_price(product.get("price")) is None:
-                continue
-            buttons = [{"id": f"det_{product['id']}", "title": "📋 التفاصيل"}]
-            if valid_variants:
-                buttons.insert(0, {"id": f"variants_{product['id']}", "title": "📏 اختيار الحجم"})
-            else:
-                buttons.insert(0, {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"})
-            cards.append({"image_url": url, "body": body, "buttons": buttons})
 
     query_label = " ".join(str(query_key or "المنتجات").split())[:45] or "المنتجات"
     intro_text = (
@@ -2528,13 +2499,18 @@ def send_matching_products_carousel(to, products, query_key=""):
         "مع مندوبة Titiz إذا أعجبك عرضها."
     )
 
-    if cards:
-        send_message(to, intro_text)
+    # لا نعتمد على interactive carousel؛ بعض حسابات/إصدارات واتساب تقبل الطلب
+    # ثم لا تعرض البطاقات للعميل. البطاقة الفردية ترسل الصورة والبيانات والقائمة
+    # بنفس المسار الموثوق المستخدم عند اختيار منتج واحد.
+    send_message(to, intro_text)
+    sent_cards = 0
+    for product in unique_products[:10]:
+        if send_product_card(to, product):
+            sent_cards += 1
 
-    if len(cards) >= 2 and send_carousel(to, "🛍️ اسحبي لمشاهدة المنتجات:", cards[:10]):
+    if sent_cards:
         matching_send_guard[guard_key] = now
-        for name in scheduled_names[:1]:
-            schedule_product_followup(to, name)
+        schedule_product_followup(to, unique_products[0].get("name", ""))
         if not whatsapp.send_url_button(
             to,
             delegate_text,
@@ -2544,22 +2520,7 @@ def send_matching_products_carousel(to, products, query_key=""):
             send_message(to, delegate_text + f"\n\n📞 {DELEGATE_WHATSAPP_URL}")
         return True
 
-    # إذا لم تتوفر صورتان عامتان، نرسل البطاقات المفردة بدلاً من إخفاء النتائج.
-    sent_cards = 0
-    for product in unique_products[:10]:
-        if send_product_card(to, canonicalize_product(product)):
-            sent_cards += 1
-    if sent_cards:
-        if not whatsapp.send_url_button(
-            to,
-            delegate_text,
-            "📞 التواصل مع المندوبة",
-            DELEGATE_WHATSAPP_URL,
-        ):
-            send_message(to, delegate_text + f"\n\n📞 {DELEGATE_WHATSAPP_URL}")
-    if query_key and unique_products:
-        matching_send_guard[guard_key] = now
-    return bool(sent_cards)
+    return False
 
 def send_list(to, text, button_text, sections):
     _send_voice_reply_if_needed(to, text)
