@@ -633,6 +633,7 @@ PRICE_INQUIRY_RESPONSE = (
     "إذا كانت الكمية أكثر من قطعة، أرسلي اسم المنتج والعدد المطلوب، وبنراجع لكِ أفضل سعر مع الإدارة بإذن الله 🤝"
 )
 OFFERS_CHANNEL_URL = "https://whatsapp.com/channel/0029VaqFTglLikgDDe0D5E2D"
+INSTAGRAM_URL = "https://www.instagram.com/lsdh3241/"
 OFFERS_RESPONSE = (
     "يمكنك العثور على أحدث العروض والخصومات على قناة تخفيضات *Titiz* للأدوات المنزلية "
     "(تجزئة) في واتساب 📢\n\n"
@@ -3129,10 +3130,19 @@ def send_contact_menu(to):
         "rows": [
             {"id": "contact_call", "title": "📞 اتصال", "description": "اتصلي بخدمة العملاء"},
             {"id": "contact_whatsapp", "title": "💬 واتساب", "description": "محادثة خدمة العملاء"},
+            {"id": "contact_instagram", "title": "📷 Instagram", "description": "شاهدي أحدث منتجات Titiz"},
             {"id": "contact_location", "title": "📍 موقعنا", "description": "فروع Titiz"},
             {"id": "contact_hours", "title": "⏰ أوقات العمل", "description": "مواعيد الخدمة"},
         ]
     }])
+
+
+def send_instagram_link(to):
+    """إرسال زر مباشر وآمن لحساب Instagram الرسمي."""
+    message = "📷 تابعي أحدث منتجات وعروض Titiz على Instagram 😊"
+    if whatsapp.send_url_button(to, message, "📷 Instagram", INSTAGRAM_URL):
+        return True
+    return bool(send_message(to, f"{message}\n{INSTAGRAM_URL}"))
 
 
 def find_admin_product(product_query):
@@ -4503,6 +4513,9 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
     if raw_action == "contact_whatsapp":
         send_message(sender, "💬 اكتبي رسالتك هنا، وموظفة Titiz ستساعدكِ فوراً.")
+        return
+    if raw_action == "contact_instagram":
+        send_instagram_link(sender)
         return
     if raw_action == "contact_location":
         send_message(sender, "📍 فروعنا:\n🏪 إب - بوابة ملعب الكبسي الخلفية\n🏪 السوق المركزي القديم")
