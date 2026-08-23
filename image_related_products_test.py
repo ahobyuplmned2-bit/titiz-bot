@@ -56,4 +56,16 @@ expected_saifi_names = {
 }
 assert saifi_names == expected_saifi_names
 
+tea_glass_matches = app.match_products_from_text("قلاصات حق الشاي", real_catalog)
+tea_glass_names = {product["name"] for product in tea_glass_matches}
+assert expected_saifi_names <= tea_glass_names
+assert "كتلي شاي ستيل أبو صفارة" not in tea_glass_names
+assert "قدور استيل" not in tea_glass_names
+
+tea_kettle_matches = app.match_products_from_text("كتالي من حق الشاي", real_catalog)
+tea_kettle_names = {product["name"] for product in tea_kettle_matches}
+assert "كتلي شاي ستيل أبو صفارة" in tea_kettle_names
+assert not expected_saifi_names & tea_kettle_names
+assert "قدور استيل" not in tea_kettle_names
+
 print("image_related_products_test: OK")
