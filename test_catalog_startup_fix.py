@@ -63,6 +63,12 @@ assert kholani_glasses["price"] == "800", "سعر اقلاص الخولاني ي
 assert "طقم 6 قطع" in kholani_glasses["keywords"], "كلمة طقم 6 قطع المفتاحية مفقودة"
 assert len(json.loads(kholani_glasses["image_urls"])) == 1, "يجب أن يحتوي اقلاص الخولاني على صورة واحدة"
 
+gas_regulator = catalog.get("منظم غاز إيطالي أصلي (ساعة غاز)")
+assert isinstance(gas_regulator, dict), "سجل منظم الغاز الإيطالي مفقود"
+assert gas_regulator["price"] == "2000", "سعر منظم الغاز الإيطالي يجب أن يكون 2000"
+assert "ضمان 5 سنوات" in gas_regulator["keywords"], "ضمان منظم الغاز الإيطالي مفقود"
+assert len(json.loads(gas_regulator["image_urls"])) == 1, "يجب أن يحتوي منظم الغاز على صورة واحدة"
+
 for relative_path in (
     "assets/products/gloves/washing-gloves.jpg",
     "assets/products/gloves/soap-gloves.jpg",
@@ -84,6 +90,7 @@ for relative_path in (
     "assets/products/frying-pans/metal-frying-pans-suitable-background.jpg",
     "assets/products/chinese-stove-eyes/chinese-stove-eyes.jpg",
     "assets/products/tea-cups/kholani-glasses-6pcs.jpg",
+    "assets/products/gas-regulators/italian-gas-regulator-5y.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"
