@@ -990,5 +990,14 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/ss05.jpg\"]",
     "variants": ""
+  },
+  "مربشة مرابش مجحي": {
+    "name": "مربشة مرابش مجحي",
+    "price": "1200",
+    "description": "طقم مضارب مجحي استيل بأربع مقاسات، مناسب لخفق البيض والكريمة وتحضير العجين والطبخ، بمقابض معدنية عملية وسهلة الاستخدام.",
+    "keywords": "مربشة,مربشه,مربشات,مرابش,مرابش مجحي,مضارب,مضرب,مضارب مجحي,مضرب مجحي,مضرب بيض,مضارب بيض,مخفق,مخفقة,مخافق,خفاق,مضرب كيك,مضرب كريمة,مضارب استيل,مضارب ستيل,مضارب مطبخ,أدوات مطبخ,مستلزمات المطبخ,رقم 1 الكبير,رقم 2,رقم 3,رقم 4,1200 ريال,1000 ريال,800 ريال,600 ريال",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/whisks/stainless-whisks-suitable-background.jpg\"]",
+    "variants": "[{\"name\": \"رقم 1 الكبير\", \"price\": 1200}, {\"name\": \"رقم 2\", \"price\": 1000}, {\"name\": \"رقم 3\", \"price\": 800}, {\"name\": \"رقم 4\", \"price\": 600}]"
   }
 }

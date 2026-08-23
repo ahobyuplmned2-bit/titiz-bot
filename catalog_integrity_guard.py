@@ -10,7 +10,7 @@ CATALOG_PATH = PROJECT / "products.json"
 
 # هذا الحد هو عدد المنتجات عند تثبيت الحماية. يمكن زيادة العدد عند إضافة منتجات
 # مأذون بها، لكن انخفاضه يعني أن سجلاً اختفى ويجب إيقاف الرفع.
-MINIMUM_PRODUCT_COUNT = 90
+MINIMUM_PRODUCT_COUNT = 91
 
 PROTECTED_GROUPS = {
     "تشكيلات اقلاص شاي صيفي ستار": {
@@ -21,6 +21,12 @@ PROTECTED_GROUPS = {
             "قلص شاي صيفي ستار موديل SS-47 6 قطع": "ss47.png",
             "قلص شاي صيفي ستار تشكيلة العلبة 6 قطع": "tea-set-box.jpg",
             "قلص شاي صيفي ستار موديل SS-05 6 قطع": "ss05.jpg",
+        },
+    },
+    "مربشة مرابش مجحي": {
+        "price": "1200",
+        "products": {
+            "مربشة مرابش مجحي": "stainless-whisks-suitable-background.jpg",
         },
     },
 }
@@ -78,7 +84,7 @@ def main() -> int:
         return 1
     print(
         "CATALOG INTEGRITY OK: "
-        f"{len(read_catalog())} منتجاً، وتشكيلات صيفي ستار الخمس محفوظة."
+        f"{len(read_catalog())} منتجاً، وتشكيلات صيفي ستار الخمس ومنتج مربشة مرابش مجحي محفوظة."
     )
     return 0
 

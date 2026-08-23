@@ -3,10 +3,11 @@ import catalog_integrity_guard as guard
 
 valid_catalog = {
     name: {
-        "price": "1400",
+        "price": group["price"],
         "image_urls": f'["https://example.test/assets/{image_name}"]',
     }
-    for name, image_name in guard.PROTECTED_GROUPS["تشكيلات اقلاص شاي صيفي ستار"]["products"].items()
+    for group in guard.PROTECTED_GROUPS.values()
+    for name, image_name in group["products"].items()
 }
 
 # نضيف سجلات كافية لاختبار الحد المرجعي دون استعمال بيانات حقيقية.

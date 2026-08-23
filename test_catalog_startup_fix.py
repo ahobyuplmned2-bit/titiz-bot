@@ -25,6 +25,18 @@ for name in saifi_star_names:
     assert product["price"] == "1400", f"سعر {name} يجب أن يبقى 1400"
     assert len(json.loads(product["image_urls"])) == 1, f"يجب أن يكون لكل تشكيلة صيفي ستار صورة مستقلة"
 
+whisks = catalog.get("مربشة مرابش مجحي")
+assert isinstance(whisks, dict), "سجل مربشة مرابش مجحي مفقود"
+assert whisks["price"] == "1200", "السعر الأساسي للمضارب يجب أن يكون 1200"
+assert json.loads(whisks["variants"]) == [
+    {"name": "رقم 1 الكبير", "price": 1200},
+    {"name": "رقم 2", "price": 1000},
+    {"name": "رقم 3", "price": 800},
+    {"name": "رقم 4", "price": 600},
+], "مقاسات المضارب أو أسعارها غير صحيحة"
+assert "مربشه" in whisks["keywords"] and "مضارب مجحي" in whisks["keywords"], "كلمات المضارب المفتاحية مفقودة"
+assert len(json.loads(whisks["image_urls"])) == 1, "يجب أن يحتوي منتج المضارب على صورة واحدة"
+
 for relative_path in (
     "assets/products/gloves/washing-gloves.jpg",
     "assets/products/gloves/soap-gloves.jpg",
