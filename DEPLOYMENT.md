@@ -150,6 +150,19 @@ DATABASE_PATH=/var/data/titiz_bot.db
 PRODUCT_FOLLOWUP_DELAY_SECONDS=86400
 ```
 
+### تشغيل التذكيرات بشكل موثوق على Render
+عامل التذكير داخل خدمة الويب يعمل كحل احتياطي فقط؛ لأن خدمة الويب قد تُعاد تشغيلها أو تنام، فلا ينبغي الاعتماد على خيط داخل العملية وحده لإرسال رسائل بعد ساعات. يعرّف `render.yaml` مهمة Render Cron باسم `whatsapp-bot-titiz-followups` تعمل كل 5 دقائق وتستدعي endpoint المحمي `/internal/run-followups`.
+
+عند مزامنة Blueprint، اضبط عنوان خدمة الويب العام في متغير `TITIZ_WEB_URL` داخل مهمة Cron، مثل:
+
+```text
+TITIZ_WEB_URL=https://whatsapp-bot-titiz.onrender.com
+```
+
+ويُنشأ `FOLLOWUP_CRON_TOKEN` تلقائياً داخل مجموعة المتغيرات المشتركة، ويجب أن يصل إلى خدمة الويب ومهمة Cron بالقيمة نفسها. لا تضع التوكن داخل المستودع أو داخل الأمر نفسه.
+
+يحفظ النظام التذكير غير الناجح على أنه غير مُرسل، ويسمح بإعادة المحاولة في الدورة التالية بدلاً من فقدانه بعد أول فشل مؤقت من WhatsApp.
+
 ### PostgreSQL (للإنتاج)
 
 لاستخدام PostgreSQL:

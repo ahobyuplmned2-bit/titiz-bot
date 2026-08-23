@@ -302,6 +302,9 @@ def init_db():
             },
             "customer_followups": {
                 "followup_kind": "TEXT DEFAULT 'satisfaction'",
+                "locked_until": "REAL",
+                "attempt_count": "INTEGER DEFAULT 0",
+                "last_error": "TEXT",
             },
         }
         for table, columns in migrations.items():
@@ -758,14 +761,59 @@ def get_due_customer_followups(limit=50):
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         rows = conn.execute('''
-            SELECT phone_number, product_name, context_text, last_message_at, due_at, followup_kind
+            SELECT phone_number, product_name, context_text, last_message_at, due_at, followup_kind,
+                   attempt_count, last_error
             FROM customer_followups
-            WHERE sent_at IS NULL AND due_at <= ?
+            WHERE sent_at IS NULL
+              AND due_at <= ?
+              AND (locked_until IS NULL OR locked_until <= ?)
             ORDER BY due_at ASC
             LIMIT ?
-        ''', (now, int(limit))).fetchall()
+        ''', (now, now, int(limit))).fetchall()
         conn.close()
         return [dict(row) for row in rows]
+
+def claim_customer_followup(phone_number, due_at, lease_seconds=300):
+    """حجز التذكير لفترة قصيرة قبل الإرسال مع السماح بإعادة المحاولة بعد انتهاء القفل."""
+    now = datetime.utcnow().timestamp()
+    locked_until = now + max(float(lease_seconds), 30.0)
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE customer_followups
+            SET locked_until = ?,
+                attempt_count = COALESCE(attempt_count, 0) + 1,
+                last_error = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE phone_number = ?
+              AND due_at = ?
+              AND sent_at IS NULL
+              AND (locked_until IS NULL OR locked_until <= ?)
+        ''', (locked_until, phone_number, due_at, now))
+        claimed = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return claimed
+
+
+def release_customer_followup(phone_number, due_at, error_text=""):
+    """إلغاء القفل عند فشل الإرسال حتى يعاد التذكير في الدورة التالية."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE customer_followups
+            SET locked_until = NULL,
+                last_error = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE phone_number = ? AND due_at = ? AND sent_at IS NULL
+        ''', (str(error_text or "")[:500], phone_number, due_at))
+        released = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return released
+
 
 def get_customer_followup(phone_number):
     """الحصول على آخر متابعة للعميل، بما فيها المتابعة التي أُرسلت."""
@@ -773,7 +821,8 @@ def get_customer_followup(phone_number):
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         row = conn.execute('''
-            SELECT phone_number, product_name, context_text, last_message_at, due_at, sent_at, followup_kind
+            SELECT phone_number, product_name, context_text, last_message_at, due_at, sent_at,
+                   followup_kind, attempt_count, last_error
             FROM customer_followups
             WHERE phone_number = ?
         ''', (phone_number,)).fetchone()
@@ -788,7 +837,7 @@ def mark_customer_followup_sent(phone_number, due_at):
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE customer_followups
-            SET sent_at = ?, updated_at = CURRENT_TIMESTAMP
+            SET sent_at = ?, locked_until = NULL, last_error = NULL, updated_at = CURRENT_TIMESTAMP
             WHERE phone_number = ? AND due_at = ? AND sent_at IS NULL
         ''', (sent_at, phone_number, due_at))
         claimed = cursor.rowcount > 0

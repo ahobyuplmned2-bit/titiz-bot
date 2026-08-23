@@ -40,7 +40,7 @@ from database import (
     mark_customer_followup_sent, get_customer_followup,
     record_contact, has_contact, queue_pending_reply,
     get_pending_replies, mark_pending_reply_sent, update_product_metadata,
-    update_product_fields,
+    update_product_fields, claim_customer_followup, release_customer_followup,
     claim_processed_webhook_message, record_message_event, update_message_event,
     get_message_events, reserve_owner_notification_sequence,
     db_lock, DB_PATH, set_order_sync_callback,
@@ -120,6 +120,7 @@ PRODUCT_FOLLOWUP_POLL_SECONDS = max(
 FOLLOWUP_WORKER_ENABLED = os.environ.get("FOLLOWUP_WORKER_ENABLED", "true").strip().lower() not in {
     "0", "false", "no", "off"
 }
+FOLLOWUP_CRON_TOKEN = os.environ.get("FOLLOWUP_CRON_TOKEN", "").strip()
 PRODUCT_NEXT_DAY_DELAY_SECONDS = max(
     int(os.environ.get("PRODUCT_NEXT_DAY_DELAY_SECONDS", "43200")), 60
 )
@@ -236,20 +237,26 @@ def notify_owner_unfollowed_conversation(followup):
 def process_due_customer_followups_once():
     """معالجة التذكيرات المستحقة مرة واحدة، ليسهل اختبارها دون عامل دائم."""
     for followup in get_due_customer_followups():
-        if not mark_customer_followup_sent(
-            followup["phone_number"], followup["due_at"]
-        ):
+        phone_number = followup["phone_number"]
+        due_at = followup["due_at"]
+        if not claim_customer_followup(phone_number, due_at):
             continue
         # لا تُعامل توصية اليوم التالي كمحادثة متوقفة عن المتابعة.
         if followup.get("followup_kind") == PRODUCT_RECOMMENDATION_KIND:
+            mark_customer_followup_sent(phone_number, due_at)
             continue
         notify_owner_unfollowed_conversation(followup)
-        if not send_product_followup(
-            followup["phone_number"],
+        sent = send_product_followup(
+            phone_number,
             followup.get("product_name", ""),
             followup.get("context_text", ""),
-        ):
-            print(f"تعذر إرسال تذكير العميل {followup['phone_number']}")
+        )
+        if sent:
+            mark_customer_followup_sent(phone_number, due_at)
+            print(f"[التذكير] تم إرسال تذكير العميل {phone_number}")
+        else:
+            release_customer_followup(phone_number, due_at, "فشل إرسال رسالة واتساب")
+            print(f"[التذكير] فشل إرسال تذكير العميل {phone_number}؛ ستتم إعادة المحاولة")
 
 def product_followup_worker():
     """عامل خلفي يرسل التذكيرات المستحقة مرة واحدة فقط."""
@@ -4986,6 +4993,22 @@ def dashboard_products():
         return _dashboard_cors(jsonify({"error": "unauthorized"})), 401
     products = get_all_products()
     return _dashboard_cors(jsonify({"products": products, "count": len(products)}))
+
+@app.route("/internal/run-followups", methods=["POST"])
+def run_followups_endpoint():
+    """تشغيل التذكيرات المستحقة من Render Cron عبر endpoint محمي."""
+    supplied_token = request.headers.get("X-Titiz-Followup-Token", "").strip()
+    if not FOLLOWUP_CRON_TOKEN or not supplied_token or not hmac.compare_digest(
+        supplied_token, FOLLOWUP_CRON_TOKEN
+    ):
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        process_due_customer_followups_once()
+        return jsonify({"ok": True, "processed_at": datetime.now(YEMEN_TIMEZONE).isoformat(timespec="seconds")}), 200
+    except Exception as exc:
+        print(f"[التذكير] فشل تشغيل endpoint التذكيرات: {exc}")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
 
 @app.route("/", methods=["GET"])
 def home():

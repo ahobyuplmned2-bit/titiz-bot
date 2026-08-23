@@ -32,6 +32,7 @@ followup = {
 }
 events = []
 app.get_due_customer_followups = lambda: [followup]
+app.claim_customer_followup = lambda phone, due: phone == "9677712282204" and due == 1
 app.mark_customer_followup_sent = lambda phone, due: phone == "9677712282204" and due == 1
 app.notify_owner_unfollowed_conversation = lambda item: events.append(("admin", item["phone_number"])) or True
 app.send_product_followup = lambda phone, product, context: events.append(("customer", phone, product, context)) or True

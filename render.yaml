@@ -1,3 +1,9 @@
+envVarGroups:
+  - name: titiz-followup-settings
+    envVars:
+      - key: FOLLOWUP_CRON_TOKEN
+        generateValue: true
+
 services:
   - type: web
     name: whatsapp-bot-titiz
@@ -7,3 +13,15 @@ services:
     envVars:
       - key: PORT
         value: "10000"
+      - fromGroup: titiz-followup-settings
+
+  - type: cron
+    name: whatsapp-bot-titiz-followups
+    runtime: python
+    schedule: "*/5 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run_followups_cron.py
+    envVars:
+      - key: TITIZ_WEB_URL
+        sync: false
+      - fromGroup: titiz-followup-settings
