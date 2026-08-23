@@ -17,8 +17,9 @@ saifi_star_names = {
     "قلص شاي صيفي ستار موديل SS-49 6 قطع",
     "قلص شاي صيفي ستار موديل SS-47 6 قطع",
     "قلص شاي صيفي ستار تشكيلة العلبة 6 قطع",
+    "قلص شاي صيفي ستار موديل SS-05 6 قطع",
 }
-assert saifi_star_names <= catalog_names, "يجب أن تبقى تشكيلات صيفي ستار الأربع كسجلات مستقلة"
+assert saifi_star_names <= catalog_names, "يجب أن تبقى تشكيلات صيفي ستار الخمس كسجلات مستقلة"
 for name in saifi_star_names:
     product = next(item for item in catalog.values() if item.get("name") == name)
     assert product["price"] == "1400", f"سعر {name} يجب أن يبقى 1400"
