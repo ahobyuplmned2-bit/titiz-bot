@@ -999,5 +999,14 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/whisks/stainless-whisks-suitable-background.jpg\"]",
     "variants": "[{\"name\": \"رقم 1 الكبير\", \"price\": 1200}, {\"name\": \"رقم 2\", \"price\": 1000}, {\"name\": \"رقم 3\", \"price\": 800}, {\"name\": \"رقم 4\", \"price\": 600}]"
+  },
+  "حراضي مقالي معدن": {
+    "name": "حراضي مقالي معدن",
+    "price": "600",
+    "description": "طقم حراضي ومقالي معدن بأحجام متعددة، مناسب للطبخ والاستخدام اليومي في المطبخ، مع ستة مقاسات مرقمة للاختيار.",
+    "keywords": "حراضي,حراضي مقالي,حراض,حراض مقالي,مقالي معدن,مقالي معدنية,مقلاة معدن,مقالي,مقالي طبخ,طقم مقالي,طقم حراضي,أواني طبخ,أدوات مطبخ,مستلزمات المطبخ,رقم 1 الصغير,رقم 1,رقم 2,رقم 3,رقم 4,رقم 5,رقم 6,600 ريال,700 ريال,900 ريال,1000 ريال,1400 ريال,1700 ريال",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/frying-pans/metal-frying-pans-suitable-background.jpg\"]",
+    "variants": "[{\"name\": \"رقم 1 الصغير\", \"price\": 600}, {\"name\": \"رقم 2\", \"price\": 700}, {\"name\": \"رقم 3\", \"price\": 900}, {\"name\": \"رقم 4\", \"price\": 1000}, {\"name\": \"رقم 5\", \"price\": 1400}, {\"name\": \"رقم 6\", \"price\": 1700}]"
   }
 }

@@ -37,6 +37,20 @@ assert json.loads(whisks["variants"]) == [
 assert "مربشه" in whisks["keywords"] and "مضارب مجحي" in whisks["keywords"], "كلمات المضارب المفتاحية مفقودة"
 assert len(json.loads(whisks["image_urls"])) == 1, "يجب أن يحتوي منتج المضارب على صورة واحدة"
 
+pans = catalog.get("حراضي مقالي معدن")
+assert isinstance(pans, dict), "سجل حراضي مقالي معدن مفقود"
+assert pans["price"] == "600", "السعر الأساسي للحراضي يجب أن يكون 600"
+assert json.loads(pans["variants"]) == [
+    {"name": "رقم 1 الصغير", "price": 600},
+    {"name": "رقم 2", "price": 700},
+    {"name": "رقم 3", "price": 900},
+    {"name": "رقم 4", "price": 1000},
+    {"name": "رقم 5", "price": 1400},
+    {"name": "رقم 6", "price": 1700},
+], "مقاسات الحراضي أو أسعارها غير صحيحة"
+assert "حراضي مقالي" in pans["keywords"] and "مقالي معدن" in pans["keywords"], "كلمات الحراضي المفتاحية مفقودة"
+assert len(json.loads(pans["image_urls"])) == 1, "يجب أن يحتوي منتج الحراضي على صورة واحدة"
+
 for relative_path in (
     "assets/products/gloves/washing-gloves.jpg",
     "assets/products/gloves/soap-gloves.jpg",
@@ -55,6 +69,7 @@ for relative_path in (
     "assets/products/steel-cups/royal-crown-short-steel-cups.jpg",
     "assets/products/spice-jars/long-spice-jars-clean.png",
     "assets/products/juice-strainers/steel-juice-strainers-with-handles.jpg",
+    "assets/products/frying-pans/metal-frying-pans-suitable-background.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"
