@@ -51,6 +51,18 @@ assert json.loads(pans["variants"]) == [
 assert "حراضي مقالي" in pans["keywords"] and "مقالي معدن" in pans["keywords"], "كلمات الحراضي المفتاحية مفقودة"
 assert len(json.loads(pans["image_urls"])) == 1, "يجب أن يحتوي منتج الحراضي على صورة واحدة"
 
+chinese_stove_eyes = catalog.get("عيون شول صيني")
+assert isinstance(chinese_stove_eyes, dict), "سجل عيون شول صيني مفقود"
+assert chinese_stove_eyes["price"] == "600", "سعر عيون شول صيني يجب أن يكون 600"
+assert "عيون شوال" in chinese_stove_eyes["keywords"], "كلمة عيون شوال المفتاحية مفقودة"
+assert len(json.loads(chinese_stove_eyes["image_urls"])) == 1, "يجب أن يحتوي عيون شول صيني على صورة واحدة"
+
+kholani_glasses = catalog.get("اقلاص الخولاني الأصلي 6 قطع")
+assert isinstance(kholani_glasses, dict), "سجل اقلاص الخولاني مفقود"
+assert kholani_glasses["price"] == "800", "سعر اقلاص الخولاني يجب أن يكون 800"
+assert "طقم 6 قطع" in kholani_glasses["keywords"], "كلمة طقم 6 قطع المفتاحية مفقودة"
+assert len(json.loads(kholani_glasses["image_urls"])) == 1, "يجب أن يحتوي اقلاص الخولاني على صورة واحدة"
+
 for relative_path in (
     "assets/products/gloves/washing-gloves.jpg",
     "assets/products/gloves/soap-gloves.jpg",
@@ -70,6 +82,8 @@ for relative_path in (
     "assets/products/spice-jars/long-spice-jars-clean.png",
     "assets/products/juice-strainers/steel-juice-strainers-with-handles.jpg",
     "assets/products/frying-pans/metal-frying-pans-suitable-background.jpg",
+    "assets/products/chinese-stove-eyes/chinese-stove-eyes.jpg",
+    "assets/products/tea-cups/kholani-glasses-6pcs.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"

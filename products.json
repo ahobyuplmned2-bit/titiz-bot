@@ -1008,5 +1008,23 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/frying-pans/metal-frying-pans-suitable-background.jpg\"]",
     "variants": "[{\"name\": \"رقم 1 الصغير\", \"price\": 600}, {\"name\": \"رقم 2\", \"price\": 700}, {\"name\": \"رقم 3\", \"price\": 900}, {\"name\": \"رقم 4\", \"price\": 1000}, {\"name\": \"رقم 5\", \"price\": 1400}, {\"name\": \"رقم 6\", \"price\": 1700}]"
+  },
+  "عيون شول صيني": {
+    "name": "عيون شول صيني",
+    "price": "600",
+    "description": "عيون شول صيني معدنية للاستخدام اليومي، تباع بالواحدة ومناسبة كقطعة عملية ضمن أدوات المطبخ.",
+    "keywords": "عيون شول,عيون شوال,عيون شوول,عين شول,عين شوال,عين شوول,شول صيني,شوال صيني,عيون صيني,عيون معدن,معدن,ادوات مطبخ,أدوات مطبخ,600 ريال",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/chinese-stove-eyes/chinese-stove-eyes.jpg\"]",
+    "variants": ""
+  },
+  "اقلاص الخولاني الأصلي 6 قطع": {
+    "name": "اقلاص الخولاني الأصلي 6 قطع",
+    "price": "800",
+    "description": "طقم اقلاص الخولاني الأصلي الزجاجي، مكوّن من 6 قطع ومناسب للشاي والعصائر والضيافة اليومية.",
+    "keywords": "اقلاص الخولاني,أقلاص الخولاني,قلاص الخولاني,كاسات الخولاني,اقلاص,أقلاص,قلاص,كاسات,طقم اقلاص,طقم كاسات,طقم 6 قطع,6 قطع,ست قطع,كاسات شاي,كاسات عصير,زجاج,زجاجي,الخولاني,الاصلي,أصلي,800 ريال",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/tea-cups/kholani-glasses-6pcs.jpg\"]",
+    "variants": ""
   }
 }
