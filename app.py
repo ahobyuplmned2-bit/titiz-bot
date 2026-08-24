@@ -142,14 +142,14 @@ TITIZ_CHANNEL_URL = os.environ.get(
     "TITIZ_CHANNEL_URL", "https://whatsapp.com/channel/0029VaqFTglLikgDDe0D5E2D"
 ).strip()
 PRODUCT_FOLLOWUP_SATISFIED_MESSAGE = (
-    "يسعدنا يا غالية 😊 إذا احتجتِ أي شيء، اكتبي لي في أي وقت."
+    "يسعدنا يا هلا 😊 إذا احتجت أي شيء، اكتب لي في أي وقت."
 )
 PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE = (
-    "تمام يا غالية، ما عاد برسل لكِ تذكير عن هذا الموضوع. وإذا احتجتِ أي مساعدة أنا هنا 😊"
+    "تمام يا هلا، ما عاد برسل لك تذكير عن هذا الموضوع. وإذا احتجت أي مساعدة أنا هنا 😊"
 )
 PRODUCT_NEXT_DAY_MESSAGE_TEMPLATE = (
-    "هلا فيكِ 😊\n"
-    "لقينا لكِ منتجات قريبة من *{product_name}*. إذا حابة تشوفيها، هذا رابط القناة:\n"
+    "هلا فيك 😊\n"
+    "لقينا لك منتجات قريبة من *{product_name}*. إذا حاب تشوفها، هذا رابط القناة:\n"
     "https://whatsapp.com/channel/0029VaqFTglLikgDDe0D5E2D"
 )
 followup_worker_lock = Lock()
@@ -192,16 +192,16 @@ def _followup_subject(product_name="", context_text=""):
         return f"عن *{_compact_followup_context(product_name)}*"
     if context_text:
         return f"عن استفسارك: «{_compact_followup_context(context_text)}»"
-    return "عن آخر استفسار لكِ"
+    return "عن آخر استفسار لك"
 
 
 def send_product_followup(phone_number, product_name="", context_text=""):
     """إرسال رسالة رضا واحدة مرتبطة بآخر منتج أو استفسار للعميل."""
     topic = _compact_followup_context(product_name or context_text) or "المنتجات المنزلية"
     message = (
-        "هلا فيكِ 😊\n"
-        f"حبيت أتأكد عن *{topic}*: لقيتِ اللي تحتاجينه؟\n"
-        "إذا حابة تشوفي منتجات قريبة منه، هذا رابط القناة:\n"
+        "هلا فيك 😊\n"
+        f"حبيت أتأكد عن *{topic}*: لقيتِ اللي تحتاجه؟\n"
+        "إذا حاب تشوفي منتجات قريبة منه، هذا رابط القناة:\n"
         f"{TITIZ_CHANNEL_URL}"
     )
     return send_buttons(phone_number, message, [
@@ -670,11 +670,11 @@ def find_response(msg_normalized):
 # ===== تسجيل الردود المبرمجة =====
 
 RESP_DISCOUNT = (
-    "أبشري يا غالية 😊\n\n"
+    "تمام يا هلا 😊\n\n"
     "أسعارنا مخفّضة من البداية ونحرص دائماً نعطيك أفضل سعر ممكن 💛\n"
-    "إذا كانت الكمية أكثر من قطعة، أرسلي اسم المنتج والعدد المطلوب، "
-    "وبنراجع لكِ أفضل سعر مع الإدارة بإذن الله 🤝\n\n"
-    "اكتبي اسم المنتج أو أرسلي صورة المنتج، وأنا أطلع لكِ السعر الحالي مباشرة 🛍️"
+    "إذا كانت الكمية أكثر من قطعة، أرسل اسم المنتج والعدد المطلوب، "
+    "وبنراجع لك أفضل سعر مع الإدارة بإذن الله 🤝\n\n"
+    "اكتب اسم المنتج أو أرسل صورة المنتج، وأنا أطلع لك السعر الحالي مباشرة 🛍️"
 )
 
 DELEGATE_WHATSAPP_NUMBER = "967712282204"
@@ -683,9 +683,9 @@ DELEGATE_WHATSAPP_URL = (
     f"?text={quote('مرحباً، أريد الاستفسار عن السعر والمنتج')}"
 )
 PRICE_INQUIRY_RESPONSE = (
-    "أبشري يا غالية 😊\n\n"
+    "تمام يا هلا 😊\n\n"
     "أسعارنا مخفّضة من البداية ونحرص دائماً نعطيك أفضل سعر ممكن 💛\n"
-    "إذا كانت الكمية أكثر من قطعة، أرسلي اسم المنتج والعدد المطلوب، وبنراجع لكِ أفضل سعر مع الإدارة بإذن الله 🤝"
+    "إذا كانت الكمية أكثر من قطعة، أرسل اسم المنتج والعدد المطلوب، وبنراجع لك أفضل سعر مع الإدارة بإذن الله 🤝"
 )
 OFFERS_CHANNEL_URL = "https://whatsapp.com/channel/0029VaqFTglLikgDDe0D5E2D"
 INSTAGRAM_URL = "https://www.instagram.com/lsdh3241/"
@@ -694,11 +694,11 @@ OFFERS_RESPONSE = (
     "(تجزئة) في واتساب 📢\n\n"
     f"🔗 {OFFERS_CHANNEL_URL}\n\n"
     "من خلال عدة طرق:\n\n"
-    "1. *عروض Big Save:* ابحثي عن المنتجات الحصرية، حيث يمكنك الحصول على خصومات "
+    "1. *عروض Big Save:* ابحث عن المنتجات الحصرية، حيث يمكنك الحصول على خصومات "
     "في أقسام مخصصة على الصفحة الرئيسية.\n"
     "2. *الكوبونات:* قد تتوفر كوبونات من المنصة أو من المتاجر مباشرة، ويمكنك التحقق منها عبر قناتنا.\n"
-    "3. *عروض المشترين الجدد:* إذا كانت هذه أول عملية شراء لكِ، فقد تتوفر عروض أو أكواد ترويجية حصرية.\n\n"
-    "تابعي القناة ليصلكِ كل جديد من المنتجات والعروض أولاً بأول 🛍️✨"
+    "3. *عروض المشترين الجدد:* إذا كانت هذه أول عملية شراء لك، فقد تتوفر عروض أو أكواد ترويجية حصرية.\n\n"
+    "تابع القناة ليصلك كل جديد من المنتجات والعروض أولاً بأول 🛍️✨"
 )
 OFFERS_KEYWORDS = [
     "وين العروض", "وين تنزل العروض", "وين تنزلو العروض", "وين تنزلوا العروض",
@@ -826,12 +826,12 @@ add_response(
 
 add_response(
     ["هلا", "هلا والله", "هلا وغلا", "هلاا", "هلااا", "يا هلا", "ياهلا"],
-    "هلا فيكِ 😊\nكيف أقدر أخدمك اليوم؟"
+    "هلا فيك 😊\nكيف أقدر أخدمك اليوم؟"
 )
 
 add_response(
     ["مرحبا", "مرحبه", "مرحباً", "مرحبأ"],
-    "مرحباً فيكِ 😊\nوش حابة تدورين عليه؟"
+    "يا هلا فيك 😊\nوش حاب تدور عليه؟"
 )
 
 add_response(
@@ -844,7 +844,7 @@ add_response(
 add_response(
     ["اهلا", "اهلين", "أهلا", "أهلين", "اهلاً", "أهلاً", "حياك",
      "حياك الله", "حياكم", "حياكم الله"],
-    "أهلين فيكِ 😊\nقولي لي وش تحتاجين؟"
+    "أهلين فيك 😊\nقل لي وش تحتاج؟"
 )
 
 add_response(
@@ -866,21 +866,21 @@ add_response(
 add_response(
     ["يعطيك العافيه", "يعطيك العافية", "الله يعافيك", "الله يعافيكم",
      "يعطيكم العافيه", "يعطيكم العافية", "عافيه", "عافية"],
-    "الله يعافيكِ 😊\nوش حابة تحتاجين؟"
+    "الله يعافيك 😊\nوش حاب تحتاج؟"
 )
 
 add_response(
     ["شكرا", "شكراً", "شكرا لك", "شكراً لك", "شكرا لكم", "مشكور",
      "مشكوره", "مشكورة", "مشكورين", "جزاك الله خير", "جزاكم الله خير",
      "تسلم", "تسلمي", "تسلمين", "يسلمو", "الله يجزاك خير"],
-    "العفو يا غالية 😊\nأنا هنا إذا احتجتِ أي شيء."
+    "العفو يا هلا 😊\nأنا هنا إذا احتجت أي شيء."
 )
 
 # --- التوصيل ---
 add_response(
     ["توصيل", "التوصيل", "شحن", "الشحن", "توصلون", "توصلوا", "يوصل",
      "كم التوصيل", "سعر التوصيل", "مجاني", "التوصيل مجاني"],
-    "🚚 *التوصيل والشحن:*\n\n✅ داخل محافظة إب: *مجاني* تماماً!\n📦 باقي المحافظات: 2-4 أيام\n💳 الدفع عند الاستلام\n\nيعني ما فيه أي مخاطرة عليكِ 😊"
+    "🚚 *التوصيل والشحن:*\n\n✅ داخل محافظة إب: *مجاني* تماماً!\n📦 باقي المحافظات: 2-4 أيام\n💳 الدفع عند الاستلام\n\nيعني ما فيه أي مخاطرة عليك 😊"
 )
 
 # --- الدفع ---
@@ -888,7 +888,7 @@ add_response(
     ["دفع", "الدفع", "كيف ادفع", "كيف الدفع", "طريقة الدفع", "طريقه الدفع",
      "حساب", "الحساب", "تحويل", "التحويل", "حسابات", "الحسابات", "نقطة جيب",
      "الكريمي", "كريمي", "جيب"],
-    "💳 *طرق الدفع:*\n\n✅ *الدفع عند الاستلام:*\nنحط المنتج لأقرب نقطة منكِ وتدفعي وقت الاستلام 👌\n\n✅ *التحويل المسبق:*\nتدفعي وإحنا نوصل لكِ الطلب لباب بيتكِ 🚚\n\n💰 *حسابات التحويل:*\n\n🟢 *نقطة جيب:* 906072\n🟡 *الكريمي نقطة حاسب:* 1202686\n🏦 *إيداع عبر الكريمي:* 3122678098\n\nاختاري الطريقة اللي تناسبكِ 😊"
+    "💳 *طرق الدفع:*\n\n✅ *الدفع عند الاستلام:*\nنحط المنتج لأقرب نقطة منك وتدفع وقت الاستلام 👌\n\n✅ *التحويل المسبق:*\nتدفع وإحنا نوصل لك الطلب لباب بيتك 🚚\n\n💰 *حسابات التحويل:*\n\n🟢 *نقطة جيب:* 906072\n🟡 *الكريمي نقطة حاسب:* 1202686\n🏦 *إيداع عبر الكريمي:* 3122678098\n\nاختر الطريقة اللي تناسبك 😊"
 )
 
 # --- الضمان ---
@@ -902,7 +902,7 @@ add_response(
 add_response(
     ["ثقة", "الثقة", "مصداقية", "كيف نثق", "كيف اثق", "نثق فيكم",
      "اثق فيكم", "صادقين", "تكذبون", "نصب", "احتيال"],
-    "🤝 *ليش تثقين فينا:*\n\n✅ عندنا محلين في إب تقدري تزورينا 🏪\n✅ الدفع عند الاستلام - ما نطلب فلوس مقدماً\n✅ استبدال خلال 7 أيام لو ما عجبكِ\n✅ زبائننا كثير والحمد لله راضين\n✅ نشتغل بسمعتنا وما نغش أي زبون\n\n📍 *عناويننا:*\n🏪 إب - بوابة ملعب الكبسي الخلفية\n🏪 السوق المركزي القديم\n\nجربي واحكمي بنفسكِ 😊👌"
+    "🤝 *ليش تثق فينا:*\n\n✅ عندنا محلين في إب تقدر تزورنا 🏪\n✅ الدفع عند الاستلام - ما نطلب فلوس مقدماً\n✅ استبدال خلال 7 أيام لو ما عجبك\n✅ زبائننا كثير والحمد لله راضين\n✅ نشتغل بسمعتنا وما نغش أي زبون\n\n📍 *عناويننا:*\n🏪 إب - بوابة ملعب الكبسي الخلفية\n🏪 السوق المركزي القديم\n\nجرّب واحكم بنفسك 😊👌"
 )
 
 # --- الموقع ---
@@ -910,18 +910,18 @@ add_response(
     ["الموقع", "موقع", "العنوان", "عنوان", "وينكم", "وين المحل",
      "وين موقعكم", "فين المحل", "فين موقعكم", "المحل", "محلكم",
      "مكانكم", "فينكم", "الفرع", "الفروع", "فروعكم"],
-    "📍 *مواقع محلات Titiz:*\n\n🏪 *الفرع الأول:*\nإب - بوابة ملعب الكبسي الخلفية\nنهاية طلعة صرافة الكريمي\n\n🏪 *الفرع الثاني:*\nالسوق المركزي القديم\nأمام صرافة فيصل الخطيب\n\n✅ نستقبلكِ بأي وقت!"
+    "📍 *مواقع محلات Titiz:*\n\n🏪 *الفرع الأول:*\nإب - بوابة ملعب الكبسي الخلفية\nنهاية طلعة صرافة الكريمي\n\n🏪 *الفرع الثاني:*\nالسوق المركزي القديم\nأمام صرافة فيصل الخطيب\n\n✅ نستقبلك بأي وقت!"
 )
 
 # --- الطلب ---
 add_response(
     ["اطلب", "أطلب", "ابي اطلب", "أبي أطلب", "ابغى", "أبغى",
      "اشتي اطلب", "بدي اطلب", "طلبيه", "طلبية"],
-    "🛒 *لإتمام الطلب:*\n\nاكتبي *اكمل الطلب* وبنكمل معكِ الخطوات 😊\n\nأو أضيفي منتجات للسلة أولاً:\nاكتبي اسم المنتج وبنضيفه لكِ ✅\n\n💳 الدفع عند الاستلام أو تحويل\n📦 التوصيل مجاني داخل المحافظة!"
+    "🛒 *لإتمام الطلب:*\n\nاكتب *اكمل الطلب* وبنكمل معك الخطوات 😊\n\nأو أضف منتجات للسلة أولاً:\nاكتب اسم المنتج وبنضيفه لك ✅\n\n💳 الدفع عند الاستلام أو تحويل\n📦 التوصيل مجاني داخل المحافظة!"
 )
 
 # --- ايش عندكم ---
-RESP_PRODUCTS_ASK = "هلا فيكِ 😊\nعندنا أدوات للبيت والمطبخ. قولي لي وش المنتج اللي تبغينه، وإذا ما تعرفين اسمه وصفيه لي وبساعدك."
+RESP_PRODUCTS_ASK = "هلا فيك 😊\nعندنا أدوات للبيت والمطبخ. قل لي وش المنتج اللي تبغاه، وإذا ما تعرف اسمه ووصفه لي وبساعدك."
 add_response(
     [
         "ايش عندكم", "ايش معاكم", "وش عندكم", "وش معاكم",
@@ -944,24 +944,24 @@ add_response(
      "فين توصلوا", "وين اخذه", "وين اخذ الطلب", "فين اخذه",
      "وين الاستلام", "فين الاستلام", "من وين استلم",
      "الاستلام", "طريقة الاستلام", "طريقه الاستلام"],
-    "📦 وين تحبين نحط لكِ المنتج؟ 🤔\n\nنقدر نحطه في أي مكان قريب منكِ:\n\n🏪 محل قريب من بيتكِ\n🛍️ بقالة في حارتكِ\n📍 أي نقطة تحدديها\n\nأرسلي لنا اسم المكان أو المنطقة وإحنا نوصله لأقرب نقطة منكِ 😊👌"
+    "📦 وين تريد نحط لك المنتج؟ 🤔\n\nنقدر نحطه في أي مكان قريب منك:\n\n🏪 محل قريب من بيتك\n🛍️ بقالة في حارتك\n📍 أي نقطة تحددها\n\nأرسل لنا اسم المكان أو المنطقة وإحنا نوصله لأقرب نقطة منك 😊👌"
 )
 
 # --- الوداع ---
 add_response(
     ["مع السلامة", "مع السلامه", "باي", "الله يحفظك", "في أمان الله",
      "في امان الله", "يلا باي", "خلاص شكرا", "تمام شكرا"],
-    "مع السلامة يا غالية! 💛👋\nنورتينا والله!\nإحنا هنا بأي وقت تحتاجينا 😊\nلا تنسينا! ❤️"
+    "مع السلامة يا هلا! 💛👋\nتشرفنا بك والله!\nإحنا هنا بأي وقت تحتاجنا 😊\nلا تنسانا! ❤️"
 )
 
 WELCOME_MESSAGE = (
-    "هلا فيكِ في Titiz 😊\n"
-    "أنا هنا أساعدك تدورين على منتجات، تتابعين طلباتك، أو تشوفين العروض.\n"
+    "هلا فيك في Titiz 😊\n"
+    "أنا هنا أساعدك تدور على منتجات، تتابع طلباتك، أو تشوف العروض.\n"
     "كيف أقدر أخدمك اليوم؟"
 )
 GUIDED_HELP_MESSAGE = (
     "أنا جاهز أساعدك 😊\n"
-    "اكتبي اسم المنتج اللي تبغينه، أو اختاري من القائمة، وبساعدك خطوة بخطوة."
+    "اكتب اسم المنتج اللي تبغاه، أو اختر من القائمة، وبساعدك خطوة بخطوة."
 )
 SOCIAL_OR_CONFUSED_PHRASES = {
     "هههه", "ههههه", "هههههه", "هاها", "هاهاها", "احبك", "احبج", "احسك",
@@ -1703,12 +1703,12 @@ def route_semantic_intent(sender, msg_body, semantic_result, products=None):
         return True
     if semantic_intent == "stop_reminder":
         cancel_customer_followup(sender)
-        send_message(sender, "✅ تم إيقاف التذكير لكِ. أنا هنا وقت ما تحتاجين أي مساعدة 😊")
+        send_message(sender, "✅ تم إيقاف التذكير لك. أنا هنا وقت ما تحتاج أي مساعدة 😊")
         return True
     if semantic_intent == "agent_handoff":
         if not whatsapp.send_url_button(
             sender,
-            "أكيد يا غالية، تواصلي مباشرة مع المندوبة وستساعدكِ في طلبك 😊",
+            "أكيد يا هلا، تواصلي مباشرة مع المندوبة وستساعدكِ في طلبك 😊",
             "📞 التواصل مع المندوبة",
             DELEGATE_WHATSAPP_URL,
         ):
@@ -1735,7 +1735,7 @@ def route_semantic_intent(sender, msg_body, semantic_result, products=None):
         if semantic_reply:
             send_message(sender, semantic_reply)
         else:
-            send_message(sender, "أنا معك يا غالية 😊 هل تبحثين عن منتج، تتابعين طلباً، أم تحتاجين مساعدة بشيء آخر؟")
+            send_message(sender, "أنا معك يا هلا 😊 هل تبحث عن منتج، تتابع طلباً، أم تحتاج مساعدة بشيء آخر؟")
         if semantic_intent in {"comparison", "budget"}:
             schedule_inquiry_followup(sender, semantic_query)
         return True
@@ -2031,7 +2031,7 @@ def analyze_product_image(sender, message, caption=""):
                     "ثم قارني هذه الإشارات مع أسماء وكلمات ووصف المنتجات في الكتالوج، ولا تشترطي كابشن؛ "
                     "الصورة المحوّلة من القناة قد تصل بدون كابشن. "
                     "عند عدم التأكد الشديد اجعلي matched_product_id=null وconfidence=0، "
-                    "واكتبي رداً عربياً قصيراً يطلب اسم المنتج أو صورة أوضح."
+                    "واكتب رداً عربياً قصيراً يطلب اسم المنتج أو صورة أوضح."
                 ),
             },
             {
@@ -2099,7 +2099,7 @@ def analyze_product_image(sender, message, caption=""):
     if result.get("is_payment_proof"):
         return {
             "kind": "payment_proof",
-            "reply": "📄 هذه الصورة تبدو كإشعار تحويل. إذا كنتِ تريدين إكمال الدفع، أرسليها بعد اختيار التحويل المسبق من الطلب 😊",
+            "reply": "📄 هذه الصورة تبدو كإشعار تحويل. إذا كنتِ تريد إكمال الدفع، أرسلها بعد اختيار التحويل المسبق من الطلب 😊",
         }
     product = resolve_image_product_match(result, products)
     if product:
@@ -2114,7 +2114,7 @@ def analyze_product_image(sender, message, caption=""):
         if (matched_name and name_norm in normalize_text(matched_name)) or (reply_text and name_norm in normalize_text(reply_text)):
             return {"kind": "product", "product": candidate, "variant_match": None}
 
-    return {"kind": "unknown", "reply": result.get("reply") or "🔍 لم أتمكن من تحديد المنتج بدقة. أرسلي صورة أوضح أو اكتبي اسم المنتج من فضلكِ 😊"}
+    return {"kind": "unknown", "reply": result.get("reply") or "🔍 لم أتمكن من تحديد المنتج بدقة. أرسل صورة أوضح أو اكتب اسم المنتج من فضلك 😊"}
 
 def deliver_pending_replies(to):
     """إرسال ردود الإدارة المؤجلة بعد أن يبدأ العميل محادثته."""
@@ -2222,7 +2222,7 @@ def send_variant_list(to, product):
             "description": "اختيار هذا الحجم والسعر",
         })
     if rows:
-        send_list(to, "اختاري الحجم والسعر المناسب:", "اختيار الحجم", [{
+        send_list(to, "اختر الحجم والسعر المناسب:", "اختيار الحجم", [{
             "title": "الأحجام المتوفرة",
             "rows": rows[:10],
         }])
@@ -2239,10 +2239,10 @@ def send_welcome(to):
 def send_guided_help(to, intro=""):
     """رد اجتماعي ودود مع قائمة Titiz بدون افتراض أن العميل يبحث عن منتج."""
     body = (intro.strip() + "\n\n" if intro and intro.strip() else "") + GUIDED_HELP_MESSAGE
-    send_list(to, body, "اختاري الخدمة", [{
+    send_list(to, body, "اختر الخدمة", [{
         "title": "كيف أساعدك؟",
         "rows": [
-            {"id": "menu_search", "title": "🔍 البحث عن منتج", "description": "اكتبي الاسم أو صفي المنتج"},
+            {"id": "menu_search", "title": "🔍 البحث عن منتج", "description": "اكتب الاسم أو صفي المنتج"},
             {"id": "menu_cart", "title": "🛒 السلة", "description": "عرض المنتجات التي اخترتها"},
             {"id": "menu_orders", "title": "📦 طلباتي", "description": "متابعة طلباتك وحالتها"},
             {"id": "menu_offers", "title": "🎁 العروض", "description": "قناة التخفيضات والخصومات"},
@@ -2270,14 +2270,14 @@ def send_search_examples(to):
     """إرسال أمثلة كتابة فقط، دون تشغيل البحث أو عرض بطاقات منتجات."""
     send_message(
         to,
-        "اكتبي اسم المنتج، أو حتى كلمة منه 😊\n\n"
+        "اكتب اسم المنتج، أو حتى كلمة منه 😊\n\n"
         "*مثلاً:*\n"
         "☕ كتلي شاي\n"
         "🍽️ صحون فرم\n"
         "🧺 سلال رحلات\n"
         "🥣 حافظات أبو قفل\n"
         "🥛 اقلاص شاي\n\n"
-        "وإذا ما تعرفين الاسم، وصفيه لي مثل: *صحن زجاج كبير* أو *مفتاح غاز*، وببحث لكِ عنه."
+        "وإذا ما تعرف الاسم، ووصفه لي مثل: *صحن زجاج كبير* أو *مفتاح غاز*، وببحث لك عنه."
     )
 
 
@@ -2300,7 +2300,7 @@ def send_contextual_praise_reply(to):
         )
         send_buttons(
             to,
-            f"يسعدنا إنه عجبكِ *{last_product['name']}* يا غالية 😊\nهل تحبين نكمل عليه أو تبحثين عن شيء ثاني؟",
+            f"يسعدنا إنه عجبك *{last_product['name']}* يا هلا 😊\nهل تريد نكمل عليه أو تبحث عن شيء ثاني؟",
             [
                 primary_button,
                 {"id": f"det_{last_product['id']}", "title": "📋 التفاصيل"},
@@ -2308,10 +2308,10 @@ def send_contextual_praise_reply(to):
             ],
         )
         return
-    send_list(to, "يسعدنا إن Titiz نال إعجابكِ يا غالية 😊\nقولي لي ما الذي تبحثين عنه وسأساعدكِ خطوة بخطوة.", "ابدئي الآن", [{
-        "title": "اختاري ما تحتاجينه",
+    send_list(to, "يسعدنا إن Titiz نال إعجابك يا هلا 😊\nقل لي ما الذي تبحث عنه وسأساعدك خطوة بخطوة.", "ابدأ الآن", [{
+        "title": "اختر ما تحتاجه",
         "rows": [
-            {"id": "menu_search", "title": "🔍 البحث عن منتج", "description": "اكتبي الاسم أو صفي المنتج"},
+            {"id": "menu_search", "title": "🔍 البحث عن منتج", "description": "اكتب الاسم أو صفي المنتج"},
             {"id": "menu_cart", "title": "🛒 السلة", "description": "عرض المنتجات التي اخترتها"},
             {"id": "menu_orders", "title": "📦 طلباتي", "description": "متابعة الطلبات والحالة"},
             {"id": "menu_offers", "title": "🎁 العروض", "description": "قناة التخفيضات والخصومات"},
@@ -2323,7 +2323,7 @@ def send_product_request_menu(to):
     """طلب اسم المنتج في رسالة واحدة قابلة للتنفيذ دون تكرار سؤال عام."""
     send_buttons(
         to,
-        "أبشري 😊 اكتبي اسم الأداة اللي تبغينها، أو اختاري الفئة وببحث لكِ عنها.",
+        "تمام 😊 اكتب اسم الأداة اللي تبغاها، أو اختر الفئة وببحث لك عنها.",
         [
             {"id": "category_kitchen", "title": "🍳 أدوات مطبخ"},
             {"id": "category_electronics", "title": "⚡ إلكترونيات"},
@@ -2346,10 +2346,10 @@ def send_conversational_recovery(to, msg_normalized, semantic_result=None):
     if is_frustration_or_confusion_message(msg_normalized):
         send_guided_help(
             to,
-            "حقك علي يا غالية 😊 قولي لي وش تحتاجين: منتج، سلة، طلب، أو عروض، وبمشي معكِ مباشرة.",
+            "حقك علي يا هلا 😊 قل لي وش تحتاج: منتج، سلة، طلب، أو عروض، وبمشي معك مباشرة.",
         )
         return
-    send_guided_help(to, "أنا معك 😊 اكتبي طلبك بطريقتك أو اختاري من القائمة.")
+    send_guided_help(to, "أنا معك 😊 اكتب طلبك بطريقتك أو اختر من القائمة.")
 
 
 _catalog_metadata_cache = None
@@ -2461,7 +2461,7 @@ def send_matched_product_variant_card(to, product, variant_match):
         f"✅ لقيت نفس المنتج عندنا: *{product.get('name', 'المنتج')}*\n"
         f"🎯 الموديل/الحجم الظاهر: *{variant_name}*\n"
         f"💰 السعر: *{int(price)} ريال*\n\n"
-        "تقدرين تضيفين هذا الخيار مباشرة أو تختارين حجماً آخر 😊",
+        "تقدر تضيف هذا الخيار مباشرة أو تختار حجماً آخر 😊",
         [
             {"id": f"variant_{product['id']}_{variant_index}", "title": "🛒 إضافة هذا الحجم"},
             {"id": f"variants_{product['id']}", "title": "📏 اختيار حجم آخر"},
@@ -2612,9 +2612,9 @@ def send_matching_products_carousel(to, products, query_key=""):
 
     query_label = " ".join(str(query_key or "المنتجات").split())[:45] or "المنتجات"
     intro_text = (
-        f"🔍 لقيت لكِ خيارات مشابهة من *{query_label}* 😊\n\n"
+        f"🔍 لقيت لك خيارات مشابهة من *{query_label}* 😊\n\n"
         "هذه المنتجات تأتي بأشكال وأسعار مختلفة لتختاري الأنسب لاستخدامكِ.\n"
-        "شاهدي الصور والوصف والسعر، ثم اختاري الحجم أو أضيفي المنتج للسلة."
+        "شوف الصور والوصف والسعر، ثم اختر الحجم أو أضف المنتج للسلة."
     )
     delegate_text = (
         "هل تريد التأكد من حصولك على أفضل سعر؟ لا يزال بإمكانك التواصل مباشرة "
@@ -2775,7 +2775,7 @@ def send_main_menu(to):
         "title": "الخدمات",
         "rows": [
             {"id": "browse_products", "title": "🛍️ تصفح المنتجات", "description": "عرض جميع المنتجات"},
-            {"id": "menu_search", "title": "🔍 البحث عن منتج", "description": "اكتبي اسم المنتج"},
+            {"id": "menu_search", "title": "🔍 البحث عن منتج", "description": "اكتب اسم المنتج"},
             {"id": "menu_cart", "title": "🛒 السلة", "description": "عرض سلة المشتريات"},
             {"id": "menu_orders", "title": "📦 طلباتي", "description": "متابعة طلباتك"},
             {"id": "menu_track", "title": "🚚 تتبع الطلب", "description": "عرض آخر حالة"},
@@ -2784,7 +2784,7 @@ def send_main_menu(to):
             {"id": "menu_contact", "title": "📞 التواصل معنا", "description": "للاستفسارات"}
         ]
     }]
-    send_list(to, "🏠 *أهلاً بكِ في Titiz!*\n\nاختاري من القائمة:", "📋 القائمة", sections)
+    send_list(to, "🏠 *أهلاً بك في Titiz!*\n\nاختر من القائمة:", "📋 القائمة", sections)
 
 ORDER_STATUSES = [
     "بانتظار مراجعة الدفع", "تم الدفع", "جديد", "جاري التجهيز",
@@ -2796,10 +2796,10 @@ TRANSFER_PAYMENT_METHODS = {PAYMENT_TRANSFER, "تحويل مسبق"}
 PAYMENT_CONFIRMATION_MESSAGE = "تم استلام دفعتك بنجاح وسيتم تجهيز طلبك قريبًا."
 CHANNEL_INVITE_URL = "https://whatsapp.com/channel/0029VaqFTglLikgDDe0D5E2D"
 ORDER_THANK_YOU_MESSAGE = (
-    "🎉 شكراً جزيلاً لطلبكِ وثقتكِ بنا يا غالية! 💛\n\n"
+    "🎉 شكراً جزيلاً لطلبك وثقتك بنا يا هلا! 💛\n\n"
     "✅ تم استلام طلبك بنجاح، وسنبدأ بتجهيزه قريباً 📦\n"
-    "سنظل على تواصل معكِ حتى يصلكِ طلبك بأمان 🚚✨\n\n"
-    "📲 أرسلي رابط قناتنا لمن تحبين، لتصلهن أحدث المنتجات والعروض 🛍️💫\n"
+    "سنظل على تواصل معك حتى يصلك طلبك بأمان 🚚✨\n\n"
+    "📲 أرسل رابط قناتنا لمن تريد، لتصلهن أحدث المنتجات والعروض 🛍️💫\n"
     f"🔗 {CHANNEL_INVITE_URL}"
 )
 
@@ -3037,7 +3037,7 @@ def send_customer_order_details(to, order=None):
         send_message(to, "📦 لا توجد طلبات مسجلة على رقمك حالياً.")
         return
     send_message(to, format_customer_order_details(order))
-    send_buttons(to, "اختاري الإجراء المناسب:", [
+    send_buttons(to, "اختر الإجراء المناسب:", [
         {"id": "menu_orders", "title": "🔄 تحديث الطلبات"},
         {"id": "order_payment_status", "title": "💳 حالة الدفع"},
         {"id": "cancel_order_request", "title": "❌ إلغاء الطلب"},
@@ -3072,7 +3072,7 @@ def request_order_cancellation(to, order_number=""):
     session_data["cancel_order_number"] = order.get("order_number")
     user_sessions[to] = session_data
     user_states[to] = "awaiting_order_cancellation"
-    send_buttons(to, f"هل تريدين إلغاء الطلب {order.get('order_number')}؟", [
+    send_buttons(to, f"هل تريد إلغاء الطلب {order.get('order_number')}؟", [
         {"id": "confirm_cancel_order", "title": "✅ نعم، إلغاء الطلب"},
         {"id": "keep_order", "title": "↩️ إبقاء الطلب"},
     ])
@@ -3087,7 +3087,7 @@ def request_address_update(to):
     session_data = user_sessions.get(to, {}) if isinstance(user_sessions.get(to, {}), dict) else {}
     session_data["address_order_number"] = order.get("order_number")
     user_sessions[to] = session_data
-    send_message(to, "📍 أرسلي العنوان الجديد أو أقرب نقطة للتوصيل، وسأرفعه للإدارة للتحديث 😊")
+    send_message(to, "📍 أرسل العنوان الجديد أو أقرب نقطة للتوصيل، وسأرفعه للإدارة للتحديث 😊")
 
 
 def request_order_edit(to):
@@ -3099,20 +3099,20 @@ def request_order_edit(to):
     session_data = user_sessions.get(to, {}) if isinstance(user_sessions.get(to, {}), dict) else {}
     session_data["edit_order_number"] = order.get("order_number")
     user_sessions[to] = session_data
-    send_message(to, "✏️ اكتبي التعديل المطلوب على الطلب، مثل: إضافة منتج أو حذف منتج أو تغيير الكمية، وسأرسله للإدارة 😊")
+    send_message(to, "✏️ اكتب التعديل المطلوب على الطلب، مثل: إضافة منتج أو حذف منتج أو تغيير الكمية، وسأرسله للإدارة 😊")
 
 
 def request_customer_complaint(to):
     order = latest_customer_order(to)
     if not order:
         user_states[to] = "awaiting_general_complaint"
-        send_message(to, "🙏 أرسلي تفاصيل المشكلة وسأرفعها للإدارة مباشرة، حتى لو لم يوجد طلب مسجل.")
+        send_message(to, "🙏 أرسل تفاصيل المشكلة وسأرفعها للإدارة مباشرة، حتى لو لم يوجد طلب مسجل.")
     else:
         user_states[to] = "awaiting_customer_complaint"
         session_data = user_sessions.get(to, {}) if isinstance(user_sessions.get(to, {}), dict) else {}
         session_data["complaint_order_number"] = order.get("order_number")
         user_sessions[to] = session_data
-        send_message(to, f"🙏 أرسلي تفاصيل المشكلة في الطلب {order.get('order_number')} وسأتابعها مع الإدارة مباشرة.")
+        send_message(to, f"🙏 أرسل تفاصيل المشكلة في الطلب {order.get('order_number')} وسأتابعها مع الإدارة مباشرة.")
 
 
 def notify_owner_customer_request(sender, request_text, category):
@@ -3128,8 +3128,8 @@ def send_cart_view(to):
     """عرض السلة مع إجراءات تفاعلية لكل منتج."""
     cart_items = get_cart(to)
     if not cart_items:
-        send_message(to, "🛒 السلة فارغة!\n\nأضيفي منتجاً أولاً 😊")
-        send_buttons(to, "اختاري ما تريدين:", [
+        send_message(to, "🛒 السلة فارغة!\n\nأضف منتجاً أولاً 😊")
+        send_buttons(to, "اختر ما تريد:", [
             {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
             {"id": "menu_orders", "title": "📦 طلباتي"},
         ])
@@ -3150,7 +3150,7 @@ def send_cart_view(to):
         ])
     lines.extend(["", f"💰 *الإجمالي: {int(total)} ريال*", "🚚 التوصيل: مجاني"])
     send_message(to, "\n".join(lines))
-    send_list(to, "اختاري إجراءً للسلة:", "إدارة السلة", [{
+    send_list(to, "اختر إجراءً للسلة:", "إدارة السلة", [{
         "title": "المنتجات",
         "rows": action_rows[:10]
     }])
@@ -3165,14 +3165,14 @@ def send_payment_choice(to):
     payment_text = (
         "💳 *طرق الدفع:*\n\n"
         "✅ *الدفع عند الاستلام:*\n"
-        "نحط المنتج لأقرب نقطة منكِ وتدفعي وقت الاستلام 👌\n\n"
+        "نحط المنتج لأقرب نقطة منك وتدفع وقت الاستلام 👌\n\n"
         "✅ *التحويل المسبق:*\n"
-        "تدفعي وإحنا نوصل لكِ الطلب لباب بيتكِ 🚚\n\n"
+        "تدفع وإحنا نوصل لك الطلب لباب بيتك 🚚\n\n"
         "💰 *حسابات التحويل:*\n\n"
         "🟢 *نقطة جيب:* 906072\n"
         "🟡 *الكريمي نقطة حاسب:* 1202686\n"
         "🏦 *إيداع عبر الكريمي:* 3122678098\n\n"
-        "اختاري الطريقة اللي تناسبكِ 😊"
+        "اختر الطريقة اللي تناسبك 😊"
     )
     send_buttons(to, payment_text, [
         {"id": "pay_cod", "title": "💵 الدفع عند الاستلام"},
@@ -3182,12 +3182,12 @@ def send_payment_choice(to):
 
 def send_contact_menu(to):
     """عرض خيارات التواصل بطريقة تفاعلية."""
-    send_list(to, "📞 اختاري طريقة التواصل:", "التواصل", [{
+    send_list(to, "📞 اختر طريقة التواصل:", "التواصل", [{
         "title": "خدمة العملاء",
         "rows": [
             {"id": "contact_call", "title": "📞 اتصال", "description": "اتصلي بخدمة العملاء"},
             {"id": "contact_whatsapp", "title": "💬 واتساب", "description": "محادثة خدمة العملاء"},
-            {"id": "contact_instagram", "title": "📷 Instagram", "description": "شاهدي أحدث منتجات Titiz"},
+            {"id": "contact_instagram", "title": "📷 Instagram", "description": "شوف أحدث منتجات Titiz"},
             {"id": "contact_location", "title": "📍 موقعنا", "description": "فروع Titiz"},
             {"id": "contact_hours", "title": "⏰ أوقات العمل", "description": "مواعيد الخدمة"},
         ]
@@ -3196,7 +3196,7 @@ def send_contact_menu(to):
 
 def send_instagram_link(to):
     """إرسال زر مباشر وآمن لحساب Instagram الرسمي."""
-    message = "📷 تابعي أحدث منتجات وعروض Titiz على Instagram 😊"
+    message = "📷 تابع أحدث منتجات وعروض Titiz على Instagram 😊"
     if whatsapp.send_url_button(to, message, "📷 Instagram", INSTAGRAM_URL):
         return True
     return bool(send_message(to, f"{message}\n{INSTAGRAM_URL}"))
@@ -3221,9 +3221,9 @@ def find_admin_product(product_query):
 
 def admin_product_match_error(product_query, matches):
     if not matches:
-        return f"❌ لم أجد المنتج: {product_query}\nاكتبي جزءاً أوضح من الاسم بدون همزات أو معها."
+        return f"❌ لم أجد المنتج: {product_query}\nاكتب جزءاً أوضح من الاسم بدون همزات أو معها."
     names = "\n".join(f"• {p.get('name', '')}" for p in matches[:8])
-    return f"⚠️ وجدت أكثر من منتج مطابق، اكتبي اسماً أطول:\n{names}"
+    return f"⚠️ وجدت أكثر من منتج مطابق، اكتب اسماً أطول:\n{names}"
 
 
 # ╔══════════════════════════════════════════════════════════════╗
@@ -3262,7 +3262,7 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                     update_order_status(order_number, "تم التسليم")
                     send_message(OWNER_NUMBER, f"🚚 تم تحديث حالة الطلب {order_number} إلى: *تم التسليم*")
                     if customer_phone:
-                        send_message(customer_phone, f"🎉 *تحديث لطلبك {order_number}*\n\n🚚 تم تسليم طلبك بنجاح! شكراً لثقتكِ الغالية بمتجر Titiz 💛✨")
+                        send_message(customer_phone, f"🎉 *تحديث لطلبك {order_number}*\n\n🚚 تم تسليم طلبك بنجاح! شكراً لثقتك الغالية بمتجر Titiz 💛✨")
             else:
                 send_message(OWNER_NUMBER, f"❌ لم أجد الطلب برقم: {order_number}")
         return True
@@ -3959,7 +3959,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if context_product:
             raw_action = f"det_{context_product['id']}"
         else:
-            send_message(sender, "📋 أرسلي اسم المنتج أو افتحي بطاقته أولاً لعرض التفاصيل.")
+            send_message(sender, "📋 أرسل اسم المنتج أو افتح بطاقته أولاً لعرض التفاصيل.")
             return
     elif text_button_action == "add_to_cart":
         if context_product:
@@ -3969,7 +3969,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 else f"add_{context_product['id']}"
             )
         else:
-            send_message(sender, "🛒 افتحي بطاقة المنتج أو اكتبي اسمه أولاً حتى أضيفه للسلة.")
+            send_message(sender, "🛒 افتح بطاقة المنتج أو اكتب اسمه أولاً حتى أضيفه للسلة.")
             return
     elif text_button_action == "add_matched_variant":
         variant_index = session_context.get("matched_variant_index")
@@ -3978,7 +3978,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         elif context_product:
             raw_action = f"variants_{context_product['id']}"
         else:
-            send_message(sender, "📏 افتحي بطاقة المنتج أو اختاري الحجم أولاً.")
+            send_message(sender, "📏 افتح بطاقة المنتج أو اختر الحجم أولاً.")
             return
     elif text_button_action:
         raw_action = text_button_action
@@ -3992,14 +3992,14 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     if raw_action == PRODUCT_FOLLOWUP_CONTINUE_ID:
-        send_message(sender, "تمام يا غالية 😊 اكتبي اسم المنتج أو سؤالك وسأكمل معكِ من حيث توقفنا.")
+        send_message(sender, "تمام يا هلا 😊 اكتب اسم المنتج أو سؤالك وسأكمل معك من حيث توقفنا.")
         return
 
     if raw_action == PRODUCT_FOLLOWUP_STOP_ID:
         send_message(sender, PRODUCT_FOLLOWUP_UNSATISFIED_MESSAGE)
         return
 
-    # بعض نسخ WhatsApp تعيد عنوان الزر بدلاً من id؛ افتحي آخر قائمة أحجام محفوظة.
+    # بعض نسخ WhatsApp تعيد عنوان الزر بدلاً من id؛ افتح آخر قائمة أحجام محفوظة.
     variant_action_labels = {"اختيار الحجم", "اختيار الحجم والسعر", "اختيار المقاس"}
     # قد يعيد واتساب عنوان الزر كاملاً مثل «📏 اختيار الحجم»؛
     # النص المطبّع يزيل الإيموجي ويحافظ على مسار الأحجام بدلاً من المرور للمساعدة العامة.
@@ -4008,7 +4008,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if product and any(parse_product_price(v.get("price")) is not None for v in product_variants(product)):
             send_variant_list(sender, product)
         else:
-            send_message(sender, "⚠️ افتحي بطاقة المنتج مرة أخرى ثم اضغطي «اختيار الحجم» لعرض الخيارات.")
+            send_message(sender, "⚠️ افتح بطاقة المنتج مرة أخرى ثم اضغطي «اختيار الحجم» لعرض الخيارات.")
         return
 
     # اختيار منتج من قائمة نتائج البحث المتعددة. لا نستخدم أزرار الكاروسيل
@@ -4025,7 +4025,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if product:
             send_product_card(sender, product)
         else:
-            send_message(sender, "⚠️ انتهت صلاحية هذه النتائج. اكتبي اسم المنتج مرة أخرى وسأعرضه لكِ فوراً.")
+            send_message(sender, "⚠️ انتهت صلاحية هذه النتائج. اكتب اسم المنتج مرة أخرى وسأعرضه لك فوراً.")
         return
 
     # فتح قائمة أحجام المنتج من بطاقة الكاروسيل.
@@ -4068,12 +4068,12 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 f"📏 الحجم: {variant_name}\n"
                 f"💰 السعر: {variant_price} ريال إلى السلة",
             )
-            send_buttons(sender, "ماذا تريدين الآن؟", [
+            send_buttons(sender, "ماذا تريد الآن؟", [
                 {"id": "menu_cart", "title": "🛒 عرض السلة"},
                 {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
             ])
         else:
-            send_message(sender, "❌ لم أتمكن من العثور على هذا الخيار، أرسلي اسم المنتج مرة أخرى.")
+            send_message(sender, "❌ لم أتمكن من العثور على هذا الخيار، أرسل اسم المنتج مرة أخرى.")
         return
 
     # أزرار المنتج: نستخدم النص الخام لأن normalize_text يزيل الشرطة السفلية.
@@ -4085,14 +4085,14 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if product:
             if add_to_cart(sender, product["id"], 1):
                 send_message(sender, f"✅ تم إضافة *{product['name']}* إلى السلة")
-                send_buttons(sender, "ماذا تريدين الآن؟", [
+                send_buttons(sender, "ماذا تريد الآن؟", [
                     {"id": "menu_cart", "title": "🛒 عرض السلة"},
                     {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
                 ])
             else:
                 send_message(sender, "⚠️ لا يمكن إضافة المنتج لأن سعره غير محدد حالياً.")
         else:
-            send_message(sender, "❌ لم أتمكن من العثور على هذا المنتج، جربي القائمة مرة أخرى.")
+            send_message(sender, "❌ لم أتمكن من العثور على هذا المنتج، جرّب القائمة مرة أخرى.")
         return
 
     if raw_action.startswith("det_"):
@@ -4102,7 +4102,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             product = None
         if product:
             send_message(sender, f"📋 *تفاصيل المنتج*\n\n{product.get('description') or 'لا يوجد وصف إضافي.'}")
-            send_buttons(sender, "اختاري الإجراء المناسب:", [
+            send_buttons(sender, "اختر الإجراء المناسب:", [
                 {"id": f"variants_{product['id']}", "title": "📏 اختيار الحجم"} if product_variants(product) else {"id": f"add_{product['id']}", "title": "🛒 إضافة للسلة"},
                 {"id": "menu_cart", "title": "🛍️ عرض السلة"},
             ])
@@ -4140,11 +4140,11 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         order_number = session_data.get("cancel_order_number", "")
         order = customer_order_by_number(sender, order_number)
         if not order:
-            send_message(sender, "❌ لم أجد الطلب المطلوب إلغاؤه. أرسلي «طلباتي» للتحديث.")
+            send_message(sender, "❌ لم أجد الطلب المطلوب إلغاؤه. أرسل «طلباتي» للتحديث.")
         elif order.get("order_status") not in {"جديد", "بانتظار مراجعة الدفع"}:
             send_message(sender, "⚠️ بدأ تجهيز هذا الطلب أو شحنه، لذلك لا يمكن إلغاؤه آلياً.")
         elif update_order_status(order_number, "ملغي"):
-            send_message(sender, f"✅ تم إلغاء الطلب {order_number} بناءً على طلبكِ.")
+            send_message(sender, f"✅ تم إلغاء الطلب {order_number} بناءً على طلبك.")
             notify_owner_customer_request(sender, f"إلغاء الطلب {order_number}", "إلغاء طلب")
         else:
             send_message(sender, "⚠️ تعذر إلغاء الطلب حالياً، وسأبلغ الإدارة لمراجعته.")
@@ -4158,7 +4158,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if isinstance(session_data, dict):
             session_data.pop("cancel_order_number", None)
             user_sessions[sender] = session_data
-        send_message(sender, "✅ تم إبقاء الطلب كما هو، وسنواصل تجهيزه لكِ بإذن الله.")
+        send_message(sender, "✅ تم إبقاء الطلب كما هو، وسنواصل تجهيزه لك بإذن الله.")
         return
 
     if raw_action == "menu_cart":
@@ -4170,7 +4170,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     if raw_action == "menu_search":
-        send_message(sender, "🔍 اكتبي اسم المنتج أو صفيه بكلماتك، وسأبحث لكِ عنه 😊")
+        send_message(sender, "🔍 اكتب اسم المنتج أو وصفه بكلماتك، وسأبحث لك عنه 😊")
         return
 
     if raw_action == "menu_track":
@@ -4200,7 +4200,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     if raw_action == "clear_cart":
         clear_cart(sender)
         send_message(sender, "🗑️ تم تفريغ السلة ✅")
-        send_buttons(sender, "اختاري ما تريدين:", [
+        send_buttons(sender, "اختر ما تريد:", [
             {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
             {"id": "menu_orders", "title": "📦 طلباتي"},
         ])
@@ -4217,7 +4217,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     if state == "awaiting_address_update":
         new_address = msg_body.strip()
         if len(new_address) < 3:
-            send_message(sender, "📍 أرسلي اسم المنطقة أو أقرب نقطة بشكل أوضح من فضلكِ.")
+            send_message(sender, "📍 أرسل اسم المنطقة أو أقرب نقطة بشكل أوضح من فضلك.")
             return
         customer = get_customer(sender) or {}
         add_customer(sender, customer.get("name"), new_address)
@@ -4234,7 +4234,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     if state == "awaiting_order_edit_request":
         edit_request = msg_body.strip()
         if len(edit_request) < 3:
-            send_message(sender, "✏️ اكتبي التعديل المطلوب بالتفصيل، مثل: إضافة منتج أو تغيير الكمية.")
+            send_message(sender, "✏️ اكتب التعديل المطلوب بالتفصيل، مثل: إضافة منتج أو تغيير الكمية.")
             return
         session_data = user_sessions.get(sender, {})
         order_number = session_data.get("edit_order_number", "") if isinstance(session_data, dict) else ""
@@ -4243,13 +4243,13 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if isinstance(session_data, dict):
             session_data.pop("edit_order_number", None)
             user_sessions[sender] = session_data
-        send_message(sender, "✅ تم استلام طلب التعديل ورفعه للإدارة، وسنرد عليكِ بعد المراجعة.")
+        send_message(sender, "✅ تم استلام طلب التعديل ورفعه للإدارة، وسنرد عليك بعد المراجعة.")
         return
 
     if state == "awaiting_customer_complaint":
         complaint = msg_body.strip()
         if len(complaint) < 3:
-            send_message(sender, "🙏 اكتبي تفاصيل المشكلة حتى نساعدكِ بسرعة.")
+            send_message(sender, "🙏 اكتب تفاصيل المشكلة حتى نساعدكِ بسرعة.")
             return
         session_data = user_sessions.get(sender, {})
         order_number = session_data.get("complaint_order_number", "") if isinstance(session_data, dict) else ""
@@ -4258,17 +4258,17 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         if isinstance(session_data, dict):
             session_data.pop("complaint_order_number", None)
             user_sessions[sender] = session_data
-        send_message(sender, "🙏 وصلتنا ملاحظتك، وتم رفعها للإدارة لمتابعتها معكِ.")
+        send_message(sender, "🙏 وصلتنا ملاحظتك، وتم رفعها للإدارة لمتابعتها معك.")
         return
 
     if state == "awaiting_general_complaint":
         complaint = msg_body.strip()
         if len(complaint) < 3:
-            send_message(sender, "🙏 اكتبي تفاصيل المشكلة حتى نساعدكِ بسرعة.")
+            send_message(sender, "🙏 اكتب تفاصيل المشكلة حتى نساعدكِ بسرعة.")
             return
         notify_owner_customer_request(sender, complaint, "شكوى عامة")
         user_states.pop(sender, None)
-        send_message(sender, "🙏 وصلتنا ملاحظتك، وتم رفعها للإدارة لمتابعتها معكِ.")
+        send_message(sender, "🙏 وصلتنا ملاحظتك، وتم رفعها للإدارة لمتابعتها معك.")
         return
 
     if state == "awaiting_name":
@@ -4281,7 +4281,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_message(sender, "حياك الله 🌟\nأهلاً بك في Titiz\nتم حفظ بياناتك بنجاح\nلو احتجت اي أداة منزلية ارسل اسم المنتج")
         else:
             send_message(sender, "⚠️ تعذر حفظ بياناتك على GitHub حالياً، لكن سنكمل طلبك. يرجى إبلاغ الإدارة إذا تكرر الخطأ.")
-        send_message(sender, "📍 تمام! الحين أرسلي لنا عنوان التوصيل (المنطقة أو أقرب نقطة) 😊\n📦 وين تحبين نحط لكِ المنتج؟ 🤔\n\nنقدر نحطه في أي مكان قريب منكِ:\n\n🏪 محل قريب من بيتكِ\n🛍️ بقالة في حارتكِ\n📍 أي نقطة تحدديها\n\nأرسلي لنا اسم المكان أو المنطقة وإحنا نوصله لأقرب نقطة منكِ 😊👌")
+        send_message(sender, "📍 تمام! الحين أرسل لنا عنوان التوصيل (المنطقة أو أقرب نقطة) 😊\n📦 وين تريد نحط لك المنتج؟ 🤔\n\nنقدر نحطه في أي مكان قريب منك:\n\n🏪 محل قريب من بيتك\n🛍️ بقالة في حارتك\n📍 أي نقطة تحددها\n\nأرسل لنا اسم المكان أو المنطقة وإحنا نوصله لأقرب نقطة منك 😊👌")
         return
 
     if state == "awaiting_customer_confirmation":
@@ -4290,7 +4290,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_payment_choice(sender)
         elif raw_action == "change_info" or "تعديل" in msg_normalized:
             user_states[sender] = "awaiting_name"
-            send_message(sender, "👤 أرسلي الاسم الصحيح من فضلكِ 😊")
+            send_message(sender, "👤 أرسل الاسم الصحيح من فضلك 😊")
         else:
             send_buttons(sender, "هل البيانات صحيحة؟", [
                 {"id": "confirm_info", "title": "✅ نعم، صحيحة"},
@@ -4326,19 +4326,19 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 clear_cart(sender)
                 user_states.pop(sender, None)
                 user_sessions.pop(sender, None)
-                send_message(sender, f"✅ *تم تأكيد طلبك بنجاح!*\n\n📋 رقم الطلب: *{order_number}*\n💰 الإجمالي: {int(total)} ريال\n💵 الدفع: عند الاستلام\n📍 العنوان: {address}\n\n🚚 سيتم توصيل طلبك قريباً!\nشكراً لثقتكِ بنا يا غالية 💛😊")
+                send_message(sender, f"✅ *تم تأكيد طلبك بنجاح!*\n\n📋 رقم الطلب: *{order_number}*\n💰 الإجمالي: {int(total)} ريال\n💵 الدفع: عند الاستلام\n📍 العنوان: {address}\n\n🚚 سيتم توصيل طلبك قريباً!\nشكراً لثقتك بنا يا هلا 💛😊")
                 send_order_thank_you(sender)
                 notify_owner_new_order(order_number, sender, name, address, items, total, "الدفع عند الاستلام")
             else:
                 user_states.pop(sender, None)
-                send_message(sender, "❌ السلة فارغة! أضيفي منتجات أولاً 😊")
+                send_message(sender, "❌ السلة فارغة! أضف منتجات أولاً 😊")
             return
         elif "تحويل" in msg_normalized or "مسبق" in msg_normalized or raw_action in {"pay_transfer", "2"}:
             user_states[sender] = "awaiting_transfer_proof"
-            send_message(sender, "💰 *حسابات التحويل:*\n\n🟢 *نقطة جيب:* 906072\n🟡 *الكريمي نقطة حاسب:* 1202686\n🏦 *إيداع عبر الكريمي:* 3122678098\n\n📸 بعد التحويل أرسلي لنا صورة إشعار التحويل ✅")
+            send_message(sender, "💰 *حسابات التحويل:*\n\n🟢 *نقطة جيب:* 906072\n🟡 *الكريمي نقطة حاسب:* 1202686\n🏦 *إيداع عبر الكريمي:* 3122678098\n\n📸 بعد التحويل أرسل لنا صورة إشعار التحويل ✅")
             return
         else:
-            send_buttons(sender, "اختاري طريقة الدفع:",
+            send_buttons(sender, "اختر طريقة الدفع:",
                 [{"id": "pay_cod", "title": "💵 عند الاستلام"},
                  {"id": "pay_transfer", "title": "💳 تحويل مسبق"}])
             return
@@ -4358,17 +4358,17 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 customer = get_customer(sender)
                 proof_id = message.get("image", {}).get("id", "")
                 if not proof_id:
-                    send_message(sender, "⚠️ لم أتمكن من قراءة صورة إشعار التحويل. أرسلي الصورة مرة أخرى من فضلكِ.")
+                    send_message(sender, "⚠️ لم أتمكن من قراءة صورة إشعار التحويل. أرسل الصورة مرة أخرى من فضلك.")
                     return
                 order_number, _ = create_order(customer["id"], items, total, PAYMENT_TRANSFER)
                 proof_saved = update_order_payment_proof(order_number, proof_id)
                 if not proof_saved:
-                    send_message(sender, "⚠️ تعذر حفظ صورة إشعار التحويل مع الطلب. أرسلي الصورة مرة أخرى من فضلكِ.")
+                    send_message(sender, "⚠️ تعذر حفظ صورة إشعار التحويل مع الطلب. أرسل الصورة مرة أخرى من فضلك.")
                     return
                 clear_cart(sender)
                 user_states.pop(sender, None)
                 user_sessions.pop(sender, None)
-                send_message(sender, f"✅ *تم استلام طلبك!*\n\n📋 رقم الطلب: *{order_number}*\n💰 الإجمالي: {int(total)} ريال\n💳 الدفع: {PAYMENT_TRANSFER}\n\n⏳ الحالة: *بانتظار مراجعة الدفع*\nسنؤكد لكِ خلال دقائق 😊")
+                send_message(sender, f"✅ *تم استلام طلبك!*\n\n📋 رقم الطلب: *{order_number}*\n💰 الإجمالي: {int(total)} ريال\n💳 الدفع: {PAYMENT_TRANSFER}\n\n⏳ الحالة: *بانتظار مراجعة الدفع*\nسنؤكد لك خلال دقائق 😊")
                 send_order_thank_you(sender)
                 notify_owner_new_order(order_number, sender, name, address, items, total, PAYMENT_TRANSFER)
                 send_message(OWNER_NUMBER, f"📸 *صورة إشعار التحويل للطلب {order_number}*\nمن العميل: {name or sender}\n📊 الحالة: *بانتظار مراجعة الدفع*")
@@ -4378,7 +4378,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                 send_message(sender, "❌ السلة فارغة!")
             return
         else:
-            send_message(sender, "📸 أرسلي صورة إشعار التحويل من فضلكِ 😊")
+            send_message(sender, "📸 أرسل صورة إشعار التحويل من فضلك 😊")
             return
 
     # === فهم صورة المنتج خارج مسار إثبات التحويل ===
@@ -4456,12 +4456,12 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                     if parse_product_price(variant.get("price")) is not None
                 ]
                 if valid_variants:
-                    send_message(sender, f"📏 اختاري الحجم أو الخيار المطلوب من *{last_product['name']}* أولاً 😊")
+                    send_message(sender, f"📏 اختر الحجم أو الخيار المطلوب من *{last_product['name']}* أولاً 😊")
                     send_variant_list(sender, last_product)
                     return
                 if add_to_cart(sender, last_product["id"], 1):
                     send_message(sender, f"✅ تم إضافة *{last_product['name']}* إلى السلة")
-                    send_buttons(sender, "ماذا تريدين الآن؟", [
+                    send_buttons(sender, "ماذا تريد الآن؟", [
                         {"id": "menu_cart", "title": "🛒 عرض السلة"},
                         {"id": "checkout", "title": "✅ إكمال الطلب"},
                         {"id": "shopping_assistant", "title": "🛍️ متابعة التسوق"},
@@ -4485,7 +4485,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
             send_product_card(sender, found)
             return
         else:
-            send_message(sender, f"❌ اختاري رقم من 1 إلى {len(products_list) if isinstance(products_list, list) else 0}")
+            send_message(sender, f"❌ اختر رقم من 1 إلى {len(products_list) if isinstance(products_list, list) else 0}")
             return
 
     # مسح الجلسة
@@ -4521,16 +4521,16 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
                         send_message(sender, "⚠️ لا يمكن إضافة المنتج لأن سعره غير محدد حالياً.")
                         return
                     price = parse_product_price(p.get("price"))
-                    send_message(sender, f"✅ تم إضافة *{p['name']}* للسلة!\n💰 السعر: {int(price)} ريال\n\nاكتبي *السلة* لعرض المشتريات\nأو *اكمل الطلب* لإتمام الشراء 😊")
+                    send_message(sender, f"✅ تم إضافة *{p['name']}* للسلة!\n💰 السعر: {int(price)} ريال\n\nاكتب *السلة* لعرض المشتريات\nأو *اكمل الطلب* لإتمام الشراء 😊")
                     return
-            send_message(sender, f"❌ ما لقينا المنتج\nجربي اسم ثاني 😊")
+            send_message(sender, f"❌ ما لقينا المنتج\nجرّب اسم ثاني 😊")
             return
 
     # إكمال الطلب
     if msg_normalized in [normalize_text(x) for x in ["اكمل الطلب", "اكمل", "تأكيد", "تاكيد", "اكمال الطلب", "checkout"]]:
         cart_items = get_cart(sender)
         if not cart_items:
-            send_message(sender, "❌ السلة فارغة! أضيفي منتجات أولاً 😊")
+            send_message(sender, "❌ السلة فارغة! أضف منتجات أولاً 😊")
             return
         total = sum(item["price"] * item["quantity"] for item in cart_items)
         summary = "🛒 *ملخص طلبك:*\n\n"
@@ -4569,7 +4569,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_message(sender, "📞 يمكنك الاتصال بخدمة العملاء على: 777355955")
         return
     if raw_action == "contact_whatsapp":
-        send_message(sender, "💬 اكتبي رسالتك هنا، وموظفة Titiz ستساعدكِ فوراً.")
+        send_message(sender, "💬 اكتب رسالتك هنا، وموظفة Titiz ستساعدكِ فوراً.")
         return
     if raw_action == "contact_instagram":
         send_instagram_link(sender)
@@ -4589,9 +4589,9 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     if raw_action == "browse_products" or msg_normalized == "browseproducts":
         send_message(
             sender,
-            "أبشري 😊 اكتبي اسم المنتج اللي تبغينه، أو صفيه لي إذا ما تعرفين اسمه، وببحث لكِ عنه.",
+            "تمام 😊 اكتب اسم المنتج اللي تبغاه، أو وصفه لي إذا ما تعرف اسمه، وببحث لك عنه.",
         )
-        send_buttons(sender, "وش المنتج اللي تدورين عليه؟", [
+        send_buttons(sender, "وش المنتج اللي تدور عليه؟", [
             {"id": "category_kitchen", "title": "أدوات مطبخ"},
             {"id": "category_electronics", "title": "إلكترونيات"},
             {"id": "category_cleaning", "title": "منظفات"},
@@ -4599,7 +4599,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     if raw_action == "category_kitchen" or msg_normalized == normalize_text("أدوات مطبخ"):
-        send_message(sender, "اكتبي اسم أداة المطبخ أو الفئة التي تبحثين عنها، وسأبحث لكِ عنها فوراً 😊")
+        send_message(sender, "اكتب اسم أداة المطبخ أو الفئة التي تبحث عنها، وسأبحث لك عنها فوراً 😊")
         return
 
     if raw_action in {"category_electronics", "category_cleaning"} or msg_normalized in {
@@ -4609,7 +4609,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         send_message(sender, "سيتم توفير المنتجات قريباً 😊")
         return
     if raw_action == "menu_payment" or msg_normalized == "menupayment":
-        send_message(sender, "💳 *طرق الدفع المتاحة:*\n\n✅ الدفع عند الاستلام\nنحط الطلب لأقرب نقطة منك وتدفعي وقت الاستلام.\n\n✅ التحويل المسبق\nتدفعي أولاً ثم يتم توصيل الطلب لباب المنزل.\n\n💰 حسابات التحويل:\n🟢 نقطة جيب: 906072\n🟡 الكريمي نقطة حاسب: 1202686\n🏦 إيداع عبر الكريمي: 3122678098")
+        send_message(sender, "💳 *طرق الدفع المتاحة:*\n\n✅ الدفع عند الاستلام\nنحط الطلب لأقرب نقطة منك وتدفع وقت الاستلام.\n\n✅ التحويل المسبق\nتدفع أولاً ثم يتم توصيل الطلب لباب المنزل.\n\n💰 حسابات التحويل:\n🟢 نقطة جيب: 906072\n🟡 الكريمي نقطة حاسب: 1202686\n🏦 إيداع عبر الكريمي: 3122678098")
         return
     if raw_action == "menu_location" or msg_normalized == "menulocation":
         resp = find_response(normalize_text("الموقع"))
@@ -4682,11 +4682,11 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
         return
 
     if is_social_or_confused_message(msg_normalized):
-        social_intro = "ههههه منورة 😊" if "ه" in msg_normalized else "أنا معك يا غالية 😊"
+        social_intro = "ههههه يا هلا 😊" if "ه" in msg_normalized else "أنا معك يا هلا 😊"
         if msg_normalized in {normalize_text("احبك"), normalize_text("احبج")}:
-            social_intro = "شكراً لكِ يا غالية، لطفك أسعدني 😊"
+            social_intro = "شكراً لك يا هلا، لطفك أسعدني 😊"
         elif msg_normalized in {normalize_text("مافهمت"), normalize_text("ما فهمت"), normalize_text("ايش"), normalize_text("وش")}:
-            social_intro = "ولا يهمك يا غالية، أبشرح لكِ بطريقة أبسط 😊"
+            social_intro = "ولا يهمك يا هلا، أبشرح لك بطريقة أبسط 😊"
         send_guided_help(sender, social_intro)
         return
 
@@ -4745,7 +4745,7 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     # === رد افتراضي عند عدم توفر خدمة الذكاء ===
     send_guided_help(
         sender,
-        "أنا معك يا غالية 😊 ما وصلني طلب واضح. اكتبي اسم المنتج أو اختاري الخدمة المناسبة.",
+        "أنا معك يا هلا 😊 ما وصلني طلب واضح. اكتب اسم المنتج أو اختر الخدمة المناسبة.",
     )
 
 
@@ -4864,26 +4864,26 @@ def webhook():
             else:
                 recent_product = (user_sessions.get(sender, {}) or {}).get("last_product")
                 if recent_product:
-                    send_buttons(sender, "إذا تريدين هذا المنتج، اختاري الإجراء المناسب:", [
+                    send_buttons(sender, "إذا تريد هذا المنتج، اختر الإجراء المناسب:", [
                         {"id": f"variants_{recent_product['id']}", "title": "📏 اختيار الحجم"}
                         if product_variants(recent_product)
                         else {"id": f"add_{recent_product['id']}", "title": "🛒 إضافة للسلة"},
                         {"id": "menu_cart", "title": "🛍️ عرض السلة"},
                     ])
                 else:
-                    send_message(sender, "📎 أرسلي صورة المنتج أو اكتبي اسمه، وسأساعدكِ فوراً 😊")
+                    send_message(sender, "📎 أرسل صورة المنتج أو اكتب اسمه، وسأساعدك فوراً 😊")
                 return jsonify({"status": "ok"}), 200
         elif message.get("type") == "audio":
             try:
                 msg_body = transcribe_voice_message(message) or ""
             except RuntimeError as exc:
                 if str(exc) == "VOICE_BUSY":
-                    send_message(sender, "🎙️ ما زلت أعالج رسالة صوتية سابقة، انتظري لحظات ثم أرسلي التسجيل مرة أخرى 😊")
+                    send_message(sender, "🎙️ ما زلت أعالج رسالة صوتية سابقة، انتظر لحظات ثم أرسل التسجيل مرة أخرى 😊")
                 elif str(exc) == "VOICE_DUPLICATE":
-                    send_message(sender, "🎙️ تم استلام هذا التسجيل مسبقاً، أرسلي تسجيلاً جديداً إذا احتجتِ 😊")
+                    send_message(sender, "🎙️ تم استلام هذا التسجيل مسبقاً، أرسل تسجيلاً جديداً إذا احتجت 😊")
                 else:
                     print(f"[الصوت] خطأ في معالجة التسجيل: {exc}")
-                    send_message(sender, "🎙️ الخدمة مشغولة حالياً. انتظري دقيقة ثم أرسلي التسجيل مرة أخرى 😊")
+                    send_message(sender, "🎙️ الخدمة مشغولة حالياً. انتظر دقيقة ثم أرسل التسجيل مرة أخرى 😊")
                 return jsonify({"status": "ok"}), 200
             except requests.HTTPError as exc:
                 status_code = getattr(getattr(exc, "response", None), "status_code", None)
@@ -4891,13 +4891,13 @@ def webhook():
                     print("[الصوت] استمر 429 بعد إعادة المحاولة")
                     send_message(
                         sender,
-                        "🎙️ خدمة فهم الصوت مشغولة حالياً. انتظري دقيقة واحدة ثم أرسلي التسجيل مرة أخرى 😊",
+                        "🎙️ خدمة فهم الصوت مشغولة حالياً. انتظر دقيقة واحدة ثم أرسل التسجيل مرة أخرى 😊",
                     )
                 else:
                     print(f"[الصوت] فشل طلب خدمة الصوت HTTP {status_code}: {exc}")
                     send_message(
                         sender,
-                        "🎙️ تعذر فهم التسجيل حالياً. أرسليه مرة أخرى أو اكتبي طلبك نصاً من فضلكِ 😊",
+                        "🎙️ تعذر فهم التسجيل حالياً. أرسله مرة أخرى أو اكتب طلبك نصاً من فضلك 😊",
                     )
                 return jsonify({"status": "ok"}), 200
             except Exception as exc:
@@ -4905,11 +4905,11 @@ def webhook():
                 send_message(
                     sender,
                     "🎙️ وصلتني رسالتك الصوتية، لكن تعذر فهم التسجيل حالياً. "
-                    "أرسليها مرة أخرى أو اكتبي طلبك نصاً من فضلكِ 😊",
+                    "أرسلها مرة أخرى أو اكتب طلبك نصاً من فضلك 😊",
                 )
                 return jsonify({"status": "ok"}), 200
             if not msg_body:
-                send_message(sender, "🎙️ لم أتمكن من سماع كلمات واضحة في التسجيل. أرسليه مرة أخرى من فضلكِ 😊")
+                send_message(sender, "🎙️ لم أتمكن من سماع كلمات واضحة في التسجيل. أرسله مرة أخرى من فضلك 😊")
                 return jsonify({"status": "ok"}), 200
             # بعد التفريغ نعامل الصوت كنص حتى تعمل حالات الاسم والعنوان والطلب بشكل طبيعي.
             processing_message = dict(message)
