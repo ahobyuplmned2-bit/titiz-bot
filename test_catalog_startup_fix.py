@@ -75,6 +75,24 @@ assert spice_jars_9["price"] == "2800", "سعر علب بهارات أبو 9 ي�
 assert "3 رفوف" in spice_jars_9["keywords"], "كلمة 3 رفوف المفتاحية مفقودة"
 assert len(json.loads(spice_jars_9["image_urls"])) == 1, "يجب أن يحتوي طقم علب البهارات على صورة واحدة"
 
+turkish_brooms = catalog.get("مكانس تركي ريش رطب")
+assert isinstance(turkish_brooms, dict), "سجل مكانس تركي ريش رطب مفقود"
+assert turkish_brooms["price"] == "1200", "السعر الأساسي للمكانس يجب أن يكون سعر الرقم 1 الكبير"
+assert "مكنسة تركي" in turkish_brooms["keywords"] and "ريش رطب" in turkish_brooms["keywords"], "كلمات المكانس المفتاحية مفقودة"
+assert json.loads(turkish_brooms["variants"]) == [
+    {"name": "رقم 1 الكبير", "price": 1200},
+    {"name": "رقم 2", "price": 1000},
+    {"name": "رقم 3", "price": 800},
+], "مقاسات المكانس أو أسعارها غير صحيحة"
+assert len(json.loads(turkish_brooms["image_urls"])) == 1, "يجب أن تحتوي المكانس على صورة واحدة"
+
+handled_scouring_pad = catalog.get("سلك غسيل أبو مقبض الأصلي")
+assert isinstance(handled_scouring_pad, dict), "سجل سلك غسيل أبو مقبض مفقود"
+assert handled_scouring_pad["price"] == "300", "سعر سلك غسيل أبو مقبض يجب أن يكون 300"
+assert "سلك غسيل أبو مقبض" in handled_scouring_pad["keywords"], "الكلمة المفتاحية سلك غسيل أبو مقبض مفقودة"
+assert "سلك جلي أبو مقبض" in handled_scouring_pad["keywords"], "كلمة سلك جلي أبو مقبض المفتاحية مفقودة"
+assert len(json.loads(handled_scouring_pad["image_urls"])) == 1, "يجب أن يحتوي سلك أبو مقبض على صورة واحدة"
+
 for relative_path in (
     "assets/products/gloves/washing-gloves.jpg",
     "assets/products/gloves/soap-gloves.jpg",
@@ -98,6 +116,8 @@ for relative_path in (
     "assets/products/tea-cups/kholani-glasses-6pcs.jpg",
     "assets/products/gas-regulators/italian-gas-regulator-5y.jpg",
     "assets/products/spice-jars/spice-jars-9-with-3-racks.jpg",
+    "assets/products/turkish-wet-bristle-brooms/turkish-wet-bristle-brooms.jpg",
+    "assets/products/handled-scouring-pads/original-handled-scouring-pad.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"

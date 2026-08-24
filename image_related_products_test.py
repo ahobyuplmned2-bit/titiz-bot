@@ -68,4 +68,14 @@ assert "كتلي شاي ستيل أبو صفارة" in tea_kettle_names
 assert not expected_saifi_names & tea_kettle_names
 assert "قدور استيل" not in tea_kettle_names
 
+broom_matches = app.match_products_from_text("مكنسة تركي ريش رطب", real_catalog)
+broom_names = {product["name"] for product in broom_matches}
+assert "مكانس تركي ريش رطب" in broom_names
+assert "موب بلاط مع العصا" not in broom_names
+
+handled_scourer_matches = app.match_products_from_text("سلك غسيل ابو مقبض", real_catalog)
+handled_scourer_names = {product["name"] for product in handled_scourer_matches}
+assert "سلك غسيل أبو مقبض الأصلي" in handled_scourer_names
+assert "موب بلاط مع العصا" not in handled_scourer_names
+
 print("image_related_products_test: OK")

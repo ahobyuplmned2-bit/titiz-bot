@@ -1044,5 +1044,23 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/spice-jars/spice-jars-9-with-3-racks.jpg\"]",
     "variants": ""
+  },
+  "مكانس تركي ريش رطب": {
+    "name": "مكانس تركي ريش رطب",
+    "price": "1200",
+    "description": "مكانس تركي ريش رطب أصلية بثلاثة مقاسات، بمقبض عملي وريش مرن مناسب لكنس الأرضيات والاستخدام اليومي في البيت.",
+    "keywords": "مكانس,مكانس تركي,مكانس تركية,مكنسة,مكنسة تركي,مكنسة تركية,مكنسات,مكانس ريش,مكنسة ريش,مكانس ريش رطب,مكنسة ريش رطب,ريش رطب,ريش مبلل,مقشة,مقشه,مقشات,مقشة تركي,مقشة ريش,مكنسة أرضيات,تنظيف أرضيات,أدوات تنظيف,مستلزمات المنزل,رقم 1 الكبير,رقم1 الكبير,رقم 2,رقم2,رقم 3,رقم3,كبير,وسط,صغير,1200 ريال,1000 ريال,800 ريال",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/turkish-wet-bristle-brooms/turkish-wet-bristle-brooms.jpg\"]",
+    "variants": "[{\"name\": \"رقم 1 الكبير\", \"price\": 1200}, {\"name\": \"رقم 2\", \"price\": 1000}, {\"name\": \"رقم 3\", \"price\": 800}]"
+  },
+  "سلك غسيل أبو مقبض الأصلي": {
+    "name": "سلك غسيل أبو مقبض الأصلي",
+    "price": "300",
+    "description": "سلك غسيل أصلي بمقبض عملي ومريح، العدد 1، مناسب لجلي الصحون والأواني وإزالة الدهون في المطبخ.",
+    "keywords": "سلك غسيل,سلك غسيل ابو مقبض,سلك غسيل أبو مقبض,سلك ابو مقبض,سلك أبو مقبض,ابو مقبض,أبو مقبض,سلك جلي أبو مقبض,سلك صحون أبو مقبض,سلك مواعين أبو مقبض,ليفة أبو مقبض,ليفة بمقبض,ليفة جلي,سلك تنظيف,سلك دهون,سلك أصلي,سلك الاصلي,جلي صحون,تنظيف صحون,تنظيف أواني,قطعة واحدة,حبة واحدة,العدد 1,300 ريال,أدوات تنظيف,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/handled-scouring-pads/original-handled-scouring-pad.jpg\"]",
+    "variants": ""
   }
 }
