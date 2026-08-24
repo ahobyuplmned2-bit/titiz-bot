@@ -43,6 +43,8 @@ from database import (
     update_product_fields, claim_customer_followup, release_customer_followup,
     claim_processed_webhook_message, record_message_event, update_message_event,
     get_message_events, reserve_owner_notification_sequence,
+    enqueue_owner_notification, claim_pending_owner_notifications,
+    mark_owner_notification_sent, release_owner_notification,
     db_lock, DB_PATH, set_order_sync_callback,
 )
 from whatsapp_api import WhatsAppAPI, format_product_card, parse_product_price
@@ -120,6 +122,13 @@ PRODUCT_FOLLOWUP_POLL_SECONDS = max(
 FOLLOWUP_WORKER_ENABLED = os.environ.get("FOLLOWUP_WORKER_ENABLED", "true").strip().lower() not in {
     "0", "false", "no", "off"
 }
+OWNER_NOTIFICATION_RETRY_BASE_SECONDS = max(
+    float(os.environ.get("OWNER_NOTIFICATION_RETRY_BASE_SECONDS", "15")), 0.0
+)
+OWNER_NOTIFICATION_RETRY_MAX_SECONDS = max(
+    float(os.environ.get("OWNER_NOTIFICATION_RETRY_MAX_SECONDS", "300")),
+    OWNER_NOTIFICATION_RETRY_BASE_SECONDS,
+)
 FOLLOWUP_CRON_TOKEN = os.environ.get("FOLLOWUP_CRON_TOKEN", "").strip()
 PRODUCT_NEXT_DAY_DELAY_SECONDS = max(
     int(os.environ.get("PRODUCT_NEXT_DAY_DELAY_SECONDS", "43200")), 60
@@ -258,11 +267,54 @@ def process_due_customer_followups_once():
             release_customer_followup(phone_number, due_at, "فشل إرسال رسالة واتساب")
             print(f"[التذكير] فشل إرسال تذكير العميل {phone_number}؛ ستتم إعادة المحاولة")
 
+
+def _send_claimed_owner_notification(notification):
+    """إرسال إشعار إدارة محفوظ، ولا يعلّمه مرسلاً إلا بعد نجاح WhatsApp."""
+    notification_id = notification["id"]
+    res = send_message(OWNER_NUMBER, notification["notification_text"])
+    if res:
+        mark_owner_notification_sent(notification_id)
+        if isinstance(res, str) and res.startswith("wamid."):
+            record_message_event(
+                whatsapp_message_id=res,
+                direction="outbound",
+                phone_number=notification["phone_number"],
+                message_type="text",
+                body=notification["notification_text"],
+            )
+        return True
+
+    attempts_after_failure = int(notification.get("attempt_count") or 0) + 1
+    retry_delay = min(
+        OWNER_NOTIFICATION_RETRY_BASE_SECONDS * (2 ** max(attempts_after_failure - 1, 0)),
+        OWNER_NOTIFICATION_RETRY_MAX_SECONDS,
+    )
+    release_owner_notification(
+        notification_id,
+        time.time() + retry_delay,
+        "فشل إرسال WhatsApp إلى الإدارة؛ ستتم إعادة المحاولة",
+    )
+    print(f"[إشعارات الإدارة] فشل الإرسال للإشعار {notification_id}؛ ستتم إعادة المحاولة")
+    return False
+
+
+def process_pending_owner_notifications_once(limit=20, notification_id=None):
+    """إرسال الإشعارات المعلقة مرة واحدة؛ تستخدم في العامل الخلفي وRender Cron والاختبارات."""
+    delivered = 0
+    for notification in claim_pending_owner_notifications(
+        limit=limit,
+        notification_id=notification_id,
+    ):
+        if _send_claimed_owner_notification(notification):
+            delivered += 1
+    return delivered
+
 def product_followup_worker():
     """عامل خلفي يرسل التذكيرات المستحقة مرة واحدة فقط."""
     while True:
         try:
             process_due_customer_followups_once()
+            process_pending_owner_notifications_once()
         except Exception as exc:
             print(f"خطأ في عامل تذكير العملاء: {exc}")
         time.sleep(PRODUCT_FOLLOWUP_POLL_SECONDS)
@@ -2629,16 +2681,18 @@ def notify_owner(sender, msg_body, message_event_id=None):
         f"🆔 رقم الرسالة: {message_reference}\n"
         "━━━━━━━━━━━━"
     )
-    res = send_message(OWNER_NUMBER, notification)
-    # إذا أعادت send_message معرف رسالة واتساب (wamid) حقيقي، نسجله في الأحداث لكي يعمل الرد المقتبس 100%
-    if res and isinstance(res, str) and res.startswith("wamid."):
-        record_message_event(
-            whatsapp_message_id=res,
-            direction="outbound",
-            phone_number=sender,
-            message_type="text",
-            body=notification,
-        )
+    notification_id = enqueue_owner_notification(
+        sender,
+        notification,
+        message_event_id=message_event_id,
+    )
+    if not notification_id:
+        print("[إشعارات الإدارة] تعذر حفظ إشعار العميل قبل الإرسال")
+        return False
+    return bool(process_pending_owner_notifications_once(
+        limit=1,
+        notification_id=notification_id,
+    ))
 
 
 def notify_owner_unavailable_product(sender, request_text, source="text", image_id=""):
@@ -5020,7 +5074,12 @@ def run_followups_endpoint():
         return jsonify({"error": "unauthorized"}), 401
     try:
         process_due_customer_followups_once()
-        return jsonify({"ok": True, "processed_at": datetime.now(YEMEN_TIMEZONE).isoformat(timespec="seconds")}), 200
+        owner_notifications_sent = process_pending_owner_notifications_once()
+        return jsonify({
+            "ok": True,
+            "owner_notifications_sent": owner_notifications_sent,
+            "processed_at": datetime.now(YEMEN_TIMEZONE).isoformat(timespec="seconds"),
+        }), 200
     except Exception as exc:
         print(f"[التذكير] فشل تشغيل endpoint التذكيرات: {exc}")
         return jsonify({"ok": False, "error": str(exc)}), 500

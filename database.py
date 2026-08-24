@@ -219,6 +219,29 @@ def init_db():
             )
         ''')
 
+        # صندوق دائم لإشعارات الإدارة. لا تضيع رسالة العميل إذا أخفق إرسال
+        # WhatsApp مؤقتاً؛ تبقى pending حتى تنجح دورة إعادة المحاولة.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS owner_notification_outbox (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_event_id INTEGER UNIQUE,
+                phone_number TEXT NOT NULL,
+                notification_text TEXT NOT NULL,
+                state TEXT NOT NULL DEFAULT 'pending',
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                next_attempt_at REAL NOT NULL,
+                locked_until REAL,
+                sent_at REAL,
+                last_error TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_owner_notification_outbox_due "
+            "ON owner_notification_outbox(state, next_attempt_at)"
+        )
+
         # ردود الإدارة المؤجلة حتى يراسل العميل البوت لأول مرة.
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS pending_replies (
@@ -454,6 +477,104 @@ def reserve_owner_notification_sequence(phone_number="", message_event_id=None):
     except Exception as exc:
         print(f"[إشعارات الإدارة] تعذر حجز رقم الرسالة: {exc}")
         return None
+
+
+def enqueue_owner_notification(phone_number, notification_text, message_event_id=None, due_at=None):
+    """حفظ إشعار الإدارة قبل الإرسال حتى لا يفقد عند خطأ WhatsApp."""
+    due_at = float(time.time() if due_at is None else due_at)
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                """
+                INSERT INTO owner_notification_outbox
+                    (message_event_id, phone_number, notification_text, next_attempt_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (message_event_id, str(phone_number or ""), str(notification_text or ""), due_at),
+            )
+            notification_id = cursor.lastrowid
+        except sqlite3.IntegrityError:
+            row = cursor.execute(
+                "SELECT id FROM owner_notification_outbox WHERE message_event_id = ?",
+                (message_event_id,),
+            ).fetchone()
+            notification_id = int(row[0]) if row else None
+        conn.commit()
+        conn.close()
+        return notification_id
+
+
+def claim_pending_owner_notifications(limit=20, notification_id=None, now=None, lock_seconds=60):
+    """قفل إشعارات الإدارة المستحقة بصورة ذرية قبل محاولة إرسالها."""
+    now = float(time.time() if now is None else now)
+    limit = max(int(limit or 1), 1)
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        filters = ["state = 'pending'", "next_attempt_at <= ?", "(locked_until IS NULL OR locked_until <= ?)"]
+        params = [now, now]
+        if notification_id is not None:
+            filters.append("id = ?")
+            params.append(int(notification_id))
+        rows = conn.execute(
+            "SELECT * FROM owner_notification_outbox WHERE " + " AND ".join(filters) +
+            " ORDER BY id ASC LIMIT ?",
+            (*params, limit),
+        ).fetchall()
+        claimed = []
+        for row in rows:
+            cursor = conn.execute(
+                """
+                UPDATE owner_notification_outbox
+                SET locked_until = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND state = 'pending'
+                  AND (locked_until IS NULL OR locked_until <= ?)
+                """,
+                (now + max(float(lock_seconds or 1), 1.0), row["id"], now),
+            )
+            if cursor.rowcount:
+                claimed.append(dict(row))
+        conn.commit()
+        conn.close()
+        return claimed
+
+
+def mark_owner_notification_sent(notification_id):
+    """تعليم إشعار الإدارة كمرسل بعد قبول WhatsApp له فقط."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.execute(
+            """
+            UPDATE owner_notification_outbox
+            SET state = 'sent', sent_at = ?, locked_until = NULL, last_error = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND state = 'pending'
+            """,
+            (time.time(), int(notification_id)),
+        )
+        conn.commit()
+        conn.close()
+        return cursor.rowcount > 0
+
+
+def release_owner_notification(notification_id, retry_at, error_text=""):
+    """إلغاء قفل الإشعار الفاشل وجدولة محاولة جديدة مع حفظ سبب الفشل."""
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.execute(
+            """
+            UPDATE owner_notification_outbox
+            SET locked_until = NULL, attempt_count = attempt_count + 1,
+                next_attempt_at = ?, last_error = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND state = 'pending'
+            """,
+            (float(retry_at), str(error_text or "")[:500], int(notification_id)),
+        )
+        conn.commit()
+        conn.close()
+        return cursor.rowcount > 0
 
 
 def update_message_event(event_id, **fields):
