@@ -93,6 +93,18 @@ assert "سلك غسيل أبو مقبض" in handled_scouring_pad["keywords"], "�
 assert "سلك جلي أبو مقبض" in handled_scouring_pad["keywords"], "كلمة سلك جلي أبو مقبض المفتاحية مفقودة"
 assert len(json.loads(handled_scouring_pad["image_urls"])) == 1, "يجب أن يحتوي سلك أبو مقبض على صورة واحدة"
 
+onion_chopper = catalog.get("عصارة البصل الفريدة الأصلية")
+assert isinstance(onion_chopper, dict), "سجل عصارة البصل الفريدة مفقود"
+assert onion_chopper["price"] == "1500", "سعر عصارة البصل الفريدة يجب أن يكون 1500"
+assert "عصارات بصل" in onion_chopper["keywords"] and "مفرمة بصل" in onion_chopper["keywords"], "كلمات عصارة البصل المفتاحية مفقودة"
+assert len(json.loads(onion_chopper["image_urls"])) == 1, "يجب أن تحتوي عصارة البصل على صورة واحدة"
+
+fava_masher = catalog.get("ممهَد فول استيل أصلي")
+assert isinstance(fava_masher, dict), "سجل ممهد الفول مفقود"
+assert fava_masher["price"] == "500", "سعر ممهد الفول يجب أن يكون 500"
+assert "ممهد فول" in fava_masher["keywords"] and "هراسة بطاطس" in fava_masher["keywords"], "كلمات ممهد الفول المفتاحية مفقودة"
+assert len(json.loads(fava_masher["image_urls"])) == 1, "يجب أن يحتوي ممهد الفول على صورة واحدة"
+
 for relative_path in (
     "assets/products/gloves/washing-gloves.jpg",
     "assets/products/gloves/soap-gloves.jpg",

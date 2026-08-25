@@ -1062,5 +1062,23 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/handled-scouring-pads/original-handled-scouring-pad.jpg\"]",
     "variants": ""
+  },
+  "عصارة البصل الفريدة الأصلية": {
+    "name": "عصارة البصل الفريدة الأصلية",
+    "price": "1500",
+    "description": "عصارة بصل يدوية أصلية من المائدة، مناسبة لتقطيع وفرم البصل بسهولة للاستخدام اليومي في المطبخ.",
+    "keywords": "عصارة بصل,عصارات بصل,عصاره بصل,عصارات بصل اصلية,عصارة البصل,عصارة البصل الفريدة,عصارة بصل الفريدة,عصارة المائدة,عصارات المائدة,مفرمة بصل,فرامة بصل,فرامه بصل,قطاعة بصل,تقطيع البصل,فرم البصل,تقطيع وفرم البصل,عصارة يدوية,فرامة يدوية,مفرمة يدوية,أداة بصل,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ,أصلي,الأصلي,1500 ريال",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/onion-choppers/onion-chopper-almafada.jpg\"]",
+    "variants": ""
+  },
+  "ممهَد فول استيل أصلي": {
+    "name": "ممهَد فول استيل أصلي",
+    "price": "500",
+    "description": "ممهَد فول استيل أصلي بمقبض عملي، مناسب لهرس الفول والبطاطس والخضروات في المطبخ.",
+    "keywords": "ممهَد فول,ممهد فول,مهراس فول,مهرس فول,هراسة فول,مدق فول,هرّاسة فول,ممهَد استيل,ممهد استيل,ممهَد فول استيل,ممهد فول استيل,هراسة استيل,مهراس استيل,مدق استيل,مهرسة بطاطس,هراسة بطاطس,هراسة خضار,هرس الفول,هرس البطاطس,هرس الخضروات,أداة هرس,أداة مطبخ,أدوات مطبخ,مستلزمات المطبخ,أصلي,استيل أصلي,500 ريال",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/steel-fava-mashers/steel-fava-masher.jpg\"]",
+    "variants": ""
   }
 }

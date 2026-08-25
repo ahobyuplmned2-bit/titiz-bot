@@ -78,4 +78,16 @@ handled_scourer_names = {product["name"] for product in handled_scourer_matches}
 assert "سلك غسيل أبو مقبض الأصلي" in handled_scourer_names
 assert "موب بلاط مع العصا" not in handled_scourer_names
 
+onion_matches = app.match_products_from_text("عصارات بصل", real_catalog)
+onion_names = {product["name"] for product in onion_matches}
+assert "عصارة البصل الفريدة الأصلية" in onion_names
+assert "قدور استيل" not in onion_names
+assert "جاك استيل" not in onion_names
+
+fava_matches = app.match_products_from_text("ممهد فول استيل", real_catalog)
+fava_names = {product["name"] for product in fava_matches}
+assert "ممهَد فول استيل أصلي" in fava_names
+assert "قدور استيل" not in fava_names
+assert "اقلاص استيل غير طويل" not in fava_names
+
 print("image_related_products_test: OK")
