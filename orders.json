@@ -118,5 +118,25 @@
     "payment_proof_url": "",
     "created_at": "2026-08-23 18:11:59",
     "updated_at": "2026-08-23 18:11:59"
+  },
+  "ORD-000007": {
+    "order_number": "ORD-000007",
+    "phone_number": "967712282204",
+    "customer_name": "ام مالك",
+    "address": "جوله العدين بقاله المنصوب",
+    "products_data": [
+      {
+        "name": "قلص شاي صيفي ستار تشكيلة العلبة 6 قطع",
+        "qty": 1,
+        "price": 1400.0,
+        "total": 1400.0
+      }
+    ],
+    "total_price": 1400.0,
+    "payment_method": "الدفع عند الاستلام",
+    "order_status": "جديد",
+    "payment_proof_url": "",
+    "created_at": "2026-08-25 10:39:33",
+    "updated_at": "2026-08-25 10:39:33"
   }
 }
