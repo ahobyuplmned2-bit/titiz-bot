@@ -68,6 +68,18 @@ assert "كتلي شاي ستيل أبو صفارة" in tea_kettle_names
 assert not expected_saifi_names & tea_kettle_names
 assert "قدور استيل" not in tea_kettle_names
 
+tea_pots_matches = app.match_products_from_text("برادات شاي", real_catalog)
+tea_pots_names = {product["name"] for product in tea_pots_matches}
+assert "كتلي شاي ستيل أبو صفارة" in tea_pots_names
+assert not expected_saifi_names & tea_pots_names
+assert "قدور استيل" not in tea_pots_names
+
+tea_kettle_typo_matches = app.match_products_from_text("كتال شاي", real_catalog)
+tea_kettle_typo_names = {product["name"] for product in tea_kettle_typo_matches}
+assert "كتلي شاي ستيل أبو صفارة" in tea_kettle_typo_names
+assert not expected_saifi_names & tea_kettle_typo_names
+assert "قدور استيل" not in tea_kettle_typo_names
+
 broom_matches = app.match_products_from_text("مكنسة تركي ريش رطب", real_catalog)
 broom_names = {product["name"] for product in broom_matches}
 assert "مكانس تركي ريش رطب" in broom_names
