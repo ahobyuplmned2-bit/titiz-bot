@@ -105,6 +105,25 @@ assert fava_masher["price"] == "500", "سعر ممهد الفول يجب أن ي
 assert "ممهد فول" in fava_masher["keywords"] and "هراسة بطاطس" in fava_masher["keywords"], "كلمات ممهد الفول المفتاحية مفقودة"
 assert len(json.loads(fava_masher["image_urls"])) == 1, "يجب أن يحتوي ممهد الفول على صورة واحدة"
 
+kaak_molds = catalog.get("مطابع كعك ومعمول أبو 10 نقشات")
+assert isinstance(kaak_molds, dict), "سجل مطابع كعك ومعمول أبو 10 نقشات مفقود"
+assert kaak_molds["price"] == "1200", "سعر مطابع كعك ومعمول أبو 10 نقشات يجب أن يكون 1200"
+assert "10 نقشات" in kaak_molds["keywords"] and "مطابع معمول" in kaak_molds["keywords"], "كلمات المطابع الجديدة مفقودة"
+assert len(json.loads(kaak_molds["image_urls"])) == 1, "يجب أن تحتوي المطابع الجديدة على صورة واحدة"
+
+steel_dough_bowls = catalog.get("معاجن استيل")
+assert isinstance(steel_dough_bowls, dict), "سجل معاجن استيل مفقود"
+assert steel_dough_bowls["price"] == "1000", "السعر الأساسي للمعاجن يجب أن يكون 1000"
+assert "عجين" in steel_dough_bowls["keywords"] and "عجانه" in steel_dough_bowls["keywords"], "كلمات المعاجن والعجين مفقودة"
+assert steel_dough_bowls["variants"] == [
+    {"name": "مقاس 1", "price": "1000"},
+    {"name": "مقاس 2", "price": "1400"},
+    {"name": "مقاس 3", "price": "1800"},
+    {"name": "مقاس 4", "price": "2000"},
+    {"name": "مقاس 5", "price": "2200"},
+], "مقاسات المعاجن أو أسعارها غير صحيحة"
+assert len(json.loads(steel_dough_bowls["image_urls"])) == 1, "يجب أن تحتوي المعاجن على صورة واحدة"
+
 for relative_path in (
     "assets/products/gloves/washing-gloves.jpg",
     "assets/products/gloves/soap-gloves.jpg",
@@ -130,6 +149,8 @@ for relative_path in (
     "assets/products/spice-jars/spice-jars-9-with-3-racks.jpg",
     "assets/products/turkish-wet-bristle-brooms/turkish-wet-bristle-brooms.jpg",
     "assets/products/handled-scouring-pads/original-handled-scouring-pad.jpg",
+    "assets/products/kaak-molds/kaak-maamoul-mold-10-patterns.jpg",
+    "assets/products/steel-dough-bowls/steel-dough-bowls-5-sizes.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"

@@ -102,4 +102,16 @@ assert "ممهَد فول استيل أصلي" in fava_names
 assert "قدور استيل" not in fava_names
 assert "اقلاص استيل غير طويل" not in fava_names
 
+kaak_matches = app.match_products_from_text("مطابع كعك ومعمول ابو 10 نقشات", real_catalog)
+kaak_names = {product["name"] for product in kaak_matches}
+assert "مطابع كعك ومعمول أبو 10 نقشات" in kaak_names
+assert "مطابع كعك صغيرة أبو 10" not in kaak_names
+assert "معاجن استيل" not in kaak_names
+
+steel_dough_matches = app.match_products_from_text("معاجن عجين عجانه", real_catalog)
+steel_dough_names = {product["name"] for product in steel_dough_matches}
+assert "معاجن استيل" in steel_dough_names
+assert "مطابع كعك ومعمول أبو 10 نقشات" not in steel_dough_names
+assert "قدور استيل" not in steel_dough_names
+
 print("image_related_products_test: OK")

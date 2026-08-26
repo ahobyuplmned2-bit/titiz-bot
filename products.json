@@ -1080,5 +1080,46 @@
     "image_id": "",
     "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/steel-fava-mashers/steel-fava-masher.jpg\"]",
     "variants": ""
+  },
+
+  "مطابع كعك ومعمول أبو 10 نقشات": {
+    "name": "مطابع كعك ومعمول أبو 10 نقشات",
+    "price": "1200",
+    "description": "مطابع يدوية للكعك والمعمول، تحتوي على 10 نقوش وأشكال متنوعة للخبز والحلويات.",
+    "keywords": "مطابع كعك ومعمول,مطابع كعك,مطابع معمول,مطبعة كعك,مطبعة معمول,قوالب كعك,قوالب معمول,مطابع ابو 10 نقشات,مطابع أبو 10 نقشات,ابو 10 نقشات,أبو 10 نقشات,10 نقشات,عشرة نقوش,قالب كعك,قالب معمول,مكبس كعك,مكبس معمول,قوالب حلويات,أدوات حلويات,أدوات مطبخ,1200 ريال",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/kaak-molds/kaak-maamoul-mold-10-patterns.jpg\"]",
+    "variants": ""
+  },
+  "معاجن استيل": {
+    "name": "معاجن استيل",
+    "price": "1000",
+    "description": "معاجن وأوعية استيل لتحضير العجين والطبخ، متوفرة بخمسة مقاسات وأسعار مختلفة.",
+    "keywords": "معاجن,معجن,معاجن استيل,معاجن ستيل,معاجن استانلس,معاجن ستانلس,عجين,عجينة,عجانة,عجانه,عجان,أوعية عجين,اوعية عجين,طاسات عجين,طاسه عجين,طاسة عجين,أوعية استيل,أوعية ستيل,زبدية استيل,زبدية عجين,أدوات مطبخ,مستلزمات المطبخ",
+    "image_id": "",
+    "image_urls": "[\"https://raw.githubusercontent.com/ahobyuplmned2-bit/titiz-bot/main/assets/products/steel-dough-bowls/steel-dough-bowls-5-sizes.jpg\"]",
+    "variants": [
+      {
+        "name": "مقاس 1",
+        "price": "1000"
+      },
+      {
+        "name": "مقاس 2",
+        "price": "1400"
+      },
+      {
+        "name": "مقاس 3",
+        "price": "1800"
+      },
+      {
+        "name": "مقاس 4",
+        "price": "2000"
+      },
+      {
+        "name": "مقاس 5",
+        "price": "2200"
+      }
+    ]
   }
+
 }
