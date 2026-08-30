@@ -10,7 +10,7 @@ CATALOG_PATH = PROJECT / "products.json"
 
 # هذا الحد هو عدد المنتجات عند تثبيت الحماية. يمكن زيادة العدد عند إضافة منتجات
 # مأذون بها، لكن انخفاضه يعني أن سجلاً اختفى ويجب إيقاف الرفع.
-MINIMUM_PRODUCT_COUNT = 102
+MINIMUM_PRODUCT_COUNT = 103
 
 PROTECTED_GROUPS = {
     "تشكيلات اقلاص شاي صيفي ستار": {
@@ -93,6 +93,12 @@ PROTECTED_GROUPS = {
         "price": "1000",
         "products": {
             "معاجن استيل": "steel-dough-bowls-5-sizes.jpg",
+        },
+    },
+    "كتالي أبيض من منتجات الدار": {
+        "price": "2500",
+        "products": {
+            "كتالي أبيض من منتجات الدار": "al-dar-white-ktali.jpg",
         },
     },
 }

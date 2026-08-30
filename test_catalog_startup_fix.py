@@ -124,6 +124,19 @@ assert steel_dough_bowls["variants"] == [
 ], "مقاسات المعاجن أو أسعارها غير صحيحة"
 assert len(json.loads(steel_dough_bowls["image_urls"])) == 1, "يجب أن تحتوي المعاجن على صورة واحدة"
 
+al_dar_ktali = catalog.get("كتالي أبيض من منتجات الدار")
+assert isinstance(al_dar_ktali, dict), "سجل كتالي أبيض من منتجات الدار مفقود"
+assert al_dar_ktali["price"] == "2500", "السعر الأساسي لكتالي الدار يجب أن يكون 2500"
+assert "كتالي الدار" in al_dar_ktali["keywords"] and "برادات شاي" in al_dar_ktali["keywords"], "كلمات كتالي الدار المفتاحية مفقودة"
+assert json.loads(al_dar_ktali["variants"]) == [
+    {"name": "4 لتر", "price": 2500},
+    {"name": "3 لتر", "price": 2000},
+    {"name": "1.5 لتر", "price": 1800},
+    {"name": "نصف لتر", "price": 1000},
+    {"name": "1 لتر", "price": 1300},
+], "أحجام كتالي الدار أو أسعارها غير صحيحة"
+assert len(json.loads(al_dar_ktali["image_urls"])) == 1, "يجب أن يحتوي كتالي الدار على صورة واحدة"
+
 for relative_path in (
     "assets/products/gloves/washing-gloves.jpg",
     "assets/products/gloves/soap-gloves.jpg",
@@ -151,6 +164,7 @@ for relative_path in (
     "assets/products/handled-scouring-pads/original-handled-scouring-pad.jpg",
     "assets/products/kaak-molds/kaak-maamoul-mold-10-patterns.jpg",
     "assets/products/steel-dough-bowls/steel-dough-bowls-5-sizes.jpg",
+    "assets/products/al-dar-white-ktali/al-dar-white-ktali.jpg",
 ):
     image_path = Path(relative_path)
     assert image_path.exists() and image_path.stat().st_size > 0, f"صورة المنتج مفقودة: {relative_path}"

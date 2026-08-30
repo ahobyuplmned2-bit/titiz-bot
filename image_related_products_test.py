@@ -114,4 +114,15 @@ assert "معاجن استيل" in steel_dough_names
 assert "مطابع كعك ومعمول أبو 10 نقشات" not in steel_dough_names
 assert "قدور استيل" not in steel_dough_names
 
+al_dar_ktali_matches = app.match_products_from_text("كتالي ابيض منتجات الدار 4 لتر", real_catalog)
+al_dar_ktali_names = {product["name"] for product in al_dar_ktali_matches}
+assert "كتالي أبيض من منتجات الدار" in al_dar_ktali_names
+assert "كتلي شاي ستيل أبو صفارة" not in al_dar_ktali_names
+assert "قدور استيل" not in al_dar_ktali_names
+
+al_dar_kettle_matches = app.match_products_from_text("برادات شاي الدار", real_catalog)
+al_dar_kettle_names = {product["name"] for product in al_dar_kettle_matches}
+assert "كتالي أبيض من منتجات الدار" in al_dar_kettle_names
+assert "قدور استيل" not in al_dar_kettle_names
+
 print("image_related_products_test: OK")
