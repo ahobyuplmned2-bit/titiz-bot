@@ -44,10 +44,34 @@ class WhatsAppAPI:
             float(os.environ.get("WHATSAPP_429_COOLDOWN_SECONDS", "8")), 1.0
         )
 
+    @staticmethod
+    def _response_detail(response):
+        """إرجاع تفاصيل خطأ Meta الآمنة للسجل دون كشف التوكن أو كامل الطلب."""
+        if not response:
+            return "لا يوجد رد من WhatsApp"
+        try:
+            data = response.json() or {}
+            error = data.get("error") or {}
+            if error:
+                return " ".join(
+                    part for part in (
+                        f"code={error.get('code')}",
+                        f"subcode={error.get('error_subcode')}",
+                        f"type={error.get('type')}",
+                        f"message={error.get('message')}",
+                    ) if part and not part.endswith("=None")
+                )[:500]
+        except (AttributeError, ValueError, TypeError):
+            pass
+        return f"status={response.status_code} body={response.text[:300]}"
+
     def _post_outbound_message(self, headers, payload, timeout=10):
         """إرسال متسلسل نظيف ووحيد لكل رسالة بدون إعادة محاولة عمياء، مع فاصل زمني آمن (0.8 ثانية) لتفادي خطأ 429."""
         with self._outbound_lock:
             now = time.monotonic()
+            if now < self._cooldown_until:
+                print("[واتساب] تم تخطي الإرسال مؤقتاً بسبب حد الطلبات 429")
+                return None
             wait_seconds = 0.8 - (now - self._last_outbound_at)
             if wait_seconds > 0:
                 time.sleep(wait_seconds)
@@ -58,6 +82,7 @@ class WhatsAppAPI:
                 return None
             self._last_outbound_at = time.monotonic()
             if response.status_code == 429:
+                self._cooldown_until = time.monotonic() + self._rate_limit_cooldown
                 print(f"[واتساب] تنبيه 429: تم الوصول لحد الطلبات من واتساب، يرجى التمهيد بين الرسائل.")
             return response
     
@@ -85,6 +110,7 @@ class WhatsAppAPI:
                 if messages:
                     return messages[0].get("id", True)
                 return True
+            print(f"[واتساب] فشل إرسال النص: {self._response_detail(response)}")
             return False
         except Exception as e:
             print(f"خطأ في إرسال الرسالة: {e}")
