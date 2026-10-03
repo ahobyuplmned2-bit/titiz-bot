@@ -5197,11 +5197,11 @@ def load_orders_from_github():
     except Exception as e:
         print(f"[بدء التشغيل] خطأ في استعادة الطلبات: {e}")
 
-# تسجيل الحفظ التلقائي قبل استعادة الطلبات أو استقبال أي رسالة.
+# تسجيل الحفظ التلقائي بعد استعادة الطلبات؛ لا نرفع نسخة جديدة أثناء الإقلاع.
+# رفع orders.json عند كل تشغيل كان يطلق نشر Railway جديداً بلا نهاية.
 set_order_sync_callback(sync_orders_to_github)
 
 # استعادة الكتالوج أولاً حتى لا تبقى منتجات GitHub الجديدة غير موجودة في SQLite بعد إعادة التشغيل.
 # بعدها تُستعاد الطلبات وتُرفع أي تغييرات محلية لم تكن على GitHub.
 load_products_from_github()
 load_orders_from_github()
-sync_orders_to_github()
