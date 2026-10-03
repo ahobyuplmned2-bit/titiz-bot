@@ -76,10 +76,16 @@ class WhatsAppAPI:
             wait_seconds = self._min_outbound_interval - (time.monotonic() - self._last_outbound_at)
             if wait_seconds > 0:
                 time.sleep(wait_seconds)
-            try:
-                response = requests.post(self.messages_url, headers=headers, json=payload, timeout=timeout)
-            except Exception as ex:
-                print(f"[واتساب] خطأ شبكة أثناء الإرسال: {ex}")
+            response = None
+            for attempt in range(1, 3):
+                try:
+                    response = requests.post(self.messages_url, headers=headers, json=payload, timeout=timeout)
+                    break
+                except requests.RequestException as ex:
+                    print(f"[واتساب] خطأ شبكة أثناء الإرسال (محاولة {attempt}/2): {ex}")
+                    if attempt < 2:
+                        time.sleep(1.0)
+            if response is None:
                 return None
             self._last_outbound_at = time.monotonic()
             if response.status_code == 429:

@@ -1626,7 +1626,9 @@ def interpret_customer_message(sender, user_text):
     except Exception as exc:
         if event_id:
             update_message_event(event_id, ai_model=SMART_AI_MODEL, ai_status="error", ai_result=str(exc))
-        raise
+        # تعطل مزود الذكاء لا يجب أن يمنع مسار الردود المبرمجة والبحث في الكتالوج.
+        print(f"[الذكاء] سيتم استخدام الرد الاحتياطي بسبب تعطل المزود: {exc}")
+        return None
 
 
 def route_semantic_intent(sender, msg_body, semantic_result, products=None):
@@ -1774,20 +1776,24 @@ def generate_smart_reply(sender, user_text):
         "temperature": 0.2,
         **_llm_token_limit(500),
     }
-    response = _request_with_429_retry(
-        requests.post,
-        "إنشاء الرد الذكي",
-        f"{SMART_AI_API_BASE}/chat/completions",
-        headers={
-            "Authorization": f"Bearer {SMART_AI_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json=payload,
-        timeout=45,
-        retries=1,
-        retry_base=0.2,
-    )
-    response.raise_for_status()
+    try:
+        response = _request_with_429_retry(
+            requests.post,
+            "إنشاء الرد الذكي",
+            f"{SMART_AI_API_BASE}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {SMART_AI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=45,
+            retries=1,
+            retry_base=0.2,
+        )
+        response.raise_for_status()
+    except Exception as exc:
+        print(f"[الذكاء] سيتم استخدام الرد الاحتياطي بسبب تعطل المزود: {exc}")
+        return None
     result = response.json()
     reply = (result.get("choices", [{}])[0].get("message", {}).get("content") or "").strip() or None
     event_id = active_message_events.get(sender)
