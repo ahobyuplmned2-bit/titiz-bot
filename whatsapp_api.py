@@ -70,9 +70,10 @@ class WhatsAppAPI:
         with self._outbound_lock:
             now = time.monotonic()
             if now < self._cooldown_until:
-                print("[واتساب] تم تخطي الإرسال مؤقتاً بسبب حد الطلبات 429")
-                return None
-            wait_seconds = 0.8 - (now - self._last_outbound_at)
+                cooldown_wait = self._cooldown_until - now
+                print(f"[واتساب] انتظار {cooldown_wait:.1f} ثانية بعد 429 قبل إعادة الإرسال")
+                time.sleep(cooldown_wait)
+            wait_seconds = self._min_outbound_interval - (time.monotonic() - self._last_outbound_at)
             if wait_seconds > 0:
                 time.sleep(wait_seconds)
             try:
