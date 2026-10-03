@@ -47,7 +47,9 @@ class WhatsAppAPI:
     @staticmethod
     def _response_detail(response):
         """إرجاع تفاصيل خطأ Meta الآمنة للسجل دون كشف التوكن أو كامل الطلب."""
-        if not response:
+        # كائن requests.Response يكون False تلقائياً عند status >= 400،
+        # لكنه يظل ردًا حقيقيًا من Meta ويحتوي سبب الخطأ.
+        if response is None:
             return "لا يوجد رد من WhatsApp"
         try:
             data = response.json() or {}
