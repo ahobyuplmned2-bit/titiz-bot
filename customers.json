@@ -5,8 +5,8 @@
     "address": "شارع العدين \nبقاله الجراش",
     "first_order_date": null,
     "order_count": 0,
-    "created_at": "2026-08-16 09:12:11",
-    "updated_at": "2026-08-16 09:12:11"
+    "created_at": "2026-10-04 21:28:27",
+    "updated_at": "2026-10-04 21:28:27"
   },
   "967712282204": {
     "phone_number": "967712282204",
@@ -14,8 +14,8 @@
     "address": "جوله العدين بقاله المنصوب",
     "first_order_date": null,
     "order_count": 0,
-    "created_at": "2026-08-16 09:12:11",
-    "updated_at": "2026-08-16 09:15:17"
+    "created_at": "2026-10-04 21:28:27",
+    "updated_at": "2026-10-04 21:28:27"
   },
   "967778138769": {
     "phone_number": "967778138769",
@@ -23,8 +23,8 @@
     "address": "المركزي \nالوكيل لمس",
     "first_order_date": null,
     "order_count": 0,
-    "created_at": "2026-08-16 09:12:11",
-    "updated_at": "2026-08-16 09:12:11"
+    "created_at": "2026-10-04 21:28:27",
+    "updated_at": "2026-10-04 21:28:27"
   },
   "967774405284": {
     "phone_number": "967774405284",
@@ -32,8 +32,8 @@
     "address": "سعوان جوار السفارة الامريكية",
     "first_order_date": null,
     "order_count": 0,
-    "created_at": "2026-08-16 09:12:11",
-    "updated_at": "2026-08-16 09:12:11"
+    "created_at": "2026-10-04 21:28:27",
+    "updated_at": "2026-10-04 21:28:27"
   },
   "967780953749": {
     "phone_number": "967780953749",
@@ -41,7 +41,16 @@
     "address": "مفرق جبله",
     "first_order_date": null,
     "order_count": 0,
-    "created_at": "2026-08-16 09:12:11",
-    "updated_at": "2026-08-16 09:12:11"
+    "created_at": "2026-10-04 21:28:27",
+    "updated_at": "2026-10-04 21:28:27"
+  },
+  "967775792507": {
+    "phone_number": "967775792507",
+    "name": "وكيف طريقه الدفع",
+    "address": "",
+    "first_order_date": null,
+    "order_count": 0,
+    "created_at": "2026-10-04 21:47:42",
+    "updated_at": "2026-10-04 21:47:42"
   }
 }
