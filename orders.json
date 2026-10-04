@@ -178,5 +178,25 @@
     "payment_proof_url": "",
     "created_at": "2026-10-04 21:27:09",
     "updated_at": "2026-10-04 21:27:47"
+  },
+  "ORD-000010": {
+    "order_number": "ORD-000010",
+    "phone_number": "967775792507",
+    "customer_name": "امير الساده\nطريقه الدفع عبر تطبيق جيب",
+    "address": "المركزي محل وكيل لمس",
+    "products_data": [
+      {
+        "name": "عصارة الدار بلاستيك مدورة أصلية",
+        "qty": 1,
+        "price": 1000.0,
+        "total": 1000.0
+      }
+    ],
+    "total_price": 1000.0,
+    "payment_method": "الدفع عند الاستلام",
+    "order_status": "جديد",
+    "payment_proof_url": "",
+    "created_at": "2026-10-04 22:00:52",
+    "updated_at": "2026-10-04 22:00:52"
   }
 }
