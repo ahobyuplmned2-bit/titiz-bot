@@ -161,7 +161,7 @@ def _compact_followup_context(value, limit=120):
 
 
 def schedule_product_followup(phone_number, product_name="", inquiry_text=""):
-    """جدولة تذكير واحد بعد 24 ساعة عن منتج أو استفسار العميل."""
+    """جدولة تذكير واحد بعد 12 ساعة عن آخر منتج أو موضوع ناقشه العميل."""
     if phone_number and phone_number != OWNER_NUMBER:
         last_message_at = time.time()
         session_data = user_sessions.get(phone_number)
@@ -196,12 +196,12 @@ def _followup_subject(product_name="", context_text=""):
 
 
 def send_product_followup(phone_number, product_name="", context_text=""):
-    """إرسال رسالة رضا واحدة مرتبطة بآخر منتج أو استفسار للعميل."""
+    """إرسال تذكير واحد مرتبط بآخر منتج أو موضوع استفسر عنه العميل."""
     topic = _compact_followup_context(product_name or context_text) or "المنتجات المنزلية"
     message = (
         "هلا فيك 😊\n"
-        f"حبيت أتأكد عن *{topic}*: لقيتِ اللي تحتاجه؟\n"
-        "إذا حاب تشوفي منتجات قريبة منه، هذا رابط القناة:\n"
+        f"آخر موضوع كان عن *{topic}*، وحبّينا نتابع معك 😊\n"
+        "إذا ما زلت تبحث عنه أو تريد منتجات قريبة منه، اكتب لنا ونكمل معك من حيث توقفنا.\n"
         f"{TITIZ_CHANNEL_URL}"
     )
     return send_buttons(phone_number, message, [
@@ -237,7 +237,7 @@ def notify_owner_unfollowed_conversation(followup):
         f"📞 الرقم: {phone_number}\n"
         f"📝 آخر الموضوع: {topic}\n"
         f"🕒 آخر رسالة: {last_message_time}\n"
-        "⏳ لم تصل متابعة من العميل خلال 24 ساعة.\n"
+        "⏳ لم تصل متابعة من العميل خلال 12 ساعة.\n"
         "━━━━━━━━━━━━"
     )
     return send_message(OWNER_NUMBER, notification)
