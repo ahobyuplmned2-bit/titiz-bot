@@ -3423,7 +3423,9 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                     price=prod_price,
                     description=marketing_desc,
                     image_id=image_url,
-                    keywords=keywords
+                    quantity=100,
+                    keywords=keywords,
+                    image_urls=json.dumps([image_url], ensure_ascii=False) if image_url else "",
                 )
                 sync_products_to_github()
 

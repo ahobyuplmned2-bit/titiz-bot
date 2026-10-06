@@ -125,6 +125,17 @@ def init_db():
             cursor.execute('ALTER TABLE products ADD COLUMN variants TEXT')
         except sqlite3.OperationalError:
             pass
+
+        # إصلاح عروض 500 القديمة التي أُضيفت قبل تثبيت الكمية ومسار الصورة.
+        # لا نغيّر المنتجات الأخرى ولا نحذف أي بيانات.
+        cursor.execute(
+            "UPDATE products SET quantity = 100 WHERE price = 500 AND COALESCE(quantity, 0) <= 0"
+        )
+        cursor.execute(
+            "UPDATE products SET image_urls = image_id, image_id = '' "
+            "WHERE price = 500 AND image_id LIKE 'http%' "
+            "AND COALESCE(image_urls, '') = ''"
+        )
         
         # جدول السلة
         cursor.execute('''
