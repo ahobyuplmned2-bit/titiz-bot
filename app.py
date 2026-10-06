@@ -3213,6 +3213,27 @@ def send_contact_menu(to):
     }])
 
 
+CUSTOMER_SERVICE_KEYWORDS = [
+    "خدمة العملاء", "خدمه العملاء", "خدمات العملاء", "خدمات العملا",
+    "اين خدمة العملاء", "وين خدمة العملاء", "فين خدمة العملاء",
+    "كيف اتواصل مع خدمة العملاء", "اريد خدمة العملاء", "ابغى خدمة العملاء",
+    "رقم خدمة العملاء", "التواصل مع خدمة العملاء", "التواصل مع المندوبة",
+]
+_NORMALIZED_CUSTOMER_SERVICE_KEYWORDS = {
+    normalize_text(keyword) for keyword in CUSTOMER_SERVICE_KEYWORDS
+}
+
+
+def is_customer_service_inquiry(msg_normalized):
+    """تمييز طلب الوصول لخدمة العملاء قبل تحويل الرسالة إلى بحث منتج."""
+    if not msg_normalized:
+        return False
+    return msg_normalized in _NORMALIZED_CUSTOMER_SERVICE_KEYWORDS or any(
+        len(keyword) >= 6 and keyword in msg_normalized
+        for keyword in _NORMALIZED_CUSTOMER_SERVICE_KEYWORDS
+    )
+
+
 def send_instagram_link(to):
     """إرسال زر مباشر وآمن لحساب Instagram الرسمي."""
     message = "📷 تابع أحدث منتجات وعروض Titiz على Instagram 😊"
@@ -4702,6 +4723,10 @@ def handle_customer_message(sender, msg_body, msg_normalized, message):
     # أسئلة الطلبات تُعرض من قاعدة البيانات مباشرة ولا تُعامل كبحث عن منتج.
     if is_order_inquiry(msg_normalized):
         send_customer_orders(sender)
+        return
+
+    if is_customer_service_inquiry(msg_normalized):
+        send_contact_menu(sender)
         return
 
     if is_price_inquiry(msg_normalized):
