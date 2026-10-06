@@ -1196,6 +1196,22 @@ def add_product(name, price, description="", image_id="", quantity=0, keywords="
         return product_id
 
 
+def get_offer_products(offer_price=500):
+    """إرجاع المنتجات المصنفة كعروض؛ حالياً العرض هو المنتج بسعر 500 ريال."""
+    validated_price = _positive_price(offer_price)
+    if validated_price is None:
+        return []
+    with db_lock:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT * FROM products WHERE available = 1 AND price = ? ORDER BY id ASC",
+            (validated_price,),
+        ).fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+
 def update_product_metadata(name, price, description="", image_id="", keywords="", image_urls="", variants=""):
     """تحديث بيانات المنتج من products.json دون تغيير الكمية أو حالة التوفر."""
     validated_price = _positive_price(price)

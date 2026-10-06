@@ -41,6 +41,7 @@ from database import (
     record_contact, has_contact, queue_pending_reply,
     get_pending_replies, mark_pending_reply_sent, update_product_metadata,
     update_product_fields, claim_customer_followup, release_customer_followup,
+    get_offer_products,
     claim_processed_webhook_message, record_message_event, update_message_event,
     get_message_events, reserve_owner_notification_sequence,
     enqueue_owner_notification, claim_pending_owner_notifications,
@@ -729,7 +730,19 @@ def is_offers_inquiry(msg_normalized):
 
 
 def send_offers_response(to):
-    """إرسال رابط قناة العروض مع زر مباشر للمندوبة."""
+    """عرض كل منتجات عروض 500 ريال، مع إبقاء رابط القناة كخيار إضافي."""
+    offer_products = get_offer_products(500)
+    if offer_products:
+        send_message(
+            to,
+            "🎁 *عروض Titiz بسعر 500 ريال*\n\n"
+            "هذه كل المنتجات المتوفرة حالياً ضمن عروض الـ500. اسحب لمشاهدة الصور والتفاصيل 😊",
+        )
+        if len(offer_products) == 1:
+            send_product_card(to, offer_products[0])
+        else:
+            send_matching_products_carousel(to, offer_products, "عروض 500 ريال")
+        return
     if not whatsapp.send_url_button(
         to,
         OFFERS_RESPONSE,
@@ -3326,14 +3339,31 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             send_message(OWNER_NUMBER, "⚠️ لم أتمكن من معرفة رقم العميل من الرسالة المقتبسة. يرجى الرد باستخدام: رد [الرقم] [الرسالة]")
             return True
 
-    # === إضافة منتج جديد من رقم الإدارة بأمر «اضف» (صورة اختيارية + اسم وسعر) ===
+    # === إضافة منتج أو عرض من رقم الإدارة ===
     is_image_add = (message.get("type") == "image")
+    image_caption = str(message.get("image", {}).get("caption", "") or "").strip()
+    offer_price_match = re.search(
+        r"(?:السعر\s*[:：]?\s*)?(500)\s*(?:ريال|ر|ريالاً)?\b",
+        image_caption,
+        re.IGNORECASE,
+    )
+    offer_name = re.sub(
+        r"(?:السعر\s*[:：]?\s*)?500\s*(?:ريال|ر|ريالاً)?\b",
+        "",
+        image_caption,
+        flags=re.IGNORECASE,
+    )
+    offer_name = re.sub(r"[|,:：\-–]+", " ", offer_name).strip()
+    is_offer_add = bool(is_image_add and offer_price_match and offer_name)
     is_add_command = bool(re.match(r"^\s*(?:اضف|إضافة)\b", msg_body or "", re.IGNORECASE))
     add_match = re.search(r"(?:اسم\s*المنتج|المنتج|اضف|إضافة)\s*[:：]?\s*([^\n,]+)(?:[\n,].*?السعر\s*[:：]?\s*(\d+))?", msg_body or "", re.IGNORECASE) if is_add_command else None
     
-    if is_add_command:
+    if is_offer_add or is_add_command:
         prod_name = ""
         prod_price = 0
+        if is_offer_add:
+            prod_name = offer_name
+            prod_price = 500
         
         if add_match:
             prod_name = add_match.group(1).strip()
@@ -3380,7 +3410,7 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
             # طريقة «اضف» السابقة: وصف ثابت واضح وكلمات بحث مشتقة من اسم المنتج فقط.
             # لا يتم استدعاء الذكاء الاصطناعي أو تحليل الصورة في هذا المسار.
             marketing_desc = f"منتج حصري وعالي الجودة من منتجات المائدة والضيافة العصرية. {prod_name} بتصميم أنيق ومميز يضفي لمسة جمالية وفخامة لمنزلك."
-            keywords = f"{prod_name}, أواني منزلية, تجهيز مطابخ, تيتيز, إب"
+            keywords = f"{prod_name}, عرض, عروض, تخفيض, عروض 500, سعر 500, أواني منزلية, تجهيز مطابخ, تيتيز, إب"
             if "ثلاجة" in prod_name or "شاي" in prod_name:
                 keywords += ", حافظات حرارة, دلال قهوة"
             elif "قدر" in prod_name or "طباخة" in prod_name:
@@ -3395,6 +3425,7 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                     image_id=image_url,
                     keywords=keywords
                 )
+                sync_products_to_github()
 
                 # رسالة التأكيد
                 send_message(OWNER_NUMBER, f"✅ *تمت إضافة المنتج بنجاح وتم تحديث الكتالوج!*")
