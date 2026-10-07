@@ -1474,6 +1474,20 @@ def download_whatsapp_image(image_data):
         mime_type = "image/jpeg"
     return image_response.content, mime_type
 
+
+def get_media_url_by_id(media_id):
+    """تحويل معرّف صورة واتساب إلى رابط مؤقت مع مهلة اتصال محددة."""
+    if not media_id or not ACCESS_TOKEN:
+        return ""
+    response = requests.get(
+        f"https://graph.facebook.com/v26.0/{media_id}",
+        headers={"Authorization": f"Bearer {ACCESS_TOKEN}"},
+        params={"phone_number_id": PHONE_NUMBER_ID},
+        timeout=15,
+    )
+    response.raise_for_status()
+    return str(response.json().get("url") or "")
+
 def transcribe_voice_message(message):
     """تحويل الرسالة الصوتية إلى نص عربي باستخدام خدمة تفريغ الصوت."""
     if not VOICE_TRANSCRIPTION_API_KEY:
@@ -3448,7 +3462,12 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                     keywords=keywords,
                     image_urls=json.dumps([image_url], ensure_ascii=False) if image_url else "",
                 )
-                sync_products_to_github()
+                # لا ننتظر GitHub داخل webhook حتى لا يتوقف رد البوت إذا تأخر GitHub.
+                Thread(
+                    target=sync_products_to_github,
+                    daemon=True,
+                    name="products-github-sync",
+                ).start()
 
                 # رسالة التأكيد
                 send_message(OWNER_NUMBER, f"✅ *تمت إضافة المنتج بنجاح وتم تحديث الكتالوج!*")
@@ -3462,7 +3481,7 @@ def handle_owner_command(sender, msg_body, msg_normalized, message):
                 )
 
                 if image_url:
-                    send_image_message(OWNER_NUMBER, image_url, card_text)
+                    send_image(OWNER_NUMBER, image_url, card_text)
                 else:
                     send_message(OWNER_NUMBER, card_text)
 
